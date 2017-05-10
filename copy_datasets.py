@@ -102,6 +102,7 @@ if __name__ == '__main__':
                      ('/raw_data_1/detector_1_events/event_id', '/raw_data_1/detector_1_events/event_id'),
                      ('/raw_data_1/detector_1_events/total_counts', '/raw_data_1/detector_1_events/total_counts'),
                      ('/raw_data_1/detector_1_events/event_index', '/raw_data_1/detector_1_events/event_index'),
+                     ('/raw_data_1/detector_1_events/event_time_zero', '/raw_data_1/detector_1_events/event_time_zero'),
                      ('/raw_data_1/good_frames', '/raw_data_1/good_frames'),
                      ('/raw_data_1/detector_1_events/event_time_offset',
                       '/raw_data_1/detector_1_events/event_time_offset')
