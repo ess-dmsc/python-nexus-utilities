@@ -95,7 +95,7 @@ class NexusBuilder:
         :param source_group_name: Name of group in source file
         :param target_group_name: Name of group in target file
         """
-        self.target_file.copy(self.source_file[source_group_name], source_group_name, shallow=True)
+        self.target_file.copy(self.source_file[source_group_name], target_group_name, shallow=True)
         for sub_group in self.source_file[source_group_name].keys():
             if sub_group in self.target_file[target_group_name]:
                 self.target_file[target_group_name].__delitem__(sub_group)
@@ -112,11 +112,13 @@ class NexusBuilder:
                                                     compression=self.compress_type, compression_opts=self.compress_opts)
             d_set[...] = dataset[...]
         except TypeError:
-            # probably this is a scalar dataset so just write it without compression
-            # abusing try-except...
-            self.target_file[target_dataset] = dataset[...]
-        except IOError:
-            logger.error('Error copying to dataset: ' + target_dataset + ', value is type: ' + str(dataset.dtype))
+            logger.error('Type error copying to dataset: ' + target_dataset + ', value is type: ' + str(
+                dataset.dtype))
+        except IOError as e:
+            logger.error('IO error copying to dataset: ' + target_dataset + ', value is type: ' + str(
+                dataset.dtype) + ', errorstr: ' + e.strerror)
+        except:
+            logger.error('Unexpected error in NexusBuilder.__copy_dataset')
             raise
         # Now copy attributes
         source_attributes = dataset.attrs.items()
