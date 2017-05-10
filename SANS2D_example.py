@@ -19,10 +19,6 @@ if __name__ == '__main__':
                      ('raw_data_1/instrument/source/type', 'raw_data_1/instrument/source/type'),
                      ('raw_data_1/instrument/moderator', 'raw_data_1/instrument/moderator'),
                      ('raw_data_1/instrument/moderator/distance', 'raw_data_1/instrument/moderator/distance'),
-                     ('raw_data_1/instrument/detector_1', 'raw_data_1/instrument/detector_bank_1'),
-                     ('raw_data_1/instrument/detector_1/distance', 'raw_data_1/instrument/detector_bank_1/distance'),
-                     ('raw_data_1/instrument/detector_1/polar_angle',
-                      'raw_data_1/instrument/detector_bank_1/polar_angle'),
                      ])
 
     builder = NexusBuilder('SANS_test.nxs', 'SANS_example_noComp.hdf5')
