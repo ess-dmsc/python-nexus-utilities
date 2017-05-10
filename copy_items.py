@@ -40,7 +40,7 @@ def copy_group(source_file, target_file, source_group_name, target_group_name):
 
 def copy_dataset(compress_opts, compress_type, data_1, f_write, target_dataset):
     """
-    Copy a dataset with specified compression options
+    Copy a dataset with specified compression options and the source dataset's attributes
     
     :param compress_opts: 
     :param compress_type: 
@@ -89,25 +89,3 @@ def copy_items(source_file_name, target_file_name, dataset_map, compress_type=32
                     copy_dataset(compress_opts, compress_type, data_1, f_write, target_item)
                 elif isinstance(data_1, h5py.Group):
                     copy_group(f_read, f_write, source_item, target_item)
-
-
-if __name__ == '__main__':
-    out_file = 'SANS_example_noComp.hdf5'
-    wipe_file(out_file)
-
-    d = OrderedDict([('b', 2), ('a', 1)])
-    copy_l_to_r = \
-        OrderedDict([('raw_data_1', 'raw_data_1'),
-                     ('/raw_data_1/detector_1_events', '/raw_data_1/detector_1_events'),
-                     ('/raw_data_1/detector_1_events/event_id', '/raw_data_1/detector_1_events/event_id'),
-                     ('/raw_data_1/detector_1_events/total_counts', '/raw_data_1/detector_1_events/total_counts'),
-                     ('/raw_data_1/detector_1_events/event_index', '/raw_data_1/detector_1_events/event_index'),
-                     ('/raw_data_1/detector_1_events/event_time_zero', '/raw_data_1/detector_1_events/event_time_zero'),
-                     ('/raw_data_1/good_frames', '/raw_data_1/good_frames'),
-                     ('/raw_data_1/detector_1_events/event_time_offset',
-                      '/raw_data_1/detector_1_events/event_time_offset')
-                     ])
-
-    copy_items('SANS_test.nxs', out_file, copy_l_to_r, compress_type=None)
-    # copy_items('SANS_test.nxs', 'SANS_example_gzip.hdf5', copy_l_to_r, compress_type='gzip', compress_opts=1)
-    # copy_items('SANS_test.nxs', 'SANS_example_blosc.hdf5', copy_l_to_r, compress_type=32001)
