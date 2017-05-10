@@ -2,12 +2,20 @@ import h5py
 from collections import OrderedDict
 import tables
 import os
+import logging
 
 """
 Functions to assist with building example NeXus files from existing ones
 
 NB. tables import looks redundant but actually loads BLOSC compression filter
 """
+
+logger = logging.getLogger('NeXus_utils')
+logger.setLevel(logging.DEBUG)
+console = logging.StreamHandler()
+formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+console.setFormatter(formatter)
+logger.addHandler(console)
 
 
 def wipe_file(filename):
@@ -48,6 +56,13 @@ def copy_dataset(compress_opts, compress_type, data_1, f_write, target_dataset):
         # probably this is a scalar dataset so just write it without compression
         # abusing try-except...
         f_write[target_dataset] = data_1[...]
+    # Now copy attributes
+    source_attributes = data_1.attrs.items()
+    target_attributes = f_write[target_dataset].attrs
+    for key, value in source_attributes:
+        if key != 'target':
+            logger.debug('attr key: ' + str(key) + ' value: ' + str(value))
+            target_attributes.create(key, value)
 
 
 def copy_items(source_file_name, target_file_name, dataset_map, compress_type=32001, compress_opts=None):
