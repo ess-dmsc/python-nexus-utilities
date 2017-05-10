@@ -38,15 +38,15 @@ def copy_group(source_file, target_file, source_group_name, target_group_name):
             target_file[target_group_name].__delitem__(sub_group)
 
 
-def copy_dataset(compress_opts, compress_type, data_1, f_write, target_dataset):
+def copy_dataset(data_1, f_write, target_dataset, compress_type, compress_opts):
     """
     Copy a dataset with specified compression options and the source dataset's attributes
     
-    :param compress_opts: 
-    :param compress_type: 
-    :param data_1: 
-    :param f_write: 
-    :param target_dataset: 
+    :param compress_opts: Compression options, for example gzip compression level
+    :param compress_type: Name or id of compression filter https://support.hdfgroup.org/services/contributions.html
+    :param data_1: The dataset being copied
+    :param f_write: File object for the target file
+    :param target_dataset: Name of the dataset in the target file
     """
     try:
         d_set = f_write.create_dataset(target_dataset, data_1[...].shape, compression=compress_type,
@@ -86,6 +86,6 @@ def copy_items(source_file_name, target_file_name, dataset_map, compress_type=32
             data_1 = f_read.get(source_item)
             with h5py.File(target_file_name, 'r+') as f_write:
                 if isinstance(data_1, h5py.Dataset):
-                    copy_dataset(compress_opts, compress_type, data_1, f_write, target_item)
+                    copy_dataset(data_1, f_write, target_item, compress_type, compress_opts)
                 elif isinstance(data_1, h5py.Group):
                     copy_group(f_read, f_write, source_item, target_item)

@@ -4,7 +4,9 @@ if __name__ == '__main__':
     out_file = 'SANS_example_noComp.hdf5'
     wipe_file(out_file)
 
-    d = OrderedDict([('b', 2), ('a', 1)])
+    with h5py.File(out_file, 'r+') as f_write:
+        pass
+
     copy_l_to_r = \
         OrderedDict([('raw_data_1', 'raw_data_1'),
                      ('/raw_data_1/detector_1_events', '/raw_data_1/detector_1_events'),
