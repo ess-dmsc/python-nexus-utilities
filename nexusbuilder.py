@@ -19,12 +19,14 @@ class NexusBuilder:
     NB. tables import looks redundant but actually loads BLOSC compression filter
     """
 
-    def __init__(self, source_file_name, target_file_name, compress_type=None, compress_opts=None):
+    def __init__(self, source_file_name, target_file_name, compress_type=None, compress_opts=None,
+                 nx_entry_name='raw_data_1'):
         """
         compress_type=32001 for BLOSC
         
         :param source_file_name: Name of the input file
         :param target_file_name: Name of the output file
+        :param nx_entry_name: Name of the root group (NXentry class)
         :param compress_type: Name or id of compression filter https://support.hdfgroup.org/services/contributions.html
         :param compress_opts: Compression options, for example gzip compression level
         """
@@ -33,6 +35,8 @@ class NexusBuilder:
         self.__wipe_file(target_file_name)
         self.source_file = h5py.File(source_file_name, 'r')
         self.target_file = h5py.File(target_file_name, 'r+')
+        # Having an NXentry root group is compulsory in NeXus standard
+        self.root = self.__add_nx_entry(nx_entry_name)
 
     def copy_items(self, dataset_map):
         """
@@ -52,9 +56,32 @@ class NexusBuilder:
             elif isinstance(source_item, h5py.Group):
                 self.__copy_group(source_item_name, target_item_name)
 
+    def add_user(self, name, affiliation):
+        """
+        Add an NXuser
+        
+        :param name: Name of the user 
+        :param affiliation: Affiliation of the user
+        :return: 
+        """
+        user_group = self.__add_nx_group(self.root, 'user_1', 'NXuser')
+        user_group.create_dataset('name', data=name)
+        user_group.create_dataset('affiliation', data=affiliation)
+
     def __del__(self):
         self.source_file.close()
         self.target_file.close()
+
+    def __add_nx_entry(self, nx_entry_name):
+        entry_group = self.target_file.create_group(nx_entry_name)
+        entry_group.attrs.create('NX_class', 'NXentry')
+        return entry_group
+
+    @staticmethod
+    def __add_nx_group(parent_group, group_name, nx_class_name):
+        created_group = parent_group.create_group(group_name)
+        created_group.attrs.create('NX_class', nx_class_name)
+        return created_group
 
     @staticmethod
     def __wipe_file(filename):
@@ -81,13 +108,16 @@ class NexusBuilder:
         :param target_dataset: Name of the dataset in the target file
         """
         try:
-            d_set = self.target_file.create_dataset(target_dataset, dataset[...].shape, compression=self.compress_type,
-                                                    compression_opts=self.compress_opts)
+            d_set = self.target_file.create_dataset(target_dataset, dataset[...].shape, dtype=dataset.dtype,
+                                                    compression=self.compress_type, compression_opts=self.compress_opts)
             d_set[...] = dataset[...]
         except TypeError:
             # probably this is a scalar dataset so just write it without compression
             # abusing try-except...
             self.target_file[target_dataset] = dataset[...]
+        except IOError:
+            logger.error('Error copying to dataset: ' + target_dataset + ', value is type: ' + str(dataset.dtype))
+            raise
         # Now copy attributes
         source_attributes = dataset.attrs.items()
         target_attributes = self.target_file[target_dataset].attrs
