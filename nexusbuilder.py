@@ -93,8 +93,12 @@ class NexusBuilder:
                 for component in root.findall('d:component', ns):
                     if component.get('type') == bank_type_name:
                         bank_name = component.find('d:location', ns).get('name')
-                        # TODO translate the pixel linspace details by the bank location
+                        # TODO translate the pixel offsets by the bank location
                         # Or should add an NXtransformation for that?
+                        # TODO also get the pixel id information (detector_number)
+                        location = component.find('d:location', ns)
+                        translation_list = np.array([location.get('x'), location.get('y'), location.get('z')])
+                        translation = np.array(map(lambda x: 0 if x is None else x, translation_list))
                         self.__add_detector_bank(bank_name, x_pixel_size, y_pixel_size, thickness)
 
     @staticmethod
