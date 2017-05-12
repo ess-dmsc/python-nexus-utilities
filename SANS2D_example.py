@@ -26,3 +26,4 @@ if __name__ == '__main__':
     # builder = NexusBuilder('SANS_test.nxs', 'SANS_example_blosc.hdf5', compress_type=32001)
     builder.copy_items(copy_l_to_r)
     builder.add_user('Sans2d Team', 'ISIS, STFC')
+    builder.add_detector_banks('SANS2D_Definition.xml')

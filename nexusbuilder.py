@@ -3,6 +3,8 @@ import logging
 from collections import OrderedDict
 import tables
 import os
+import xml.etree.ElementTree
+import numpy as np
 
 logger = logging.getLogger('NeXus_Builder')
 logger.setLevel(logging.DEBUG)
@@ -68,9 +70,48 @@ class NexusBuilder:
         user_group.create_dataset('name', data=name)
         user_group.create_dataset('affiliation', data=affiliation)
 
+    def add_detector_banks(self, mantid_idf):
+        """
+        Add detector banks from a Mantid IDF file
+        NB, currently only works for "RectangularDetector" panels
+        
+        :param mantid_idf: filename of the Mantid IDF XML file 
+        """
+        root = xml.etree.ElementTree.parse(mantid_idf).getroot()
+        ns = {'d': 'http://www.mantidproject.org/IDF/1.0'}
+        # Our root should be the instrument
+        assert (root.tag == '{' + ns['d'] + '}instrument')
+
+        # Look for detector bank definition
+        for xml_type in root.findall('d:type', ns):
+            if xml_type.get('is') == 'rectangular_detector':
+                x_pixel_size, y_pixel_size, thickness = self.__get_pixel(root, xml_type.get('type'))
+                bank_type_name = xml_type.get('name')
+                x_pixel_offset_1d = self.__get_1d_pixel_offsets('x', xml_type)
+                y_pixel_offset_1d = self.__get_1d_pixel_offsets('y', xml_type)
+                x_pixel_offset, y_pixel_offset = np.meshgrid(x_pixel_offset_1d, y_pixel_offset_1d)
+                for component in root.findall('d:component', ns):
+                    if component.get('type') == bank_type_name:
+                        bank_name = component.find('d:location', ns).get('name')
+                        # TODO translate the pixel linspace details by the bank location
+                        # Or should add an NXtransformation for that?
+                        self.__add_detector_bank(bank_name, x_pixel_size, y_pixel_size, thickness)
+
+    @staticmethod
+    def __get_1d_pixel_offsets(dimension_name, xml_type):
+        step = float(xml_type.get(dimension_name + 'step'))
+        pixels = int(xml_type.get(dimension_name + 'pixels'))
+        start = float(xml_type.get(dimension_name + 'start'))
+        stop = start + (step * pixels)
+        return np.linspace(start, stop, pixels)
+
     def __del__(self):
         self.source_file.close()
         self.target_file.close()
+
+    def __add_detector_bank(self, name, x_pixel_size, y_pixel_size, thickness):
+        instrument_group = self.root['instrument']
+        detector_bank_group = self.__add_nx_group(instrument_group, name, 'NXdetector')
 
     def __add_nx_entry(self, nx_entry_name):
         entry_group = self.target_file.create_group(nx_entry_name)
@@ -127,3 +168,31 @@ class NexusBuilder:
             if key != 'target':
                 logger.debug('attr key: ' + str(key) + ' value: ' + str(value))
                 target_attributes.create(key, value)
+
+    @staticmethod
+    def __get_point(xml_point):
+        return np.array([xml_point.get('x'), xml_point.get('y'), xml_point.get('z')]).astype(float)
+
+    def __get_pixel(self, xml_root, type_name):
+        ns = {'d': 'http://www.mantidproject.org/IDF/1.0'}
+        for type in xml_root.findall('d:type', ns):
+            if type.get('name') == type_name and type.get('is') == 'detector':
+                cuboid = type.find('d:cuboid', ns)
+                if cuboid is not None:
+                    left_front_bottom = self.__get_point(cuboid.find('d:left-front-bottom-point', ns))
+                    left_front_top = self.__get_point(cuboid.find('d:left-front-top-point', ns))
+                    left_back_bottom = self.__get_point(cuboid.find('d:left-back-bottom-point', ns))
+                    right_front_bottom = self.__get_point(cuboid.find('d:right-front-bottom-point', ns))
+                    # Assume thickness is front to back
+                    front_to_back = left_back_bottom - left_front_bottom
+                    thickness = np.sqrt(np.dot(front_to_back, front_to_back))
+                    # Assume x pixel size is left to right
+                    left_to_right = right_front_bottom - left_front_bottom
+                    x_pixel_size = np.sqrt(np.dot(left_to_right, left_to_right))
+                    # Assume y pixel size is top to bottom
+                    top_to_bottom = left_front_top - left_front_bottom
+                    y_pixel_size = np.sqrt(np.dot(top_to_bottom, top_to_bottom))
+                    return x_pixel_size, y_pixel_size, thickness
+                else:
+                    print('no cuboid shape found to define pixel')
+        return None, None, None
