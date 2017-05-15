@@ -107,7 +107,7 @@ class NexusBuilder:
         :param y_pixel_offset: Pixel offsets on y axis from centre of detector
         :return: NXdetector group
         """
-        # TODO finish
+        # TODO add pixel_numbers (ids)
         if not is_scalar(x_pixel_size):
             logger.error('In NexusBuilder.__add_detector_bank x_pixel_size must be scalar')
         if not is_scalar(y_pixel_size):
@@ -119,21 +119,18 @@ class NexusBuilder:
         detector_bank_group.create_dataset('local_name', data=name)
         thickness_dataset = detector_bank_group.create_dataset('sensor_thickness', data=np.array([thickness]))
         thickness_dataset.attrs.create('units', 'metres')
-        x_pixel_size_dataset = detector_bank_group.create_dataset('x_pixel_size', data=np.array([x_pixel_size]))
-        x_pixel_size_dataset.attrs.create('units', 'metres')
-        y_pixel_size_dataset = detector_bank_group.create_dataset('y_pixel_size', data=np.array([y_pixel_size]))
-        y_pixel_size_dataset.attrs.create('units', 'metres')
-        if x_pixel_offset is not None:
-            x_pixel_offset_dataset = detector_bank_group.create_dataset('x_pixel_offset', data=x_pixel_offset,
-                                                                        compression=self.compress_type,
-                                                                        compression_opts=self.compress_opts)
-            x_pixel_offset_dataset.attrs.create('units', 'metres')
-        if y_pixel_offset is not None:
-            y_pixel_offset_dataset = detector_bank_group.create_dataset('y_pixel_offset', data=y_pixel_offset,
-                                                                        compression=self.compress_type,
-                                                                        compression_opts=self.compress_opts)
-            y_pixel_offset_dataset.attrs.create('units', 'metres')
+        self.__add_detector_bank_axis(detector_bank_group, 'x', x_pixel_size, x_pixel_offset)
+        self.__add_detector_bank_axis(detector_bank_group, 'y', y_pixel_size, y_pixel_offset)
         return detector_bank_group
+
+    def __add_detector_bank_axis(self, group, axis, pixel_size, pixel_offset):
+        pixel_size_dataset = group.create_dataset(axis + '_pixel_size', data=np.array([pixel_size]))
+        pixel_size_dataset.attrs.create('units', 'metres')
+        if pixel_offset is not None:
+            pixel_offset_dataset = group.create_dataset(axis + '_pixel_offset', data=pixel_offset,
+                                                        compression=self.compress_type,
+                                                        compression_opts=self.compress_opts)
+            pixel_offset_dataset.attrs.create('units', 'metres')
 
     def __del__(self):
         self.source_file.close()
