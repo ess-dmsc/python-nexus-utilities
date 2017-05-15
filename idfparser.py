@@ -37,9 +37,10 @@ class IDFParser:
                                          'y_pixel_offset': y_pixel_offset}
                         # TODO also get the pixel id information (detector_number)
                         location = component.find('d:location', self.ns)
-                        translation_list = np.array([location.get('x'), location.get('y'), location.get('z')])
+                        distance_list = np.array([location.get('x'), location.get('y'), location.get('z')])
                         # If any of these are omitted it means position 0 on that axis
-                        det_bank_info['translation'] = np.array(map(lambda x: 0 if x is None else x, translation_list))
+                        det_bank_info['distance'] = np.array(
+                            map(lambda x: 0 if x is None else x, distance_list)).astype(float)
                         yield det_bank_info
 
     @staticmethod

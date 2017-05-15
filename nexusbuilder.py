@@ -91,18 +91,25 @@ class NexusBuilder:
         for det_info in self.idf_parser.get_detector_banks():
             det_bank_group = self.add_detector_bank(det_info['name'], det_info['number'], det_info['x_pixel_size'],
                                                     det_info['y_pixel_size'], det_info['thickness'],
+                                                    det_info['distance'][2], det_info['distance'][0],
+                                                    det_info['distance'][1],
                                                     det_info['x_pixel_offset'], det_info['y_pixel_offset'])
-            self.__add_translation(det_bank_group)
+            if 'transformation' in det_info:
+                self.__add_translation(det_bank_group, det_info['transformation'])
 
-    def add_detector_bank(self, name, number, x_pixel_size, y_pixel_size, thickness, x_pixel_offset=None,
-                          y_pixel_offset=None):
+    def add_detector_bank(self, name, number, x_pixel_size, y_pixel_size, thickness, distance, x_beam_centre,
+                          y_beam_centre, x_pixel_offset=None, y_pixel_offset=None):
         """
         Add an NXdetector, only suitable for rectangular detectors of consistent pixels
         
         :param name: Name of the detector panel
+        :param number : Banks are numbered from 1
         :param x_pixel_size: Pixel width
         :param y_pixel_size: Pixel height
         :param thickness: Pixel thickness
+        :param distance: Bank distance along z from parent component
+        :param x_beam_centre: Displacement of the centre of the bank from the beam centre along x
+        :param y_beam_centre: Displacement of the centre of the bank from the beam centre along y
         :param x_pixel_offset: Pixel offsets on x axis from centre of detector
         :param y_pixel_offset: Pixel offsets on y axis from centre of detector
         :return: NXdetector group
@@ -119,13 +126,17 @@ class NexusBuilder:
         detector_bank_group.create_dataset('local_name', data=name)
         thickness_dataset = detector_bank_group.create_dataset('sensor_thickness', data=np.array([thickness]))
         thickness_dataset.attrs.create('units', 'metres')
-        self.__add_detector_bank_axis(detector_bank_group, 'x', x_pixel_size, x_pixel_offset)
-        self.__add_detector_bank_axis(detector_bank_group, 'y', y_pixel_size, y_pixel_offset)
+        distance_dataset = detector_bank_group.create_dataset('distance', data=np.array([distance]))
+        distance_dataset.attrs.create('units', 'metres')
+        self.__add_detector_bank_axis(detector_bank_group, 'x', x_pixel_size, x_pixel_offset, x_beam_centre)
+        self.__add_detector_bank_axis(detector_bank_group, 'y', y_pixel_size, y_pixel_offset, y_beam_centre)
         return detector_bank_group
 
-    def __add_detector_bank_axis(self, group, axis, pixel_size, pixel_offset):
+    def __add_detector_bank_axis(self, group, axis, pixel_size, pixel_offset, beam_centre):
         pixel_size_dataset = group.create_dataset(axis + '_pixel_size', data=np.array([pixel_size]))
         pixel_size_dataset.attrs.create('units', 'metres')
+        beam_centre_dataset = group.create_dataset('beam_center_' + axis, data=np.array([beam_centre]))
+        beam_centre_dataset.attrs.create('units', 'metres')
         if pixel_offset is not None:
             pixel_offset_dataset = group.create_dataset(axis + '_pixel_offset', data=pixel_offset,
                                                         compression=self.compress_type,
@@ -136,8 +147,8 @@ class NexusBuilder:
         self.source_file.close()
         self.target_file.close()
 
-    def __add_translation(self, group):
-        # TODO finish
+    def __add_translation(self, group, transformation_info):
+        # TODO finish (add datasets)
         self.__add_nx_group(group, 'transformation', 'NXtransformation')
 
     def __add_nx_entry(self, nx_entry_name):
