@@ -45,9 +45,9 @@ class IDFParser:
 
     def __get_pixel(self, xml_root, type_name):
         ns = {'d': 'http://www.mantidproject.org/IDF/1.0'}
-        for type in xml_root.findall('d:type', ns):
-            if type.get('name') == type_name and type.get('is') == 'detector':
-                cuboid = type.find('d:cuboid', ns)
+        for xml_type in xml_root.findall('d:type', ns):
+            if xml_type.get('name') == type_name and xml_type.get('is') == 'detector':
+                cuboid = xml_type.find('d:cuboid', ns)
                 if cuboid is not None:
                     left_front_bottom = self.__get_point(cuboid.find('d:left-front-bottom-point', ns))
                     left_front_top = self.__get_point(cuboid.find('d:left-front-top-point', ns))
