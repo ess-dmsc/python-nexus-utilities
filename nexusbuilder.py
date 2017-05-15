@@ -3,7 +3,6 @@ import logging
 from collections import OrderedDict
 import tables
 import os
-import xml.etree.ElementTree
 import numpy as np
 from idfparser import IDFParser
 
