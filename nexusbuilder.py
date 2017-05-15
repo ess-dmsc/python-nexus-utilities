@@ -5,6 +5,7 @@ import tables
 import os
 import xml.etree.ElementTree
 import numpy as np
+from idfparser import IDFParser
 
 logger = logging.getLogger('NeXus_Builder')
 logger.setLevel(logging.DEBUG)
@@ -12,6 +13,12 @@ console = logging.StreamHandler()
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logger.addHandler(console)
+
+
+def is_scalar(object_to_check):
+    if hasattr(object_to_check, "__len__"):
+        return len(object_to_check) == 1
+    return True
 
 
 class NexusBuilder:
@@ -22,7 +29,7 @@ class NexusBuilder:
     """
 
     def __init__(self, source_file_name, target_file_name, compress_type=None, compress_opts=None,
-                 nx_entry_name='raw_data_1'):
+                 nx_entry_name='raw_data_1', idf_filename=None):
         """
         compress_type=32001 for BLOSC
         
@@ -31,6 +38,7 @@ class NexusBuilder:
         :param nx_entry_name: Name of the root group (NXentry class)
         :param compress_type: Name or id of compression filter https://support.hdfgroup.org/services/contributions.html
         :param compress_opts: Compression options, for example gzip compression level
+        :param idf_filename: Filename of a Mantid IDF file from which to get instrument geometry
         """
         self.compress_type = compress_type
         self.compress_opts = compress_opts
@@ -39,6 +47,10 @@ class NexusBuilder:
         self.target_file = h5py.File(target_file_name, 'r+')
         # Having an NXentry root group is compulsory in NeXus standard
         self.root = self.__add_nx_entry(nx_entry_name)
+        if idf_filename:
+            self.idf_parser = IDFParser(idf_filename)
+        else:
+            self.idf_parser = None
 
     def copy_items(self, dataset_map):
         """
@@ -70,52 +82,37 @@ class NexusBuilder:
         user_group.create_dataset('name', data=name)
         user_group.create_dataset('affiliation', data=affiliation)
 
-    def add_detector_banks(self, mantid_idf):
+    def add_detector_banks_from_idf(self):
         """
         Add detector banks from a Mantid IDF file
-        NB, currently only works for "RectangularDetector" panels
-        
-        :param mantid_idf: filename of the Mantid IDF XML file 
+        NB, currently only works for "RectangularDetector" panels 
         """
-        root = xml.etree.ElementTree.parse(mantid_idf).getroot()
-        ns = {'d': 'http://www.mantidproject.org/IDF/1.0'}
-        # Our root should be the instrument
-        assert (root.tag == '{' + ns['d'] + '}instrument')
+        if self.idf_parser is None:
+            logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
+        for det_info in self.idf_parser.get_detector_banks():
+            det_bank_group = self.add_detector_bank(det_info['name'], det_info['x_pixel_size'],
+                                                    det_info['y_pixel_size'], det_info['thickness'])
+            self.__add_translation(det_bank_group)
 
-        # Look for detector bank definition
-        for xml_type in root.findall('d:type', ns):
-            if xml_type.get('is') == 'rectangular_detector':
-                x_pixel_size, y_pixel_size, thickness = self.__get_pixel(root, xml_type.get('type'))
-                bank_type_name = xml_type.get('name')
-                x_pixel_offset_1d = self.__get_1d_pixel_offsets('x', xml_type)
-                y_pixel_offset_1d = self.__get_1d_pixel_offsets('y', xml_type)
-                x_pixel_offset, y_pixel_offset = np.meshgrid(x_pixel_offset_1d, y_pixel_offset_1d)
-                for component in root.findall('d:component', ns):
-                    if component.get('type') == bank_type_name:
-                        bank_name = component.find('d:location', ns).get('name')
-                        # TODO translate the pixel offsets by the bank location
-                        # Or should add an NXtransformation for that?
-                        # TODO also get the pixel id information (detector_number)
-                        location = component.find('d:location', ns)
-                        translation_list = np.array([location.get('x'), location.get('y'), location.get('z')])
-                        translation = np.array(map(lambda x: 0 if x is None else x, translation_list))
-                        self.__add_detector_bank(bank_name, x_pixel_size, y_pixel_size, thickness)
-
-    @staticmethod
-    def __get_1d_pixel_offsets(dimension_name, xml_type):
-        step = float(xml_type.get(dimension_name + 'step'))
-        pixels = int(xml_type.get(dimension_name + 'pixels'))
-        start = float(xml_type.get(dimension_name + 'start'))
-        stop = start + (step * pixels)
-        return np.linspace(start, stop, pixels)
+    def add_detector_bank(self, name, x_pixel_size, y_pixel_size, thickness):
+        # TODO finish
+        if not is_scalar(x_pixel_size):
+            logger.error('In NexusBuilder.__add_detector_bank x_pixel_size must be scalar')
+        if not is_scalar(y_pixel_size):
+            logger.error('In NexusBuilder.__add_detector_bank y_pixel_size must be scalar')
+        if not is_scalar(thickness):
+            logger.error('In NexusBuilder.__add_detector_bank thickness must be scalar')
+        instrument_group = self.root['instrument']
+        detector_bank_group = self.__add_nx_group(instrument_group, name, 'NXdetector')
+        return detector_bank_group
 
     def __del__(self):
         self.source_file.close()
         self.target_file.close()
 
-    def __add_detector_bank(self, name, x_pixel_size, y_pixel_size, thickness):
-        instrument_group = self.root['instrument']
-        detector_bank_group = self.__add_nx_group(instrument_group, name, 'NXdetector')
+    def __add_translation(self, group):
+        # TODO finish
+        self.__add_nx_group(group, 'transformation', 'NXtransformation')
 
     def __add_nx_entry(self, nx_entry_name):
         entry_group = self.target_file.create_group(nx_entry_name)
@@ -172,31 +169,3 @@ class NexusBuilder:
             if key != 'target':
                 logger.debug('attr key: ' + str(key) + ' value: ' + str(value))
                 target_attributes.create(key, value)
-
-    @staticmethod
-    def __get_point(xml_point):
-        return np.array([xml_point.get('x'), xml_point.get('y'), xml_point.get('z')]).astype(float)
-
-    def __get_pixel(self, xml_root, type_name):
-        ns = {'d': 'http://www.mantidproject.org/IDF/1.0'}
-        for type in xml_root.findall('d:type', ns):
-            if type.get('name') == type_name and type.get('is') == 'detector':
-                cuboid = type.find('d:cuboid', ns)
-                if cuboid is not None:
-                    left_front_bottom = self.__get_point(cuboid.find('d:left-front-bottom-point', ns))
-                    left_front_top = self.__get_point(cuboid.find('d:left-front-top-point', ns))
-                    left_back_bottom = self.__get_point(cuboid.find('d:left-back-bottom-point', ns))
-                    right_front_bottom = self.__get_point(cuboid.find('d:right-front-bottom-point', ns))
-                    # Assume thickness is front to back
-                    front_to_back = left_back_bottom - left_front_bottom
-                    thickness = np.sqrt(np.dot(front_to_back, front_to_back))
-                    # Assume x pixel size is left to right
-                    left_to_right = right_front_bottom - left_front_bottom
-                    x_pixel_size = np.sqrt(np.dot(left_to_right, left_to_right))
-                    # Assume y pixel size is top to bottom
-                    top_to_bottom = left_front_top - left_front_bottom
-                    y_pixel_size = np.sqrt(np.dot(top_to_bottom, top_to_bottom))
-                    return x_pixel_size, y_pixel_size, thickness
-                else:
-                    print('no cuboid shape found to define pixel')
-        return None, None, None
