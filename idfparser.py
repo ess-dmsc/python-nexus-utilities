@@ -17,6 +17,7 @@ class IDFParser:
         :returns A generator which yields details of each detector bank found in the instrument file 
         """
         # Look for detector bank definition
+        detector_number = 0
         for xml_type in self.root.findall('d:type', self.ns):
             if xml_type.get('is') == 'rectangular_detector':
                 x_pixel_size, y_pixel_size, thickness = self.__get_pixel(self.root, xml_type.get('type'))
@@ -26,7 +27,9 @@ class IDFParser:
                 x_pixel_offset, y_pixel_offset = np.meshgrid(x_pixel_offset_1d, y_pixel_offset_1d)
                 for component in self.root.findall('d:component', self.ns):
                     if component.get('type') == bank_type_name:
+                        detector_number += 1
                         det_bank_info = {'name': component.find('d:location', self.ns).get('name'),
+                                         'number': detector_number,
                                          'x_pixel_size': x_pixel_size,
                                          'y_pixel_size': y_pixel_size,
                                          'thickness': thickness,

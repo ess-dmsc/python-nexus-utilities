@@ -89,12 +89,13 @@ class NexusBuilder:
         if self.idf_parser is None:
             logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
         for det_info in self.idf_parser.get_detector_banks():
-            det_bank_group = self.add_detector_bank(det_info['name'], det_info['x_pixel_size'],
+            det_bank_group = self.add_detector_bank(det_info['name'], det_info['number'], det_info['x_pixel_size'],
                                                     det_info['y_pixel_size'], det_info['thickness'],
                                                     det_info['x_pixel_offset'], det_info['y_pixel_offset'])
             self.__add_translation(det_bank_group)
 
-    def add_detector_bank(self, name, x_pixel_size, y_pixel_size, thickness, x_pixel_offset=None, y_pixel_offset=None):
+    def add_detector_bank(self, name, number, x_pixel_size, y_pixel_size, thickness, x_pixel_offset=None,
+                          y_pixel_offset=None):
         """
         Add an NXdetector, only suitable for rectangular detectors of consistent pixels
         
@@ -114,7 +115,8 @@ class NexusBuilder:
         if not is_scalar(thickness):
             logger.error('In NexusBuilder.__add_detector_bank thickness must be scalar')
         instrument_group = self.root['instrument']
-        detector_bank_group = self.__add_nx_group(instrument_group, name, 'NXdetector')
+        detector_bank_group = self.__add_nx_group(instrument_group, 'detector_' + str(number), 'NXdetector')
+        detector_bank_group.create_dataset('local_name', data=name)
         thickness_dataset = detector_bank_group.create_dataset('sensor_thickness', data=np.array([thickness]))
         thickness_dataset.attrs.create('units', 'metres')
         x_pixel_size_dataset = detector_bank_group.create_dataset('x_pixel_size', data=np.array([x_pixel_size]))
