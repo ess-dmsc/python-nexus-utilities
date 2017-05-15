@@ -90,10 +90,22 @@ class NexusBuilder:
             logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
         for det_info in self.idf_parser.get_detector_banks():
             det_bank_group = self.add_detector_bank(det_info['name'], det_info['x_pixel_size'],
-                                                    det_info['y_pixel_size'], det_info['thickness'])
+                                                    det_info['y_pixel_size'], det_info['thickness'],
+                                                    det_info['x_pixel_offset'], det_info['y_pixel_offset'])
             self.__add_translation(det_bank_group)
 
-    def add_detector_bank(self, name, x_pixel_size, y_pixel_size, thickness):
+    def add_detector_bank(self, name, x_pixel_size, y_pixel_size, thickness, x_pixel_offset=None, y_pixel_offset=None):
+        """
+        Add an NXdetector, only suitable for rectangular detectors of consistent pixels
+        
+        :param name: Name of the detector panel
+        :param x_pixel_size: Pixel width
+        :param y_pixel_size: Pixel height
+        :param thickness: Pixel thickness
+        :param x_pixel_offset: Pixel offsets on x axis from centre of detector
+        :param y_pixel_offset: Pixel offsets on y axis from centre of detector
+        :return: NXdetector group
+        """
         # TODO finish
         if not is_scalar(x_pixel_size):
             logger.error('In NexusBuilder.__add_detector_bank x_pixel_size must be scalar')
@@ -103,6 +115,22 @@ class NexusBuilder:
             logger.error('In NexusBuilder.__add_detector_bank thickness must be scalar')
         instrument_group = self.root['instrument']
         detector_bank_group = self.__add_nx_group(instrument_group, name, 'NXdetector')
+        thickness_dataset = detector_bank_group.create_dataset('sensor_thickness', data=np.array([thickness]))
+        thickness_dataset.attrs.create('units', 'metres')
+        x_pixel_size_dataset = detector_bank_group.create_dataset('x_pixel_size', data=np.array([x_pixel_size]))
+        x_pixel_size_dataset.attrs.create('units', 'metres')
+        y_pixel_size_dataset = detector_bank_group.create_dataset('y_pixel_size', data=np.array([y_pixel_size]))
+        y_pixel_size_dataset.attrs.create('units', 'metres')
+        if x_pixel_offset is not None:
+            x_pixel_offset_dataset = detector_bank_group.create_dataset('x_pixel_offset', data=x_pixel_offset,
+                                                                        compression=self.compress_type,
+                                                                        compression_opts=self.compress_opts)
+            x_pixel_offset_dataset.attrs.create('units', 'metres')
+        if y_pixel_offset is not None:
+            y_pixel_offset_dataset = detector_bank_group.create_dataset('y_pixel_offset', data=y_pixel_offset,
+                                                                        compression=self.compress_type,
+                                                                        compression_opts=self.compress_opts)
+            y_pixel_offset_dataset.attrs.create('units', 'metres')
         return detector_bank_group
 
     def __del__(self):

@@ -53,15 +53,15 @@ class IDFParser:
                     left_front_top = self.__get_point(cuboid.find('d:left-front-top-point', ns))
                     left_back_bottom = self.__get_point(cuboid.find('d:left-back-bottom-point', ns))
                     right_front_bottom = self.__get_point(cuboid.find('d:right-front-bottom-point', ns))
-                    # Assume thickness is front to back
-                    front_to_back = left_back_bottom - left_front_bottom
-                    thickness = np.sqrt(np.dot(front_to_back, front_to_back))
                     # Assume x pixel size is left to right
                     left_to_right = right_front_bottom - left_front_bottom
                     x_pixel_size = np.sqrt(np.dot(left_to_right, left_to_right))
-                    # Assume y pixel size is top to bottom
+                    # Assume y pixel size is front to back
+                    front_to_back = left_back_bottom - left_front_bottom
+                    y_pixel_size = np.sqrt(np.dot(front_to_back, front_to_back))
+                    # Assume thickness is top to bottom
                     top_to_bottom = left_front_top - left_front_bottom
-                    y_pixel_size = np.sqrt(np.dot(top_to_bottom, top_to_bottom))
+                    thickness = np.sqrt(np.dot(top_to_bottom, top_to_bottom))
                     return x_pixel_size, y_pixel_size, thickness
                 else:
                     print('no cuboid shape found to define pixel')
