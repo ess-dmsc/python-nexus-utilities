@@ -3,7 +3,13 @@ from nexusbuilder import NexusBuilder
 
 if __name__ == '__main__':
     copy_l_to_r = \
-        OrderedDict([('/raw_data_1/good_frames', '/raw_data_1/good_frames'),
+        OrderedDict([('raw_data_1/good_frames', 'raw_data_1/good_frames'),
+                     ('raw_data_1/duration', 'raw_data_1/duration'),
+                     ('raw_data_1/start_time', 'raw_data_1/start_time'),
+                     ('raw_data_1/end_time', 'raw_data_1/end_time'),
+                     ('raw_data_1/run_cycle', 'raw_data_1/run_cycle'),
+                     ('raw_data_1/title', 'raw_data_1/title'),
+                     ('raw_data_1/definition', 'raw_data_1/definition'),
                      ('raw_data_1/instrument', 'raw_data_1/instrument'),
                      ('raw_data_1/instrument/name', 'raw_data_1/instrument/name'),
                      ('raw_data_1/instrument/source', 'raw_data_1/instrument/source'),
@@ -21,15 +27,15 @@ if __name__ == '__main__':
     builder.add_user('Sans2d Team', 'ISIS, STFC')
     builder.add_detector_banks_from_idf()
     copy_l_to_r = \
-        OrderedDict([('/raw_data_1/detector_1_events', '/raw_data_1/instrument/detector_2/events'),
-                     ('/raw_data_1/detector_1_events/event_id', '/raw_data_1/instrument/detector_2/events/event_id'),
-                     ('/raw_data_1/detector_1_events/total_counts',
-                      '/raw_data_1/instrument/detector_2/events/total_counts'),
-                     ('/raw_data_1/detector_1_events/event_index',
-                      '/raw_data_1/instrument/detector_2/events/event_index'),
-                     ('/raw_data_1/detector_1_events/event_time_zero',
-                      '/raw_data_1/instrument/detector_2/events/event_time_zero'),
-                     ('/raw_data_1/detector_1_events/event_time_offset',
-                      '/raw_data_1/instrument/detector_2/events/event_time_offset'),
+        OrderedDict([('raw_data_1/detector_1_events', 'raw_data_1/instrument/detector_2/events'),
+                     ('raw_data_1/detector_1_events/event_id', 'raw_data_1/instrument/detector_2/events/event_id'),
+                     ('raw_data_1/detector_1_events/total_counts',
+                      'raw_data_1/instrument/detector_2/events/total_counts'),
+                     ('raw_data_1/detector_1_events/event_index',
+                      'raw_data_1/instrument/detector_2/events/event_index'),
+                     ('raw_data_1/detector_1_events/event_time_zero',
+                      'raw_data_1/instrument/detector_2/events/event_time_zero'),
+                     ('raw_data_1/detector_1_events/event_time_offset',
+                      'raw_data_1/instrument/detector_2/events/event_time_offset'),
                      ])
     builder.copy_items(copy_l_to_r)
