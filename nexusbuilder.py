@@ -85,6 +85,8 @@ class NexusBuilder:
         """
         Add detector banks from a Mantid IDF file
         NB, currently only works for "RectangularDetector" panels 
+            currently assumes the coordinate system in the IDF is the same as the NeXus one
+            (z is beam direction, x is the other horizontal, y is vertical)
         """
         if self.idf_parser is None:
             logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
