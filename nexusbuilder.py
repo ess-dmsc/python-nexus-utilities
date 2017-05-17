@@ -5,6 +5,7 @@ import tables
 import os
 import numpy as np
 from idfparser import IDFParser
+import nexusutils
 
 logger = logging.getLogger('NeXus_Builder')
 logger.setLevel(logging.DEBUG)
@@ -12,12 +13,6 @@ console = logging.StreamHandler()
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logger.addHandler(console)
-
-
-def is_scalar(object_to_check):
-    if hasattr(object_to_check, "__len__"):
-        return len(object_to_check) == 1
-    return True
 
 
 class NexusBuilder:
@@ -41,7 +36,7 @@ class NexusBuilder:
         """
         self.compress_type = compress_type
         self.compress_opts = compress_opts
-        self.__wipe_file(target_file_name)
+        nexusutils.wipe_file(target_file_name)
         self.source_file = h5py.File(source_file_name, 'r')
         self.target_file = h5py.File(target_file_name, 'r+')
         # Having an NXentry root group is compulsory in NeXus standard
@@ -77,7 +72,7 @@ class NexusBuilder:
         :param affiliation: Affiliation of the user
         :return: 
         """
-        user_group = self.__add_nx_group(self.root, 'user_1', 'NXuser')
+        user_group = nexusutils.add_nx_group(self.root, 'user_1', 'NXuser')
         user_group.create_dataset('name', data=name)
         user_group.create_dataset('affiliation', data=affiliation)
 
@@ -97,7 +92,7 @@ class NexusBuilder:
                                                     det_info['distance'][1],
                                                     det_info['x_pixel_offset'], det_info['y_pixel_offset'])
             if 'transformation' in det_info:
-                self.__add_translation(det_bank_group, det_info['transformation'])
+                nexusutils.add_translation(det_bank_group, det_info['transformation'])
 
     def add_detector_bank(self, name, number, x_pixel_size, y_pixel_size, thickness, distance, x_beam_centre,
                           y_beam_centre, x_pixel_offset=None, y_pixel_offset=None):
@@ -117,14 +112,14 @@ class NexusBuilder:
         :return: NXdetector group
         """
         # TODO add pixel_numbers (ids)
-        if not is_scalar(x_pixel_size):
+        if not nexusutils.is_scalar(x_pixel_size):
             logger.error('In NexusBuilder.__add_detector_bank x_pixel_size must be scalar')
-        if not is_scalar(y_pixel_size):
+        if not nexusutils.is_scalar(y_pixel_size):
             logger.error('In NexusBuilder.__add_detector_bank y_pixel_size must be scalar')
-        if not is_scalar(thickness):
+        if not nexusutils.is_scalar(thickness):
             logger.error('In NexusBuilder.__add_detector_bank thickness must be scalar')
         instrument_group = self.root['instrument']
-        detector_bank_group = self.__add_nx_group(instrument_group, 'detector_' + str(number), 'NXdetector')
+        detector_bank_group = nexusutils.add_nx_group(instrument_group, 'detector_' + str(number), 'NXdetector')
         detector_bank_group.create_dataset('local_name', data=name)
         thickness_dataset = detector_bank_group.create_dataset('sensor_thickness', data=np.array([thickness]))
         thickness_dataset.attrs.create('units', 'metres')
@@ -149,25 +144,10 @@ class NexusBuilder:
         self.source_file.close()
         self.target_file.close()
 
-    def __add_translation(self, group, transformation_info):
-        # TODO finish (add datasets)
-        self.__add_nx_group(group, 'transformation', 'NXtransformation')
-
     def __add_nx_entry(self, nx_entry_name):
         entry_group = self.target_file.create_group(nx_entry_name)
         entry_group.attrs.create('NX_class', 'NXentry')
         return entry_group
-
-    @staticmethod
-    def __add_nx_group(parent_group, group_name, nx_class_name):
-        created_group = parent_group.create_group(group_name)
-        created_group.attrs.create('NX_class', nx_class_name)
-        return created_group
-
-    @staticmethod
-    def __wipe_file(filename):
-        with h5py.File(filename, 'w') as f_write:
-            pass
 
     def __copy_group(self, source_group_name, target_group_name):
         """
