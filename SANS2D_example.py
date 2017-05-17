@@ -20,24 +20,24 @@ if __name__ == '__main__':
                      ('raw_data_1/instrument/moderator/distance', 'raw_data_1/instrument/moderator/distance'),
                      ])
 
-    builder = NexusBuilder('SANS_test.nxs', 'SANS_example_noComp.hdf5', idf_filename='SANS2D_Definition.xml')
+    builder = NexusBuilder('SANS_test.nxs', 'SANS_example_noComp.hdf5', idf_filename='SANS2D_Definition_Tubes.xml')
     # builder = NexusBuilder('SANS_test.nxs', 'SANS_example_gzip.hdf5', idf_filename='SANS2D_Definition.xml',
     #                        compress_type='gzip', compress_opts=1)
     # builder = NexusBuilder('SANS_test.nxs', 'SANS_example_blosc.hdf5', idf_filename='SANS2D_Definition.xml',
     #                        compress_type=32001)
     builder.copy_items(copy_l_to_r)
     builder.add_user('Sans2d Team', 'ISIS, STFC')
-    builder.add_detector_banks_from_idf()
-    copy_l_to_r = \
-        OrderedDict([('raw_data_1/detector_1_events', 'raw_data_1/instrument/detector_2/events'),
-                     ('raw_data_1/detector_1_events/event_id', 'raw_data_1/instrument/detector_2/events/event_id'),
-                     ('raw_data_1/detector_1_events/total_counts',
-                      'raw_data_1/instrument/detector_2/events/total_counts'),
-                     ('raw_data_1/detector_1_events/event_index',
-                      'raw_data_1/instrument/detector_2/events/event_index'),
-                     ('raw_data_1/detector_1_events/event_time_zero',
-                      'raw_data_1/instrument/detector_2/events/event_time_zero'),
-                     ('raw_data_1/detector_1_events/event_time_offset',
-                      'raw_data_1/instrument/detector_2/events/event_time_offset'),
-                     ])
-    builder.copy_items(copy_l_to_r)
+    # builder.add_detector_banks_from_idf()
+    builder.copy_items(OrderedDict([('raw_data_1/detector_1_events',
+                                     'raw_data_1/instrument/detector_2/events'),
+                                    ('raw_data_1/detector_1_events/event_id',
+                                     'raw_data_1/instrument/detector_2/events/event_id'),
+                                    ('raw_data_1/detector_1_events/total_counts',
+                                     'raw_data_1/instrument/detector_2/events/total_counts'),
+                                    ('raw_data_1/detector_1_events/event_index',
+                                     'raw_data_1/instrument/detector_2/events/event_index'),
+                                    ('raw_data_1/detector_1_events/event_time_zero',
+                                     'raw_data_1/instrument/detector_2/events/event_time_zero'),
+                                    ('raw_data_1/detector_1_events/event_time_offset',
+                                     'raw_data_1/instrument/detector_2/events/event_time_offset'),
+                                    ]))

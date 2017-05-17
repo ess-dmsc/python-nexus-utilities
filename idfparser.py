@@ -48,28 +48,38 @@ class IDFParser:
         return np.array([xml_point.get('x'), xml_point.get('y'), xml_point.get('z')]).astype(float)
 
     def __get_pixel(self, xml_root, type_name):
-        ns = {'d': 'http://www.mantidproject.org/IDF/1.0'}
-        for xml_type in xml_root.findall('d:type', ns):
+        for xml_type in xml_root.findall('d:type', self.ns):
             if xml_type.get('name') == type_name and xml_type.get('is') == 'detector':
-                cuboid = xml_type.find('d:cuboid', ns)
+                cuboid = xml_type.find('d:cuboid', self.ns)
+                cylinder = xml_type.find('d:cylinder', self.ns)
                 if cuboid is not None:
-                    left_front_bottom = self.__get_point(cuboid.find('d:left-front-bottom-point', ns))
-                    left_front_top = self.__get_point(cuboid.find('d:left-front-top-point', ns))
-                    left_back_bottom = self.__get_point(cuboid.find('d:left-back-bottom-point', ns))
-                    right_front_bottom = self.__get_point(cuboid.find('d:right-front-bottom-point', ns))
-                    # Assume x pixel size is left to right
-                    left_to_right = right_front_bottom - left_front_bottom
-                    x_pixel_size = np.sqrt(np.dot(left_to_right, left_to_right))
-                    # Assume y pixel size is front to back
-                    front_to_back = left_back_bottom - left_front_bottom
-                    y_pixel_size = np.sqrt(np.dot(front_to_back, front_to_back))
-                    # Assume thickness is top to bottom
-                    top_to_bottom = left_front_top - left_front_bottom
-                    thickness = np.sqrt(np.dot(top_to_bottom, top_to_bottom))
-                    return x_pixel_size, y_pixel_size, thickness
+                    return self.__parse_cuboid(cuboid)
+                elif cylinder is not None:
+                    return self.__parse_cylinder(cylinder)
                 else:
-                    print('no cuboid shape found to define pixel')
+                    print('pixel is not of known shape')
         return None, None, None
+
+    def __parse_cuboid(self, cuboid_xml):
+        left_front_bottom = self.__get_point(cuboid_xml.find('d:left-front-bottom-point', self.ns))
+        left_front_top = self.__get_point(cuboid_xml.find('d:left-front-top-point', self.ns))
+        left_back_bottom = self.__get_point(cuboid_xml.find('d:left-back-bottom-point', self.ns))
+        right_front_bottom = self.__get_point(cuboid_xml.find('d:right-front-bottom-point', self.ns))
+        # Assume x pixel size is left to right
+        left_to_right = right_front_bottom - left_front_bottom
+        x_pixel_size = np.sqrt(np.dot(left_to_right, left_to_right))
+        # Assume y pixel size is front to back
+        front_to_back = left_back_bottom - left_front_bottom
+        y_pixel_size = np.sqrt(np.dot(front_to_back, front_to_back))
+        # Assume thickness is top to bottom
+        top_to_bottom = left_front_top - left_front_bottom
+        thickness = np.sqrt(np.dot(top_to_bottom, top_to_bottom))
+        return x_pixel_size, y_pixel_size, thickness
+
+    def __parse_cylinder(self, cylinder_xml):
+        # Map this geometry to x, y and z size (thickness) as best as we can
+
+        pass
 
     @staticmethod
     def __get_1d_pixel_offsets(dimension_name, xml_type):
