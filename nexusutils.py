@@ -1,3 +1,4 @@
+import numpy as np
 import h5py
 
 
@@ -14,7 +15,7 @@ def wipe_file(filename):
 
 def add_nx_group(parent_group, group_name, nx_class_name):
     created_group = parent_group.create_group(group_name)
-    created_group.attrs.create('NX_class', nx_class_name)
+    created_group.attrs.create('NX_class', np.array(nx_class_name).astype('|S7'))
     return created_group
 
 

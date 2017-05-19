@@ -129,24 +129,84 @@ class NexusBuilder:
         self.__add_detector_bank_axis(detector_bank_group, 'y', y_pixel_size, y_pixel_offset, y_beam_centre)
         return detector_bank_group
 
+    def add_detector(self, name, number):
+        """
+        Add an NXdetector with minimal details
+        :param name: Name of the detector panel
+        :param number: Detectors are typically numbered from 1
+        :return: NXdetector group
+        """
+        instrument_group = self.root['instrument']
+        detector_group = nexusutils.add_nx_group(instrument_group, 'detector_' + str(number), 'NXdetector')
+        detector_group.create_dataset('local_name', data=name)
+        return detector_group
+
+    def add_detector_module(self, detector_group, name, start_id, data_size,
+                            fast_pixel_direction_pixel_step=1, fast_pixel_direction_offset=(0, 0, 0),
+                            slow_pixel_direction_pixel_step=None, slow_pixel_direction_offset=None):
+        """
+        Add an NXdetector_module
+        Assumes units of metres
+        Use an NXtransformation for the module offset
+        
+        :param detector_group: The parent NXdetector
+        :param start_id: The first pixel id in the module
+        :param data_size: Total number of pixels in this module
+        :param fast_pixel_direction_vector: Direction of the fast varying pixel number direction, three-element iterable
+        :param fast_pixel_direction_offset: Offset between pixels in the fast varying pixel number direction, three-element iterable 
+        :param slow_pixel_direction_vector: Direction of the slow varying pixel number direction, three-element iterable
+        :param slow_pixel_direction_offset: Offset between pixels in the slow varying pixel number direction, three-element iterable
+        :return: NXdetector_module
+        """
+        detector_module = nexusutils.add_nx_group(detector_group, name, 'NXdetector_module')
+        self.__add_pixel_direction(detector_module, 'fast_pixel_direction', fast_pixel_direction_offset,
+                                   fast_pixel_direction_pixel_step, data_size[0])
+        if len(data_size) > 1:
+            self.__add_pixel_direction(detector_module, 'slow_pixel_direction', slow_pixel_direction_offset,
+                                       slow_pixel_direction_pixel_step, data_size[1])
+        detector_module.create_dataset('data_origin', data=start_id)
+        detector_module.create_dataset('data_size', data=data_size)
+        return detector_module
+
+    def __add_pixel_direction(self, detector_module, name, pixel_direction_offset, pixel_direction_step,
+                              direction_size):
+        if all(arg is not None for arg in [name, pixel_direction_offset, pixel_direction_step, direction_size]):
+            if len(pixel_direction_offset) != 3:
+                logger.error(
+                    'In add_detector_module the pixel direction offset' +
+                    ' must each have three values (corresponding to the cartesian axes)' +
+                    ' Module name: ' + name)
+            pixel_direction = detector_module.create_dataset(name, shape=[0])
+            pixel_direction.attrs.create('transformation_type', np.array('translation').astype('|S11'))
+            pixel_direction.attrs.create('offset_units', np.array('metres').astype('|S6'))
+            pixel_direction.attrs.create('offset', data=np.array(pixel_direction_offset))
+            pixel_direction.attrs.create('size_in_pixels', direction_size)
+            pixel_direction.attrs.create('pixel_number_step', pixel_direction_step)
+        else:
+            logger.debug('Missing arguments in __add_pixel_direction to define direction: ' + name)
+
     def __add_detector_bank_axis(self, group, axis, pixel_size, pixel_offset, beam_centre):
         pixel_size_dataset = group.create_dataset(axis + '_pixel_size', data=np.array([pixel_size]))
-        pixel_size_dataset.attrs.create('units', 'metres')
+        pixel_size_dataset.attrs.create('units', np.array('metres').astype('|S6'))
         beam_centre_dataset = group.create_dataset('beam_center_' + axis, data=np.array([beam_centre]))
-        beam_centre_dataset.attrs.create('units', 'metres')
+        beam_centre_dataset.attrs.create('units', np.array('metres').astype('|S6'))
         if pixel_offset is not None:
             pixel_offset_dataset = group.create_dataset(axis + '_pixel_offset', data=pixel_offset,
                                                         compression=self.compress_type,
                                                         compression_opts=self.compress_opts)
-            pixel_offset_dataset.attrs.create('units', 'metres')
+            pixel_offset_dataset.attrs.create('units', np.array('metres').astype('|S6'))
 
     def __del__(self):
-        self.source_file.close()
-        self.target_file.close()
+        # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
+        try:
+            self.source_file.close()
+            self.target_file.close()
+        except Exception:
+            pass
 
     def __add_nx_entry(self, nx_entry_name):
         entry_group = self.target_file.create_group(nx_entry_name)
-        entry_group.attrs.create('NX_class', 'NXentry')
+        entry_group.attrs.create('NX_class', np.array('NXentry').astype('|S7'))
         return entry_group
 
     def __copy_group(self, source_group_name, target_group_name):
