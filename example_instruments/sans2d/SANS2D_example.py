@@ -42,7 +42,8 @@ if __name__ == '__main__':
                                     ('raw_data_1/detector_1_events/event_time_offset',
                                      'raw_data_1/instrument/detector_2/events/event_time_offset'),
                                     ]))
-    builder.add_detector_module(detector_group, 'left_tubes', 1100000, (512, 60), 1, (0.05, 0, 0), 2000, (0, 0.1, 0))
-    # TODO add an NXtransformation
-    builder.add_detector_module(detector_group, 'right_tubes', 1101000, (512, 60), 1, (0.05, 0, 0), 2000, (0, 0.1, 0))
-    # TODO add an NXtransformation
+    left_tubes = builder.add_grid_pattern(detector_group, 'left_tubes', 1100000, [-0.5192, -0.48195, 0], [512, 60],
+                                          [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]))
+    # TODO add NXtransformation for z displacement of 23.281 from source and displacement on y axis for detector_2
+    right_tubes = builder.add_grid_pattern(detector_group, 'right_tubes', 1101000, [-0.5222, -0.473855, 0],
+                                           [512, 60], [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]))

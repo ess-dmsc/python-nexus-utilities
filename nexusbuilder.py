@@ -141,32 +141,44 @@ class NexusBuilder:
         detector_group.create_dataset('local_name', data=name)
         return detector_group
 
-    def add_detector_module(self, detector_group, name, start_id, data_size,
-                            fast_pixel_direction_pixel_step=1, fast_pixel_direction_offset=(0, 0, 0),
-                            slow_pixel_direction_pixel_step=None, slow_pixel_direction_offset=None):
-        """
-        Add an NXdetector_module
-        Assumes units of metres
-        Use an NXtransformation for the module offset
-        
-        :param detector_group: The parent NXdetector
-        :param start_id: The first pixel id in the module
-        :param data_size: Total number of pixels in this module
-        :param fast_pixel_direction_offset: Offset between pixels in the fast varying pixel number direction, three-element iterable
-        :param slow_pixel_direction_offset: Offset between pixels in the slow varying pixel number direction, three-element iterable
-        :return: NXdetector_module
-        """
-        detector_module = nexusutils.add_nx_group(detector_group, name, 'NXdetector_module')
-        self.__add_pixel_direction(detector_module, 'fast_pixel_direction', fast_pixel_direction_offset,
-                                   fast_pixel_direction_pixel_step, data_size[0])
-        if len(data_size) > 1:
-            self.__add_pixel_direction(detector_module, 'slow_pixel_direction', slow_pixel_direction_offset,
-                                       slow_pixel_direction_pixel_step, data_size[1])
-        detector_module.create_dataset('data_origin', data=start_id)
-        detector_module.create_dataset('data_size', data=data_size)
-        return detector_module
+    def add_tube_pixel(self):
+        pass
 
-    def __add_pixel_direction(self, detector_module, name, pixel_direction_offset, pixel_direction_step,
+    @staticmethod
+    def add_grid_pattern(detector_group, name, id_start, position_start, size, id_steps, steps):
+        """
+        Add an NXgrid_pattern
+        NB, will need to add a pixel_shape definition to it afterwards
+
+        :param detector_group: NXdetector group to add grid pattern to
+        :param name: Name of the NXgrid_pattern group
+        :param id_start: The lowest detector id in the grid
+        :param position_start: Vector defining the position of the detector pixel with the lowest id
+        :param size: Iterable containing the number of pixels in each dimension of the grid
+        :param id_steps: Iterable of scalars defining increase in id number along each grid dimension
+        :param steps: Iterable of vectors defining translation along each grid dimension to get to next pixel
+        :return: NXgrid_pattern group
+        """
+        grid_pattern = nexusutils.add_nx_group(detector_group, name, 'NXgrid_pattern')
+        grid_pattern.create_dataset('id_start', data=np.array([id_start]))
+        position_start_dataset = grid_pattern.create_dataset('position_start', data=np.array([position_start]))
+        position_start_dataset.attrs.create('units', np.array('metres').astype('|S6'))
+        grid_pattern.create_dataset('size', data=np.array([size]))
+        grid_pattern.create_dataset('X_id_step', data=np.array([id_steps[0]]))
+        grid_pattern.create_dataset('Y_id_step', data=np.array([id_steps[1]]))
+        if len(id_steps) > 2:
+            grid_pattern.create_dataset('Z_id_step', data=np.array([id_steps[2]]))
+        X_step_dataset = grid_pattern.create_dataset('X_step', data=np.array([steps[0]]))
+        X_step_dataset.attrs.create('units', np.array('metres').astype('|S6'))
+        Y_step_dataset = grid_pattern.create_dataset('Y_step', data=np.array([steps[1]]))
+        Y_step_dataset.attrs.create('units', np.array('metres').astype('|S6'))
+        if len(steps) > 2:
+            Z_step_dataset = grid_pattern.create_dataset('Z_step', data=np.array([steps[2]]))
+            Z_step_dataset.attrs.create('units', np.array('metres').astype('|S6'))
+        return grid_pattern
+
+    @staticmethod
+    def __add_pixel_direction(detector_module, name, pixel_direction_offset, pixel_direction_step,
                               direction_size):
         if all(arg is not None for arg in [name, pixel_direction_offset, pixel_direction_step, direction_size]):
             if len(pixel_direction_offset) != 3:
