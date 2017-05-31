@@ -55,7 +55,7 @@ class NexusBuilder:
         """
         if not isinstance(dataset_map, OrderedDict):
             raise Exception(
-                'Map of source and target items but be an OrderedDict in top-down hierarchy order of the target file')
+                'Map of source and target items must be an OrderedDict in top-down hierarchy order of the target file')
 
         for source_item_name, target_item_name in dataset_map.items():
             source_item = self.source_file.get(source_item_name)
@@ -152,9 +152,7 @@ class NexusBuilder:
         :param detector_group: The parent NXdetector
         :param start_id: The first pixel id in the module
         :param data_size: Total number of pixels in this module
-        :param fast_pixel_direction_vector: Direction of the fast varying pixel number direction, three-element iterable
-        :param fast_pixel_direction_offset: Offset between pixels in the fast varying pixel number direction, three-element iterable 
-        :param slow_pixel_direction_vector: Direction of the slow varying pixel number direction, three-element iterable
+        :param fast_pixel_direction_offset: Offset between pixels in the fast varying pixel number direction, three-element iterable
         :param slow_pixel_direction_offset: Offset between pixels in the slow varying pixel number direction, three-element iterable
         :return: NXdetector_module
         """
