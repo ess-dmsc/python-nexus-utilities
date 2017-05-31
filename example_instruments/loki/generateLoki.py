@@ -1,5 +1,9 @@
 import math
 import numpy as np
+"""
+Generate example IDF for LOKI instrument
+Author: L. Moore
+"""
 
 
 class LOKIGenerator(object):
