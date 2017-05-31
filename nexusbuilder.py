@@ -39,7 +39,7 @@ class NexusBuilder:
         nexusutils.wipe_file(target_file_name)
         self.source_file = h5py.File(source_file_name, 'r')
         self.target_file = h5py.File(target_file_name, 'r+')
-        # Having an NXentry root group is compulsory in NeXus standard
+        # Having an NXentry root group is compulsory in NeXus format
         self.root = self.__add_nx_entry(nx_entry_name)
         if idf_filename:
             self.idf_parser = IDFParser(idf_filename)
