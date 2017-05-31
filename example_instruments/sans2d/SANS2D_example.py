@@ -28,6 +28,7 @@ if __name__ == '__main__':
     builder.copy_items(copy_l_to_r)
     builder.add_user('Sans2d Team', 'ISIS, STFC')
     # builder.add_detector_banks_from_idf()
+    detector_group = builder.add_detector('detector_2', 2)
     builder.copy_items(OrderedDict([('raw_data_1/detector_1_events',
                                      'raw_data_1/instrument/detector_2/events'),
                                     ('raw_data_1/detector_1_events/event_id',
@@ -41,3 +42,7 @@ if __name__ == '__main__':
                                     ('raw_data_1/detector_1_events/event_time_offset',
                                      'raw_data_1/instrument/detector_2/events/event_time_offset'),
                                     ]))
+    builder.add_detector_module(detector_group, 'left_tubes', 1100000, (512, 60), 1, (0.05, 0, 0), 2000, (0, 0.1, 0))
+    # TODO add an NXtransformation
+    builder.add_detector_module(detector_group, 'right_tubes', 1101000, (512, 60), 1, (0.05, 0, 0), 2000, (0, 0.1, 0))
+    # TODO add an NXtransformation
