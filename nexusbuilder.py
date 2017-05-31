@@ -141,8 +141,65 @@ class NexusBuilder:
         detector_group.create_dataset('local_name', data=name)
         return detector_group
 
-    def add_tube_pixel(self):
-        pass
+    @staticmethod
+    def add_shape(group, name, vertices, faces, detector_faces=None):
+        """
+        Add an NXshape to define geometry in OFF-like format
+
+        :param group: Group to add the NXshape group to
+        :param name: Name of the NXshape group
+        :param vertices: 2D numpy array list of [x,y,z] coordinates of vertices
+        :param faces: 2D numpy array list of vertex indices in each face, right-hand rule for face normal
+        :param detector_faces: Optional 2D numpy array list of face number-detector id pairs
+        :return: NXshape group
+        """
+        shape = nexusutils.add_nx_group(group, name, 'NXshape')
+        shape.create_dataset('vertices', data=vertices)
+        shape.create_dataset('faces', data=faces)
+        if detector_faces is not None:
+            shape.create_dataset('detector_faces', data=detector_faces)
+        return shape
+
+    def add_tube_pixel(self, group, height, radius, centre=None, number_of_vertices=100):
+        """
+        Axis is assumed to be along x
+        :param group: Group to add the pixel geometry to
+        :param height: Height of the cylinder
+        :param radius: Radius of the cylinder
+        :param centre: Circle face centre in form [x, y, z]
+        :param number_of_vertices: Maximum number of vertices to use to describe pixel
+        :return: NXshape describing a single pixel
+        """
+        if centre is None:
+            centre = [0, 0, 0]
+        angles = np.linspace(0, 2 * np.pi, np.floor((number_of_vertices / 2) + 1))
+        # The last point is the same as the first so get rid of it
+        angles = angles[:-1]
+        y = centre[1] + radius * np.cos(angles)
+        z = centre[2] + radius * np.sin(angles)
+        num_points_on_each_circle_face = len(y)
+        vertices = np.concatenate((
+            np.array(list(zip(np.zeros(len(y)), y, z))),
+            np.array(list(zip(np.ones(len(y)) * height, y, z)))))
+        #
+        # points around left circle face   points around right circle face (these follow the left ones in vertices list)
+        #  circular boundary ^                     ^
+        #                    |                     |
+        #     nth_vertex + 2 .                     . nth_vertex + num_points_on_each_circle_face + 2
+        #     nth_vertex + 1 .                     . nth_vertex + num_points_on_each_circle_face + 1
+        #     nth_vertex     .                     . nth_vertex + num_points_on_each_circle_face
+        #                    |                     |
+        #  circular boundary v                     v
+        #
+        faces = [
+            [nth_vertex, nth_vertex + num_points_on_each_circle_face, nth_vertex + num_points_on_each_circle_face + 1,
+             nth_vertex + 1] for nth_vertex in range(num_points_on_each_circle_face - 1)]
+        # Append the last face
+        faces.append([num_points_on_each_circle_face - 1, (2 * num_points_on_each_circle_face) - 1,
+                      num_points_on_each_circle_face, 0])
+        faces = np.array(faces)
+        pixel_shape = self.add_shape(group, 'pixel_shape', vertices, faces)
+        return pixel_shape
 
     @staticmethod
     def add_grid_pattern(detector_group, name, id_start, position_start, size, id_steps, steps):
