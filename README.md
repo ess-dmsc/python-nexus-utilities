@@ -1,4 +1,4 @@
-# kafka-nexus-utilities
+# python-nexus-utilities
 Functions to assist with building example NeXus files from existing ones.
 
 Tested with Python 3.5. You can install dependencies with
