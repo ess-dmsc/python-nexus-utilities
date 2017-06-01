@@ -141,14 +141,12 @@ class NexusBuilder:
         """
         # TODO add pixel_numbers (ids)
         if not nexusutils.is_scalar(x_pixel_size):
-            logger.error('In NexusBuilder.__add_detector_bank x_pixel_size must be scalar')
+            logger.error('In NexusBuilder.add_detector_bank x_pixel_size must be scalar')
         if not nexusutils.is_scalar(y_pixel_size):
-            logger.error('In NexusBuilder.__add_detector_bank y_pixel_size must be scalar')
+            logger.error('In NexusBuilder.add_detector_bank y_pixel_size must be scalar')
         if not nexusutils.is_scalar(thickness):
-            logger.error('In NexusBuilder.__add_detector_bank thickness must be scalar')
-        instrument_group = self.root['instrument']
-        detector_bank_group = nexusutils.add_nx_group(instrument_group, 'detector_' + str(number), 'NXdetector')
-        detector_bank_group.create_dataset('local_name', data=name)
+            logger.error('In NexusBuilder.add_detector_bank thickness must be scalar')
+        detector_bank_group = self.add_detector(name, number)
         self.add_dataset(detector_bank_group, 'sensor_thickness', thickness, {'units': 'metres'})
         self.add_dataset(detector_bank_group, 'distance', distance, {'units': 'metres'})
         self.__add_detector_bank_axis(detector_bank_group, 'x', x_pixel_size, x_pixel_offset, x_beam_centre)
