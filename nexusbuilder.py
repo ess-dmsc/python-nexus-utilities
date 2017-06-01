@@ -155,7 +155,8 @@ class NexusBuilder:
         """
         shape = nexusutils.add_nx_group(group, name, 'NXshape')
         shape.create_dataset('vertices', data=vertices)
-        shape.create_dataset('faces', data=faces)
+        faces_dataset = shape.create_dataset('faces', data=faces)
+        faces_dataset.attrs.create('vertices_per_face', np.array('4').astype('|S1'))
         if detector_faces is not None:
             shape.create_dataset('detector_faces', data=detector_faces)
         return shape
