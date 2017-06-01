@@ -29,6 +29,8 @@ if __name__ == '__main__':
     builder.add_user('Sans2d Team', 'ISIS, STFC')
 
     # Add the first detector panel
+    # This panel is centred on the beam centre
+    # 23.281 is the displacement along the beam (z-axis) from source, not sample. Should this be changed... (L2 ~4m)
     detector_group_1 = builder.add_detector('rear-detector', 1)
     # Copy event data from the existing NeXus file
     builder.copy_items(OrderedDict([('raw_data_1/detector_1_events',
@@ -44,22 +46,20 @@ if __name__ == '__main__':
                                     ('raw_data_1/detector_1_events/event_time_offset',
                                      'raw_data_1/instrument/detector_1/events/event_time_offset'),
                                     ]))
-    left_tubes = builder.add_grid_pattern(detector_group_1, 'left_tubes', 1100000, [-0.5192, -0.48195, 0], [512, 60],
+    left_tubes = builder.add_grid_pattern(detector_group_1, 'left_tubes', 1100000, [-0.5192, -0.48195, 23.281],
+                                          [512, 60],
                                           [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]))
     builder.add_tube_pixel(left_tubes, 0.002033984375, 0.00405)
-    # TODO add NXtransformation for z displacement of 23.281 from source
-    right_tubes = builder.add_grid_pattern(detector_group_1, 'right_tubes', 1101000, [-0.5222, -0.473855, 0],
+    right_tubes = builder.add_grid_pattern(detector_group_1, 'right_tubes', 1101000, [-0.5222, -0.473855, 23.281],
                                            [512, 60], [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]))
-    # TODO add a link to the pixel in left_tubes instead of repeating the definition
     builder.add_tube_pixel(right_tubes, 0.002033984375, 0.00405)
 
     # Add the second detector panel
-    # TODO avoid repeating definitions which are already in the first panel, use links instead
-    # TODO add NXtransformation for z displacement of 23.281 from source and displacement on y axis
+    # This panel is displaced by -1.1m on the x axis from the beam centre
     detector_group_2 = builder.add_detector('front-detector', 2)
-    left_tubes_2 = builder.add_grid_pattern(detector_group_2, 'left_tubes', 1100000, [-0.5192, -0.48195, 0], [512, 60],
-                                            [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]))
+    left_tubes_2 = builder.add_grid_pattern(detector_group_2, 'left_tubes', 1100000, [-0.5192-1.1, -0.48195, 23.281],
+                                            [512, 60], [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]))
     builder.add_tube_pixel(left_tubes_2, 0.002033984375, 0.00405)
-    right_tubes_2 = builder.add_grid_pattern(detector_group_2, 'right_tubes', 1101000, [-0.5222, -0.473855, 0],
+    right_tubes_2 = builder.add_grid_pattern(detector_group_2, 'right_tubes', 1101000, [-0.5222-1.1, -0.473855, 23.281],
                                              [512, 60], [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]))
     builder.add_tube_pixel(right_tubes_2, 0.002033984375, 0.00405)
