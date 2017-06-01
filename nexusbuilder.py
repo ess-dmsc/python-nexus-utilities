@@ -89,13 +89,19 @@ class NexusBuilder:
         """
         if isinstance(group, str):
             group = self.root[group]
-        dataset = group.create_dataset(name, data=data)
+        if nexusutils.is_scalar(data):
+            data = [data]
+            dataset = group.create_dataset(name, data=data)
+        else:
+            dataset = group.create_dataset(name, data=data, compression=self.compress_type,
+                                           compression_opts=self.compress_opts)
+
         if attributes:
-            for key, value in attributes:
-                if isinstance(value, str):
-                    dataset.attrs.create(key, np.array(value).astype('|S' + str(len(value))))
+            for key in attributes:
+                if isinstance(attributes[key], str):
+                    dataset.attrs.create(key, np.array(attributes[key]).astype('|S' + str(len(attributes[key]))))
                 else:
-                    dataset.attrs.create(key, np.array(value))
+                    dataset.attrs.create(key, np.array(attributes[key]))
         return dataset
 
     def add_detector_banks_from_idf(self):
@@ -143,10 +149,8 @@ class NexusBuilder:
         instrument_group = self.root['instrument']
         detector_bank_group = nexusutils.add_nx_group(instrument_group, 'detector_' + str(number), 'NXdetector')
         detector_bank_group.create_dataset('local_name', data=name)
-        thickness_dataset = detector_bank_group.create_dataset('sensor_thickness', data=np.array([thickness]))
-        thickness_dataset.attrs.create('units', 'metres')
-        distance_dataset = detector_bank_group.create_dataset('distance', data=np.array([distance]))
-        distance_dataset.attrs.create('units', 'metres')
+        self.add_dataset(detector_bank_group, 'sensor_thickness', thickness, {'units': 'metres'})
+        self.add_dataset(detector_bank_group, 'distance', distance, {'units': 'metres'})
         self.__add_detector_bank_axis(detector_bank_group, 'x', x_pixel_size, x_pixel_offset, x_beam_centre)
         self.__add_detector_bank_axis(detector_bank_group, 'y', y_pixel_size, y_pixel_offset, y_beam_centre)
         return detector_bank_group
@@ -163,8 +167,7 @@ class NexusBuilder:
         detector_group.create_dataset('local_name', data=name)
         return detector_group
 
-    @staticmethod
-    def add_shape(group, name, vertices, faces, detector_faces=None):
+    def add_shape(self, group, name, vertices, faces, detector_faces=None):
         """
         Add an NXshape to define geometry in OFF-like format
 
@@ -177,8 +180,7 @@ class NexusBuilder:
         """
         shape = nexusutils.add_nx_group(group, name, 'NXshape')
         shape.create_dataset('vertices', data=vertices)
-        faces_dataset = shape.create_dataset('faces', data=faces)
-        faces_dataset.attrs.create('vertices_per_face', np.array('4').astype('|S1'))
+        self.add_dataset(shape, 'faces', faces, {'vertices_per_face': 4})
         if detector_faces is not None:
             shape.create_dataset('detector_faces', data=detector_faces)
         return shape
@@ -225,8 +227,7 @@ class NexusBuilder:
         pixel_shape = self.add_shape(group, 'pixel_shape', vertices, faces)
         return pixel_shape
 
-    @staticmethod
-    def add_grid_pattern(detector_group, name, id_start, position_start, size, id_steps, steps):
+    def add_grid_pattern(self, detector_group, name, id_start, position_start, size, id_steps, steps):
         """
         Add an NXgrid_pattern
         NB, will need to add a pixel_shape definition to it afterwards
@@ -242,24 +243,19 @@ class NexusBuilder:
         """
         grid_pattern = nexusutils.add_nx_group(detector_group, name, 'NXgrid_pattern')
         grid_pattern.create_dataset('id_start', data=np.array([id_start]))
-        position_start_dataset = grid_pattern.create_dataset('position_start', data=np.array([position_start]))
-        position_start_dataset.attrs.create('units', np.array('metres').astype('|S6'))
+        self.add_dataset(grid_pattern, 'position_start', position_start, {'units': 'metres'})
         grid_pattern.create_dataset('size', data=np.array([size]))
         grid_pattern.create_dataset('X_id_step', data=np.array([id_steps[0]]))
         grid_pattern.create_dataset('Y_id_step', data=np.array([id_steps[1]]))
         if len(id_steps) > 2:
             grid_pattern.create_dataset('Z_id_step', data=np.array([id_steps[2]]))
-        X_step_dataset = grid_pattern.create_dataset('X_step', data=np.array([steps[0]]))
-        X_step_dataset.attrs.create('units', np.array('metres').astype('|S6'))
-        Y_step_dataset = grid_pattern.create_dataset('Y_step', data=np.array([steps[1]]))
-        Y_step_dataset.attrs.create('units', np.array('metres').astype('|S6'))
+        self.add_dataset(grid_pattern, 'X_step', [steps[0]], {'units': 'metres'})
+        self.add_dataset(grid_pattern, 'Y_step', [steps[1]], {'units': 'metres'})
         if len(steps) > 2:
-            Z_step_dataset = grid_pattern.create_dataset('Z_step', data=np.array([steps[2]]))
-            Z_step_dataset.attrs.create('units', np.array('metres').astype('|S6'))
+            self.add_dataset(grid_pattern, 'Z_step', [steps[2]], {'units': 'metres'})
         return grid_pattern
 
-    @staticmethod
-    def __add_pixel_direction(detector_module, name, pixel_direction_offset, pixel_direction_step,
+    def __add_pixel_direction(self, detector_module, name, pixel_direction_offset, pixel_direction_step,
                               direction_size):
         if all(arg is not None for arg in [name, pixel_direction_offset, pixel_direction_step, direction_size]):
             if len(pixel_direction_offset) != 3:
@@ -267,25 +263,19 @@ class NexusBuilder:
                     'In add_detector_module the pixel direction offset' +
                     ' must each have three values (corresponding to the cartesian axes)' +
                     ' Module name: ' + name)
-            pixel_direction = detector_module.create_dataset(name, shape=[0])
-            pixel_direction.attrs.create('transformation_type', np.array('translation').astype('|S11'))
-            pixel_direction.attrs.create('offset_units', np.array('metres').astype('|S6'))
-            pixel_direction.attrs.create('offset', data=np.array(pixel_direction_offset))
-            pixel_direction.attrs.create('size_in_pixels', direction_size)
-            pixel_direction.attrs.create('pixel_number_step', pixel_direction_step)
+            self.add_dataset(detector_module, name, 0, {'transformation_type': 'translation',
+                                                        'offset_units': 'metres',
+                                                        'offset': pixel_direction_offset,
+                                                        'size_in_pixels': direction_size,
+                                                        'pixel_number_step': pixel_direction_step})
         else:
             logger.debug('Missing arguments in __add_pixel_direction to define direction: ' + name)
 
     def __add_detector_bank_axis(self, group, axis, pixel_size, pixel_offset, beam_centre):
-        pixel_size_dataset = group.create_dataset(axis + '_pixel_size', data=np.array([pixel_size]))
-        pixel_size_dataset.attrs.create('units', np.array('metres').astype('|S6'))
-        beam_centre_dataset = group.create_dataset('beam_center_' + axis, data=np.array([beam_centre]))
-        beam_centre_dataset.attrs.create('units', np.array('metres').astype('|S6'))
+        self.add_dataset(group, axis + '_pixel_size', pixel_size, {'units': 'metres'})
+        self.add_dataset(group, 'beam_center_' + axis, beam_centre, {'units': 'metres'})
         if pixel_offset is not None:
-            pixel_offset_dataset = group.create_dataset(axis + '_pixel_offset', data=pixel_offset,
-                                                        compression=self.compress_type,
-                                                        compression_opts=self.compress_opts)
-            pixel_offset_dataset.attrs.create('units', np.array('metres').astype('|S6'))
+            self.add_dataset(group, axis + '_pixel_offset', pixel_offset, {'units': 'metres'})
 
     def __del__(self):
         # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
