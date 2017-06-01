@@ -70,11 +70,32 @@ class NexusBuilder:
         
         :param name: Name of the user 
         :param affiliation: Affiliation of the user
-        :return: 
+        :return: NXuser
         """
         user_group = nexusutils.add_nx_group(self.root, 'user_1', 'NXuser')
         user_group.create_dataset('name', data=name)
         user_group.create_dataset('affiliation', data=affiliation)
+        return user_group
+
+    def add_dataset(self, group, name, data, attributes=None):
+        """
+        Add a dataset to a given group
+
+        :param group: Group handle, or group path from NXentry
+        :param name: Name of the dataset to create
+        :param data: Data to put in the dataset
+        :param attributes: Optional dictionary of attributes to add to dataset
+        :return: Dataset
+        """
+        if isinstance(group, str):
+            group = self.root[group]
+        dataset = group.create_dataset(name, data=data)
+        if attributes:
+            for key, value in attributes:
+                if isinstance(value, str):
+                    dataset.attrs.create(key, np.array(value).astype('|S' + str(len(value))))
+                else:
+                    dataset.attrs.create(key, np.array(value))
 
     def add_detector_banks_from_idf(self):
         """
