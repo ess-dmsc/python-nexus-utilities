@@ -30,6 +30,7 @@ if __name__ == '__main__':
 
     # Add the first detector panel
     detector_group_1 = builder.add_detector('rear-detector', 1)
+    # Copy event data from the existing NeXus file
     builder.copy_items(OrderedDict([('raw_data_1/detector_1_events',
                                      'raw_data_1/instrument/detector_1/events'),
                                     ('raw_data_1/detector_1_events/event_id',
@@ -53,8 +54,9 @@ if __name__ == '__main__':
     builder.add_tube_pixel(right_tubes, 0.002033984375, 0.00405)
 
     # Add the second detector panel
-    detector_group_2 = builder.add_detector('front-detector', 2)
+    # TODO avoid repeating definitions which are already in the first panel, use links instead
     # TODO add NXtransformation for z displacement of 23.281 from source and displacement on y axis
+    detector_group_2 = builder.add_detector('front-detector', 2)
     left_tubes_2 = builder.add_grid_pattern(detector_group_2, 'left_tubes', 1100000, [-0.5192, -0.48195, 0], [512, 60],
                                             [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]))
     builder.add_tube_pixel(left_tubes_2, 0.002033984375, 0.00405)

@@ -182,7 +182,8 @@ class NexusBuilder:
             np.array(list(zip(np.zeros(len(y)), y, z))),
             np.array(list(zip(np.ones(len(y)) * height, y, z)))))
         #
-        # points around left circle face   points around right circle face (these follow the left ones in vertices list)
+        # points around left circle face           points around right circle face
+        #                                          (these follow the left ones in vertices list)
         #  circular boundary ^                     ^
         #                    |                     |
         #     nth_vertex + 2 .                     . nth_vertex + num_points_on_each_circle_face + 2
@@ -194,7 +195,7 @@ class NexusBuilder:
         faces = [
             [nth_vertex, nth_vertex + num_points_on_each_circle_face, nth_vertex + num_points_on_each_circle_face + 1,
              nth_vertex + 1] for nth_vertex in range(num_points_on_each_circle_face - 1)]
-        # Append the last face
+        # Append the last rectangular face
         faces.append([num_points_on_each_circle_face - 1, (2 * num_points_on_each_circle_face) - 1,
                       num_points_on_each_circle_face, 0])
         faces = np.array(faces)
