@@ -81,7 +81,7 @@ class NexusBuilder:
         """
         Add a dataset to a given group
 
-        :param group: Group handle, or group path from NXentry
+        :param group: Group object, or group path from NXentry as a string
         :param name: Name of the dataset to create
         :param data: Data to put in the dataset
         :param attributes: Optional dictionary of attributes to add to dataset
@@ -96,6 +96,7 @@ class NexusBuilder:
                     dataset.attrs.create(key, np.array(value).astype('|S' + str(len(value))))
                 else:
                     dataset.attrs.create(key, np.array(value))
+        return dataset
 
     def add_detector_banks_from_idf(self):
         """
