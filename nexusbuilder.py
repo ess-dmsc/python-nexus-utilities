@@ -372,11 +372,21 @@ class NexusBuilder:
                 vertices[vertex_number, :] = np.array(off_file.readline().split()).astype(float)
 
             faces_lines = off_file.readlines()
-            all_faces = [np.array(face_line.split()).astype(int) for face_line in faces_lines]
-            # Set of each possible number of vertices in a face
-            vertices_in_faces = {each_face[0] for each_face in all_faces}
-            faces = []
-            for vertices_in_face in vertices_in_faces:
-                faces.append(np.array([face[1:] for face in all_faces if face[0] == vertices_in_face], dtype=int))
+        all_faces = [np.array(face_line.split()).astype(int) for face_line in faces_lines]
+        # Set of each possible number of vertices in a face
+        vertices_in_faces = {each_face[0] for each_face in all_faces}
+        faces = []
+        for vertices_in_face in vertices_in_faces:
+            faces.append(np.array([face[1:] for face in all_faces if face[0] == vertices_in_face], dtype='int32'))
 
         return self.add_shape(group, name, vertices, faces)
+
+    def add_grid_shape_from_idf(self, type_name):
+        """
+        Add NXgrid_shape from a StructuredDetector in a Mantid IDF file
+
+        :param type_name: Name of the type in the IDF containing the vertex list for the grid
+        :return:
+        """
+        if self.idf_parser is None:
+            logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
