@@ -3,6 +3,7 @@ import logging
 from collections import OrderedDict
 import tables
 import os
+import itertools
 import numpy as np
 from idfparser import IDFParser
 import nexusutils
@@ -178,16 +179,25 @@ class NexusBuilder:
         """
         Add an NXshape to define geometry in OFF-like format
 
-        :param group: Group to add the NXshape group to
+        :param group: Group or group name to add the NXshape group to
         :param name: Name of the NXshape group
         :param vertices: 2D numpy array list of [x,y,z] coordinates of vertices
         :param faces: 2D numpy array list of vertex indices in each face, right-hand rule for face normal
+                      or a list of these where with an arrays for faces with different number of vertices
         :param detector_faces: Optional 2D numpy array list of face number-detector id pairs
         :return: NXshape group
         """
+        if isinstance(group, str):
+            group = self.root[group]
+
         shape = nexusutils.add_nx_group(group, name, 'NXshape')
         shape.create_dataset('vertices', data=vertices)
-        self.add_dataset(shape, 'faces', faces, {'vertices_per_face': 4})
+        if isinstance(faces, list):
+            for face_types in faces:
+                self.add_dataset(shape, 'faces_' + str(face_types.shape[1]), face_types,
+                                 {'vertices_per_face': face_types.shape[1]})
+        else:
+            self.add_dataset(shape, 'faces', faces, {'vertices_per_face': faces.shape[1]})
         if detector_faces is not None:
             shape.create_dataset('detector_faces', data=detector_faces)
         return shape
@@ -337,3 +347,36 @@ class NexusBuilder:
             if key != 'target':
                 logger.debug('attr key: ' + str(key) + ' value: ' + str(value))
                 target_attributes.create(key, value)
+
+    def add_shape_from_file(self, filename, group, name):
+        """
+        Add an NXshape shape definition from an OFF file
+
+        :param filename: Name of the OFF file from which to get the geometry
+        :param group: Group to add the NXshape to
+        :param name: Name of the NXshape group to be created
+        :return: NXshape group
+        """
+        with open(filename) as off_file:
+            file_start = off_file.readline()
+            if file_start != 'OFF\n':
+                logger.error('OFF file is expected to start "OFF", actually started: ' + file_start)
+                return None
+            counts = off_file.readline().split()
+            number_of_vertices = int(counts[0])
+            # number_of_faces = int(counts[1])
+            # number_of_edges = int(counts[2])
+
+            vertices = np.zeros((number_of_vertices, 3), dtype=float)  # preallocate
+            for vertex_number in range(number_of_vertices):
+                vertices[vertex_number, :] = np.array(off_file.readline().split()).astype(float)
+
+            faces_lines = off_file.readlines()
+            all_faces = [np.array(face_line.split()).astype(int) for face_line in faces_lines]
+            # Set of each possible number of vertices in a face
+            vertices_in_faces = {each_face[0] for each_face in all_faces}
+            faces = []
+            for vertices_in_face in vertices_in_faces:
+                faces.append(np.array([face[1:] for face in all_faces if face[0] == vertices_in_face], dtype=int))
+
+        return self.add_shape(group, name, vertices, faces)

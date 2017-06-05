@@ -50,6 +50,9 @@ if __name__ == '__main__':
     builder.add_dataset('instrument/monitor_3', 'distance', 19.497 - 19.281)
     builder.add_dataset('instrument/monitor_4', 'distance', 30.0 - 19.281)
 
+    # Define monitor_1 to have the shape of the Utah teapot
+    builder.add_shape_from_file('teapot.off', 'instrument/monitor_1', 'shape')
+
     # Add the first detector panel
     # This panel is centred on the beam centre
     # 4.0 is the displacement along the beam (z-axis) from the sample (L2 distance)
