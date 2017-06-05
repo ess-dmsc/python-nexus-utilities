@@ -49,6 +49,7 @@ class NexusBuilder:
     def copy_items(self, dataset_map):
         """
         Copy datasets and groups from one NeXus file to another
+        NB, the order is important as the method of copying groups used deletes any sub-groups and datasets.
 
         :param dataset_map: Input groups and datasets to output ones, order must be top-down in hierarchy of output file 
                             Must be ordered.
@@ -90,6 +91,7 @@ class NexusBuilder:
         if isinstance(group, str):
             group = self.root[group]
         if nexusutils.is_scalar(data):
+            # Don't try to use compression with scalar datasets
             data = [data]
             dataset = group.create_dataset(name, data=data)
         else:
@@ -99,6 +101,7 @@ class NexusBuilder:
         if attributes:
             for key in attributes:
                 if isinstance(attributes[key], str):
+                    # Since python 3 we have to treat strings like this
                     dataset.attrs.create(key, np.array(attributes[key]).astype('|S' + str(len(attributes[key]))))
                 else:
                     dataset.attrs.create(key, np.array(attributes[key]))
@@ -187,9 +190,9 @@ class NexusBuilder:
         """
         Axis is assumed to be along x
         :param group: Group to add the pixel geometry to
-        :param height: Height of the cylinder
-        :param radius: Radius of the cylinder
-        :param centre: Circle face centre in form [x, y, z]
+        :param height: Height of the tube
+        :param radius: Radius of the tube
+        :param centre: On-axis centre at the end of the tube in form [x, y, z]
         :param number_of_vertices: Maximum number of vertices to use to describe pixel
         :return: NXshape describing a single pixel
         """
@@ -200,27 +203,28 @@ class NexusBuilder:
         angles = angles[:-1]
         y = centre[1] + radius * np.cos(angles)
         z = centre[2] + radius * np.sin(angles)
-        num_points_on_each_circle_face = len(y)
+        num_points_at_each_tube_end = len(y)
         vertices = np.concatenate((
             np.array(list(zip(np.zeros(len(y)), y, z))),
             np.array(list(zip(np.ones(len(y)) * height, y, z)))))
         #
-        # points around left circle face           points around right circle face
+        # points around left circle tube-end       points around right circle tube-end
         #                                          (these follow the left ones in vertices list)
         #  circular boundary ^                     ^
         #                    |                     |
-        #     nth_vertex + 2 .                     . nth_vertex + num_points_on_each_circle_face + 2
-        #     nth_vertex + 1 .                     . nth_vertex + num_points_on_each_circle_face + 1
-        #     nth_vertex     .                     . nth_vertex + num_points_on_each_circle_face
+        #     nth_vertex + 2 .                     . nth_vertex + num_points_at_each_tube_end + 2
+        #     nth_vertex + 1 .                     . nth_vertex + num_points_at_each_tube_end + 1
+        #     nth_vertex     .                     . nth_vertex + num_points_at_each_tube_end
         #                    |                     |
         #  circular boundary v                     v
         #
         faces = [
-            [nth_vertex, nth_vertex + num_points_on_each_circle_face, nth_vertex + num_points_on_each_circle_face + 1,
-             nth_vertex + 1] for nth_vertex in range(num_points_on_each_circle_face - 1)]
+            [nth_vertex, nth_vertex + num_points_at_each_tube_end, nth_vertex + num_points_at_each_tube_end + 1,
+             nth_vertex + 1] for nth_vertex in range(num_points_at_each_tube_end - 1)]
         # Append the last rectangular face
-        faces.append([num_points_on_each_circle_face - 1, (2 * num_points_on_each_circle_face) - 1,
-                      num_points_on_each_circle_face, 0])
+        faces.append([num_points_at_each_tube_end - 1, (2 * num_points_at_each_tube_end) - 1,
+                      num_points_at_each_tube_end, 0])
+        # NB this is a tube, not a cylinder, I'm not adding the circular faces on the ends of the tube
         faces = np.array(faces)
         pixel_shape = self.add_shape(group, 'pixel_shape', vertices, faces)
         return pixel_shape
