@@ -35,10 +35,10 @@ if __name__ == '__main__':
                      ('raw_data_1/monitor_4/time_of_flight', 'raw_data_1/instrument/monitor_4/time_of_flight'),
                      ])
 
-    # builder = NexusBuilder('SANS_test.nxs', 'SANS_example_noComp.hdf5', idf_filename='SANS2D_Definition_Tubes.xml')
-    builder = NexusBuilder('SANS_test.nxs', 'SANS_example_gzip.hdf5', idf_filename='SANS2D_Definition_Tubes.xml',
+    # builder = NexusBuilder('SANS_example_noComp.hdf5', 'SANS_test.nxs', idf_filename='SANS2D_Definition_Tubes.xml')
+    builder = NexusBuilder('SANS_example_gzip.hdf5', 'SANS_test.nxs', idf_filename='SANS2D_Definition_Tubes.xml',
                            compress_type='gzip', compress_opts=1)
-    # builder = NexusBuilder('SANS_test.nxs', 'SANS_example_blosc.hdf5', idf_filename='SANS2D_Definition_Tubes.xml',
+    # builder = NexusBuilder('SANS_example_blosc.hdf5', 'SANS_test.nxs', idf_filename='SANS2D_Definition_Tubes.xml',
     #                        compress_type=32001)
     builder.copy_items(copy_l_to_r)
     builder.add_user('Sans2d Team', 'ISIS, STFC')

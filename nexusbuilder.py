@@ -22,13 +22,13 @@ class NexusBuilder:
     NB. tables import looks redundant but actually loads BLOSC compression filter
     """
 
-    def __init__(self, source_file_name, target_file_name, compress_type=None, compress_opts=None,
+    def __init__(self, target_file_name, source_file_name=None, compress_type=None, compress_opts=None,
                  nx_entry_name='raw_data_1', idf_filename=None):
         """
         compress_type=32001 for BLOSC
-        
-        :param source_file_name: Name of the input file
+
         :param target_file_name: Name of the output file
+        :param source_file_name: Name of the input file
         :param nx_entry_name: Name of the root group (NXentry class)
         :param compress_type: Name or id of compression filter https://support.hdfgroup.org/services/contributions.html
         :param compress_opts: Compression options, for example gzip compression level
@@ -37,7 +37,10 @@ class NexusBuilder:
         self.compress_type = compress_type
         self.compress_opts = compress_opts
         nexusutils.wipe_file(target_file_name)
-        self.source_file = h5py.File(source_file_name, 'r')
+        if source_file_name:
+            self.source_file = h5py.File(source_file_name, 'r')
+        else:
+            self.source_file = None
         self.target_file = h5py.File(target_file_name, 'r+')
         # Having an NXentry root group is compulsory in NeXus format
         self.root = self.__add_nx_entry(nx_entry_name)
@@ -90,7 +93,10 @@ class NexusBuilder:
         """
         if isinstance(group, str):
             group = self.root[group]
-        if nexusutils.is_scalar(data):
+
+        if isinstance(data, str):
+            dataset = group.create_dataset(name, data=np.array(data).astype('|S' + str(len(data))))
+        elif nexusutils.is_scalar(data):
             # Don't try to use compression with scalar datasets
             data = [data]
             dataset = group.create_dataset(name, data=data)
