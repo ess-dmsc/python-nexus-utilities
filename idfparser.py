@@ -88,3 +88,64 @@ class IDFParser:
         start = float(xml_type.get(dimension_name + 'start'))
         stop = start + (step * pixels)
         return np.linspace(start, stop, pixels)
+
+    def __get_structured_detector_typenames(self):
+        names = []
+        for xml_type in self.root.findall('d:type', self.ns):
+            if xml_type.get('is') == 'StructuredDetector':
+                names.append(xml_type.get('name'))
+        return names
+
+    def get_structured_detectors(self):
+        """
+        Returns details for all components which are StructuredDetectors
+        :return:
+        """
+        structured_detector_names = self.__get_structured_detector_typenames()
+        if not structured_detector_names:
+            return None
+        location = {}
+        rotation = {}
+        for xml_type in self.root.findall('d:component', self.ns):
+            if xml_type.get('type') in structured_detector_names:
+                for location_type in xml_type:
+                    location = {'x': location_type.get('x'), 'y': location_type.get('y'), 'z': location_type.get('z')}
+                    rotation = {'angle': location_type.get('rot'), 'axis_x': location_type.get('axis-x'),
+                                'axis_y': location_type.get('axis-y'), 'axis_z': location_type.get('axis-z')}
+                yield {'id_start': xml_type.get('idstart'), 'X_id_step': xml_type.get('idstepbyrow'),
+                       'Y_id_step': xml_type.get('idstep'), 'name': xml_type.get('name'),
+                       'type_name': xml_type.get('type'), 'location': location,
+                       'rotation': rotation}
+
+    def get_structured_detector_vertices(self, type_name):
+        """
+        Looks for type definition for a StructuredDetector with the specified name and returns an array of vertices
+
+        :param type_name: The name of a StructuredDetector type definition
+        :return: Numpy array of vertex coordinates
+        """
+        for xml_type in self.root.findall('d:type', self.ns):
+            if xml_type.get('name') == type_name:
+                x_pixels = int(xml_type.get('xpixels'))
+                y_pixels = int(xml_type.get('ypixels'))
+                vertices = np.zeros((x_pixels + 1, y_pixels + 1, 3))
+                vertex_number_x = 0
+                vertex_number_y = 0
+                for vertex in xml_type:
+                    vertices[vertex_number_x, vertex_number_y, :] = np.array(
+                        [self.__none_to_zero(vertex.get('x')), self.__none_to_zero(vertex.get('y')),
+                         self.__none_to_zero(vertex.get('z'))])
+                    vertex_number_x += 1
+                    if vertex_number_x > x_pixels:
+                        # We've filled a row, move to the next one
+                        vertex_number_x = 0
+                        vertex_number_y += 1
+                return vertices
+        return None
+
+    @staticmethod
+    def __none_to_zero(x):
+        if x is None:
+            return 0
+        else:
+            return x

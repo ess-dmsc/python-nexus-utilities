@@ -191,7 +191,7 @@ class NexusBuilder:
             group = self.root[group]
 
         shape = nexusutils.add_nx_group(group, name, 'NXshape')
-        shape.create_dataset('vertices', data=vertices)
+        self.add_dataset(shape, 'vertices', vertices)
         if isinstance(faces, list):
             for face_types in faces:
                 self.add_dataset(shape, 'faces_' + str(face_types.shape[1]), face_types,
@@ -199,7 +199,7 @@ class NexusBuilder:
         else:
             self.add_dataset(shape, 'faces', faces, {'vertices_per_face': faces.shape[1]})
         if detector_faces is not None:
-            shape.create_dataset('detector_faces', data=detector_faces)
+            self.add_dataset(shape, 'detector_vertices', detector_faces)
         return shape
 
     def add_tube_pixel(self, group, height, radius, centre=None, number_of_vertices=100):
@@ -240,7 +240,7 @@ class NexusBuilder:
         # Append the last rectangular face
         faces.append([num_points_at_each_tube_end - 1, (2 * num_points_at_each_tube_end) - 1,
                       num_points_at_each_tube_end, 0])
-        # NB this is a tube, not a cylinder, I'm not adding the circular faces on the ends of the tube
+        # NB this is a tube, not a cylinder; I'm not adding the circular faces on the ends of the tube
         faces = np.array(faces)
         pixel_shape = self.add_shape(group, 'pixel_shape', vertices, faces)
         return pixel_shape
@@ -381,12 +381,56 @@ class NexusBuilder:
 
         return self.add_shape(group, name, vertices, faces)
 
-    def add_grid_shape_from_idf(self, type_name):
+    def add_grid_shapes_from_idf(self):
+        """
+        Find structured detectors in the IDF and add corresponding NXgrid_shapes in the NeXus file
+        :param group: Group in which to put the NXgrid_shapes
+        """
+        for detector_number, detector in enumerate(self.idf_parser.get_structured_detectors()):
+            # Put each one in an NXdetector
+            detector_group = self.add_detector(detector['name'], detector_number)
+            # Add the grid shape
+            grid_shape = self.add_grid_shape_from_idf(detector_group, 'grid_shape', detector['type_name'],
+                                                      detector['id_start'], detector['X_id_step'],
+                                                      detector['Y_id_step'])
+            # TODO add NXtransformations for location and rotation
+
+    def add_grid_shape_from_idf(self, group, name, type_name, id_start, X_id_step, Y_id_step, Z_id_step=None):
         """
         Add NXgrid_shape from a StructuredDetector in a Mantid IDF file
 
+        :param group: Group object or name in which to add the NXgrid_shape
+        :param name: Name of the NXgrid_shape to be created
         :param type_name: Name of the type in the IDF containing the vertex list for the grid
-        :return:
+        :param id_start: Lowest pixel id in the grid
+        :param X_id_step: Each pixel along the first dimension of the grid the pixel id increases by this number
+        :param Y_id_step: Each pixel along the second dimension of the grid the pixel id increases by this number
+        :param Z_id_step: Each pixel along the third dimension of the grid the pixel id increases by this number
+        :return: NXgrid_shape group
         """
         if self.idf_parser is None:
             logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
+        if isinstance(group, str):
+            group = self.root[group]
+        vertices = self.idf_parser.get_structured_detector_vertices(type_name)
+        grid_shape = nexusutils.add_nx_group(group, name, 'NXgrid_shape')
+        self.add_dataset(grid_shape, 'vertices', vertices, {'units': 'metres'})
+        self.add_dataset(grid_shape, 'id_start', id_start)
+        self.add_dataset(grid_shape, 'X_id_step', X_id_step)
+        self.add_dataset(grid_shape, 'Y_id_step', Y_id_step)
+        if Z_id_step:
+            self.add_dataset(grid_shape, 'Z_id_step', Z_id_step)
+        return grid_shape
+
+    def add_instrument(self, name):
+        """
+        Add an NXinstrument with specified name
+
+        :param name: Name of the instrument
+        :return: NXinstrument
+        """
+        instrument = nexusutils.add_nx_group(self.root, 'instrument', 'NXinstrument')
+        if len(name) > 2:
+            self.add_dataset(instrument, 'name', name, {'short_name': name[:3]})
+        else:
+            self.add_dataset(instrument, 'name', name, {'short_name': name})
