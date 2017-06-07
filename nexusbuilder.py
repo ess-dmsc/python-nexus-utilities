@@ -385,14 +385,16 @@ class NexusBuilder:
         """
         Find structured detectors in the IDF and add corresponding NXgrid_shapes in the NeXus file
         :param group: Group in which to put the NXgrid_shapes
+        :return: number of grid shapes added
         """
-        for detector_number, detector in enumerate(self.idf_parser.get_structured_detectors()):
+        detector_number = 0
+        for detector in self.idf_parser.get_structured_detectors():
             # Put each one in an NXdetector
             detector_group = self.add_detector(detector['name'], detector_number)
             # Add the grid shape
-            grid_shape = self.add_grid_shape_from_idf(detector_group, 'grid_shape', detector['type_name'],
-                                                      detector['id_start'], detector['X_id_step'],
-                                                      detector['Y_id_step'])
+            self.add_grid_shape_from_idf(detector_group, 'grid_shape', detector['type_name'],
+                                         detector['id_start'], detector['X_id_step'],
+                                         detector['Y_id_step'])
             # Add translation of detector
             translate_vector = np.array(
                 [detector['location']['x'], detector['location']['y'], detector['location']['z']]).astype(float)
@@ -408,6 +410,8 @@ class NexusBuilder:
                 rotate_unit_vector, rotate_magnitude = nexusutils.normalise(rotate_vector)
                 self.add_transformation(detector_group, 'rotation', float(detector['rotation']['angle']), 'degrees',
                                         rotate_unit_vector, name='panel_orientation', depends_on='panel_position')
+            detector_number += 1
+        return detector_number
 
     def add_grid_shape_from_idf(self, group, name, type_name, id_start, X_id_step, Y_id_step, Z_id_step=None):
         """
@@ -450,7 +454,7 @@ class NexusBuilder:
             self.add_dataset(instrument, 'name', name, {'short_name': name})
 
     def add_transformation(self, group, transformation_type, values, units, vector, name='transformation',
-                           depends_on=None):
+                           depends_on='.'):
         """
         Add an NXtransformation
 
@@ -468,7 +472,6 @@ class NexusBuilder:
         attributes = {'units': units,
                       'vector': vector,
                       'transformation_type': transformation_type,
+                      'depends_on': depends_on,
                       'NXclass': 'NXtransformation'}
-        if depends_on is not None:
-            attributes['depends_on'] = depends_on
         self.add_dataset(group, name, values, attributes)
