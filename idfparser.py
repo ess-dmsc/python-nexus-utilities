@@ -109,11 +109,17 @@ class IDFParser:
         for xml_type in self.root.findall('d:component', self.ns):
             if xml_type.get('type') in structured_detector_names:
                 for location_type in xml_type:
-                    location = {'x': location_type.get('x'), 'y': location_type.get('y'), 'z': location_type.get('z')}
-                    rotation = {'angle': location_type.get('rot'), 'axis_x': location_type.get('axis-x'),
-                                'axis_y': location_type.get('axis-y'), 'axis_z': location_type.get('axis-z')}
-                yield {'id_start': xml_type.get('idstart'), 'X_id_step': xml_type.get('idstepbyrow'),
-                       'Y_id_step': xml_type.get('idstep'), 'name': xml_type.get('name'),
+                    location = {'x': location_type.get('x'), 'y': location_type.get('y'),
+                                'z': location_type.get('z')}
+                    angle = location_type.get('rot')
+                    if angle is not None:
+                        rotation = {'angle': location_type.get('rot'), 'axis_x': location_type.get('axis-x'),
+                                    'axis_y': location_type.get('axis-y'),
+                                    'axis_z': location_type.get('axis-z')}
+                    else:
+                        rotation = None
+                yield {'id_start': int(xml_type.get('idstart')), 'X_id_step': int(xml_type.get('idstepbyrow')),
+                       'Y_id_step': int(xml_type.get('idstep')), 'name': xml_type.get('name'),
                        'type_name': xml_type.get('type'), 'location': location,
                        'rotation': rotation}
 

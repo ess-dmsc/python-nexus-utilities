@@ -19,6 +19,15 @@ def add_nx_group(parent_group, group_name, nx_class_name):
     return created_group
 
 
-def add_translation(group, transformation_info):
-    # TODO finish (add datasets)
-    add_nx_group(group, 'transformation', 'NXtransformation')
+def normalise(input_vector):
+    """
+    Normalise to unit vector
+
+    :param input_vector: Input vector (numpy array)
+    :param axis: The axis along which to normalise
+    :param order: Order of the norm, see https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.norm.html
+    :return: Unit vector, magnitude
+    """
+    magnitude = np.sqrt(np.sum(np.square(input_vector)))
+    unit_vector = input_vector/magnitude
+    return unit_vector, magnitude

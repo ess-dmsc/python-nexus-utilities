@@ -3,13 +3,12 @@ import logging
 from collections import OrderedDict
 import tables
 import os
-import itertools
 import numpy as np
 from idfparser import IDFParser
 import nexusutils
 
 logger = logging.getLogger('NeXus_Builder')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 console = logging.StreamHandler()
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
@@ -393,7 +392,21 @@ class NexusBuilder:
             grid_shape = self.add_grid_shape_from_idf(detector_group, 'grid_shape', detector['type_name'],
                                                       detector['id_start'], detector['X_id_step'],
                                                       detector['Y_id_step'])
-            # TODO add NXtransformations for location and rotation
+            # Add translation of detector
+            translate_vector = np.array(
+                [detector['location']['x'], detector['location']['y'], detector['location']['z']]).astype(float)
+            translate_unit_vector, translate_magnitude = nexusutils.normalise(translate_vector)
+            self.add_transformation(detector_group, 'translation', translate_magnitude, 'metres', translate_unit_vector,
+                                    name='translation')
+
+            # Add rotation of detector
+            if detector['rotation'] is not None:
+                rotate_vector = np.array(
+                    [detector['rotation']['axis_x'], detector['rotation']['axis_y'],
+                     detector['rotation']['axis_z']]).astype(float)
+                rotate_unit_vector, rotate_magnitude = nexusutils.normalise(rotate_vector)
+                self.add_transformation(detector_group, 'rotation', float(detector['rotation']['angle']), 'degrees',
+                                        rotate_unit_vector, name='rotation')
 
     def add_grid_shape_from_idf(self, group, name, type_name, id_start, X_id_step, Y_id_step, Z_id_step=None):
         """
@@ -434,3 +447,28 @@ class NexusBuilder:
             self.add_dataset(instrument, 'name', name, {'short_name': name[:3]})
         else:
             self.add_dataset(instrument, 'name', name, {'short_name': name})
+
+    def add_transformation(self, group, transformation_type, values, units, vector=None, name='transformation'):
+        """
+        Add an NXtransformation
+
+        :param group:
+        :param transformation_type:
+        :param values:
+        :param units:
+        :param vector:
+        :param name:
+        :return:
+        """
+        transform_types = ['translation', 'rotation']
+        if transformation_type not in transform_types:
+            raise Exception('Transformation must be one of these types (' + ' '.join(transform_types) + ')')
+        transformation = nexusutils.add_nx_group(group, name, 'NXtransformation')
+        if vector is None:
+            self.add_dataset(transformation, 'AXISNAME', values, {'units': units,
+                                                                  'transformation_type': transformation_type})
+        else:
+            self.add_dataset(transformation, 'AXISNAME', values, {'units': units,
+                                                                  'vector': vector,
+                                                                  'transformation_type': transformation_type})
+        return transformation
