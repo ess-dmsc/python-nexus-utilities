@@ -398,7 +398,7 @@ class NexusBuilder:
                 [detector['location']['x'], detector['location']['y'], detector['location']['z']]).astype(float)
             translate_unit_vector, translate_magnitude = nexusutils.normalise(translate_vector)
             self.add_transformation(detector_group, 'translation', translate_magnitude, 'metres', translate_unit_vector,
-                                    name='position')
+                                    name='panel_position')
 
             # Add rotation of detector
             if detector['rotation'] is not None:
@@ -407,7 +407,7 @@ class NexusBuilder:
                      detector['rotation']['axis_z']]).astype(float)
                 rotate_unit_vector, rotate_magnitude = nexusutils.normalise(rotate_vector)
                 self.add_transformation(detector_group, 'rotation', float(detector['rotation']['angle']), 'degrees',
-                                        rotate_unit_vector, name='panel_rotation', depends_on='position')
+                                        rotate_unit_vector, name='panel_orientation', depends_on='panel_position')
 
     def add_grid_shape_from_idf(self, group, name, type_name, id_start, X_id_step, Y_id_step, Z_id_step=None):
         """
