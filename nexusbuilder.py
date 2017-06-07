@@ -164,16 +164,18 @@ class NexusBuilder:
         self.__add_detector_bank_axis(detector_bank_group, 'y', y_pixel_size, y_pixel_offset, y_beam_centre)
         return detector_bank_group
 
-    def add_detector(self, name, number):
+    def add_detector(self, name, number, depends_on='.'):
         """
         Add an NXdetector with minimal details
         :param name: Name of the detector panel
         :param number: Detectors are typically numbered from 1
+        :param depends_on: Name (full path) to axis the detector is on
         :return: NXdetector group
         """
         instrument_group = self.root['instrument']
         detector_group = nexusutils.add_nx_group(instrument_group, 'detector_' + str(number), 'NXdetector')
         self.add_dataset(detector_group, 'local_name', name)
+        self.add_dataset(detector_group, 'depends_on', depends_on)
         return detector_group
 
     def add_shape(self, group, name, vertices, faces, detector_faces=None):
@@ -246,7 +248,7 @@ class NexusBuilder:
         pixel_shape = self.add_shape(group, 'pixel_shape', vertices, faces)
         return pixel_shape
 
-    def add_grid_pattern(self, detector_group, name, id_start, position_start, size, id_steps, steps):
+    def add_grid_pattern(self, detector_group, name, id_start, position_start, size, id_steps, steps, depends_on='.'):
         """
         Add an NXgrid_pattern
         NB, will need to add a pixel_shape definition to it afterwards
@@ -258,6 +260,7 @@ class NexusBuilder:
         :param size: Iterable containing the number of pixels in each dimension of the grid
         :param id_steps: Iterable of scalars defining increase in id number along each grid dimension
         :param steps: Iterable of vectors defining translation along each grid dimension to get to next pixel
+        :param depends_on: Name (full path) of axis that this component depends on
         :return: NXgrid_pattern group
         """
         grid_pattern = nexusutils.add_nx_group(detector_group, name, 'NXgrid_pattern')
@@ -272,6 +275,7 @@ class NexusBuilder:
         self.add_dataset(grid_pattern, 'Y_step', [steps[1]], {'units': 'metres'})
         if len(steps) > 2:
             self.add_dataset(grid_pattern, 'Z_step', [steps[2]], {'units': 'metres'})
+        self.add_dataset(grid_pattern, 'depends_on', depends_on)
         return grid_pattern
 
     def __add_pixel_direction(self, detector_module, name, pixel_direction_offset, pixel_direction_step,
@@ -386,7 +390,7 @@ class NexusBuilder:
         """
         Find structured detectors in the IDF and add corresponding NXgrid_shapes in the NeXus file
         :param group: Group in which to put the NXgrid_shapes
-        :return: number of grid shapes added
+        :return: Number of grid shapes added
         """
         detector_number = 0
         for detector in self.idf_parser.get_structured_detectors():
@@ -400,7 +404,7 @@ class NexusBuilder:
             translate_vector = np.array(
                 [detector['location']['x'], detector['location']['y'], detector['location']['z']]).astype(float)
             translate_unit_vector, translate_magnitude = nexusutils.normalise(translate_vector)
-            transform_group = nexusutils.add_nx_group(detector_group, 'transformations', 'NXtransformation')
+            transform_group = self.add_transformation_group(detector_group)
             position = self.add_transformation(transform_group, 'translation', translate_magnitude, 'metres',
                                                translate_unit_vector, name='panel_position')
 
@@ -416,6 +420,16 @@ class NexusBuilder:
             self.add_dataset(detector_group, 'depends_on', str(transform_group.name))
             detector_number += 1
         return detector_number
+
+    def add_transformation_group(self, group):
+        """
+        Add an NXtransformation group
+        :param group: Add NXtransformation to this group
+        :return: NXtransformation group
+        """
+        if isinstance(group, str):
+            group = self.root[group]
+        return nexusutils.add_nx_group(group, 'transformations', 'NXtransformation')
 
     def add_grid_shape_from_idf(self, group, name, type_name, id_start, X_id_step, Y_id_step, Z_id_step=None):
         """

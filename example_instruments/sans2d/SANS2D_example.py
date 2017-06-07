@@ -43,12 +43,27 @@ if __name__ == '__main__':
     builder.copy_items(copy_l_to_r)
     builder.add_user('Sans2d Team', 'ISIS, STFC')
     builder.add_dataset('sample', 'distance', 19.281)
+    sample_transform_group = builder.add_transformation_group('sample')
+    sample_position = builder.add_transformation(sample_transform_group, 'translation', 19.281, 'metres',
+                                                 [0.0, 0.0, 1.0], name='location')
     # Add monitor distances
     # I got values from the Mantid IDF where monitor distances are from source not sample, hence the -19.281
     builder.add_dataset('instrument/monitor_1', 'distance', 7.217 - 19.281)
+    transform_group = builder.add_transformation_group('instrument/monitor_1')
+    builder.add_transformation(transform_group, 'translation', 7.217, 'metres', [0.0, 0.0, 1.0],
+                               name='location')
     builder.add_dataset('instrument/monitor_2', 'distance', 17.937 - 19.281)
+    transform_group = builder.add_transformation_group('instrument/monitor_2')
+    builder.add_transformation(transform_group, 'translation', 17.937, 'metres', [0.0, 0.0, 1.0],
+                               name='location')
     builder.add_dataset('instrument/monitor_3', 'distance', 19.497 - 19.281)
+    transform_group = builder.add_transformation_group('instrument/monitor_3')
+    builder.add_transformation(transform_group, 'translation', 19.497, 'metres', [0.0, 0.0, 1.0],
+                               name='location')
     builder.add_dataset('instrument/monitor_4', 'distance', 30.0 - 19.281)
+    transform_group = builder.add_transformation_group('instrument/monitor_4')
+    builder.add_transformation(transform_group, 'translation', 30.0, 'metres', [0.0, 0.0, 1.0],
+                               name='location')
 
     # Define monitor_1 to have the shape of the Utah teapot
     builder.add_shape_from_file('teapot.off', 'instrument/monitor_1', 'shape')
@@ -73,18 +88,22 @@ if __name__ == '__main__':
                                     ]))
     left_tubes = builder.add_grid_pattern(detector_group_1, 'left_tubes', 1100000, [-0.5192, -0.48195, 4.0],
                                           [512, 60],
-                                          [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]))
+                                          [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]),
+                                          depends_on=str(sample_position.name))
     builder.add_tube_pixel(left_tubes, 0.002033984375, 0.00405)
     right_tubes = builder.add_grid_pattern(detector_group_1, 'right_tubes', 1101000, [-0.5222, -0.473855, 4.0],
-                                           [512, 60], [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]))
+                                           [512, 60], [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]),
+                                           depends_on=str(sample_position.name))
     builder.add_tube_pixel(right_tubes, 0.002033984375, 0.00405)
 
     # Add the second detector panel
     # This panel is displaced by -1.1m on the x axis from the beam centre
     detector_group_2 = builder.add_detector('front-detector', 2)
     left_tubes_2 = builder.add_grid_pattern(detector_group_2, 'left_tubes', 1100000, [-0.5192 - 1.1, -0.48195, 4.0],
-                                            [512, 60], [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]))
+                                            [512, 60], [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]),
+                                            depends_on=str(sample_position.name))
     builder.add_tube_pixel(left_tubes_2, 0.002033984375, 0.00405)
     right_tubes_2 = builder.add_grid_pattern(detector_group_2, 'right_tubes', 1101000, [-0.5222 - 1.1, -0.473855, 4.0],
-                                             [512, 60], [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]))
+                                             [512, 60], [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]),
+                                             depends_on=str(sample_position.name))
     builder.add_tube_pixel(right_tubes_2, 0.002033984375, 0.00405)
