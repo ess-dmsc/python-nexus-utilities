@@ -169,14 +169,14 @@ class NexusBuilder:
         Add an NXdetector with minimal details
         :param name: Name of the detector panel
         :param number: Detectors are typically numbered from 1
-        :param depends_on: Name (full path) to axis the detector is on
+        :param depends_on: Dataset object or name (full path) of axis the detector depends on
         :return: NXdetector group
         """
         instrument_group = self.root['instrument']
         detector_group = nexusutils.add_nx_group(instrument_group, 'detector_' + str(number), 'NXdetector')
         self.add_dataset(detector_group, 'local_name', name)
         if depends_on is not None:
-            self.add_dataset(detector_group, 'depends_on', depends_on)
+            self.add_depends_on(detector_group, depends_on)
         return detector_group
 
     def add_shape(self, group, name, vertices, faces, detector_faces=None):
@@ -276,7 +276,7 @@ class NexusBuilder:
         self.add_dataset(grid_pattern, 'Y_step', [steps[1]], {'units': 'metres'})
         if len(steps) > 2:
             self.add_dataset(grid_pattern, 'Z_step', [steps[2]], {'units': 'metres'})
-        self.add_dataset(grid_pattern, 'depends_on', depends_on)
+        self.add_depends_on(grid_pattern, depends_on)
         return grid_pattern
 
     def __add_pixel_direction(self, detector_module, name, pixel_direction_offset, pixel_direction_step,
@@ -415,12 +415,49 @@ class NexusBuilder:
                     [detector['rotation']['axis_x'], detector['rotation']['axis_y'],
                      detector['rotation']['axis_z']]).astype(float)
                 rotate_unit_vector, rotate_magnitude = nexusutils.normalise(rotate_vector)
-                self.add_transformation(transform_group, 'rotation', float(detector['rotation']['angle']), 'degrees',
-                                        rotate_unit_vector, name='panel_orientation', depends_on=str(position.name))
+                rotation = self.add_transformation(transform_group, 'rotation', float(detector['rotation']['angle']),
+                                                   'degrees',
+                                                   rotate_unit_vector, name='panel_orientation',
+                                                   depends_on=str(position.name))
+                self.add_depends_on(detector_group, rotation)
+            else:
+                self.add_depends_on(detector_group, position)
 
-            self.add_dataset(detector_group, 'depends_on', str(transform_group.name))
             detector_number += 1
         return detector_number
+
+    def add_monitor(self, number, distance_from_sample, distance_from_source, instrument_group='instrument',
+                    units='metres'):
+        """
+        Add a monitor to instrument
+        :param number: Monitors are usually numbered from 1
+        :param distance_from_sample: Distance from sample along z
+        :param distance_from_source: Distance from source along z
+        :param instrument_group: Instrument group, or name (full path) of it
+        :param units: Units of the distances
+        :return:
+        """
+        if isinstance(instrument_group, h5py._hl.group.Group):
+            instrument_group = str(instrument_group.name)
+        monitor_group = 'monitor_' + str(number)
+        monitor = nexusutils.add_nx_group(self.root[instrument_group], monitor_group, 'NXmonitor')
+        self.add_dataset(monitor, 'distance', distance_from_sample, {'units': units})
+        transform_group = self.add_transformation_group(monitor)
+        location = self.add_transformation(transform_group, 'translation', distance_from_source, units,
+                                           [0.0, 0.0, 1.0], name='location')
+        self.add_depends_on(monitor, location)
+
+    def add_depends_on(self, group, dependee):
+        """
+        Add a "depends_on" dataset to a group
+
+        :param group: Group to add dataset to
+        :param dependee: The dependee as a dataset object or full path string
+        :return: The "depends_on" dataset
+        """
+        if isinstance(dependee, h5py._hl.dataset.Dataset):
+            dependee = str(dependee.name)
+        return self.add_dataset(group, 'depends_on', dependee)
 
     def add_transformation_group(self, group):
         """
