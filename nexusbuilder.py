@@ -129,7 +129,8 @@ class NexusBuilder:
                                                     det_info['distance'][1],
                                                     det_info['x_pixel_offset'], det_info['y_pixel_offset'])
             if 'transformation' in det_info:
-                nexusutils.add_translation(det_bank_group, det_info['transformation'])
+                pass
+                # self.add_transformation(det_bank_group, det_info['transformation'])
 
     def add_detector_bank(self, name, number, x_pixel_size, y_pixel_size, thickness, distance, x_beam_centre,
                           y_beam_centre, x_pixel_offset=None, y_pixel_offset=None):
@@ -397,7 +398,7 @@ class NexusBuilder:
                 [detector['location']['x'], detector['location']['y'], detector['location']['z']]).astype(float)
             translate_unit_vector, translate_magnitude = nexusutils.normalise(translate_vector)
             self.add_transformation(detector_group, 'translation', translate_magnitude, 'metres', translate_unit_vector,
-                                    name='translation')
+                                    name='position')
 
             # Add rotation of detector
             if detector['rotation'] is not None:
@@ -406,7 +407,7 @@ class NexusBuilder:
                      detector['rotation']['axis_z']]).astype(float)
                 rotate_unit_vector, rotate_magnitude = nexusutils.normalise(rotate_vector)
                 self.add_transformation(detector_group, 'rotation', float(detector['rotation']['angle']), 'degrees',
-                                        rotate_unit_vector, name='rotation')
+                                        rotate_unit_vector, name='panel_rotation', depends_on='position')
 
     def add_grid_shape_from_idf(self, group, name, type_name, id_start, X_id_step, Y_id_step, Z_id_step=None):
         """
@@ -448,27 +449,26 @@ class NexusBuilder:
         else:
             self.add_dataset(instrument, 'name', name, {'short_name': name})
 
-    def add_transformation(self, group, transformation_type, values, units, vector=None, name='transformation'):
+    def add_transformation(self, group, transformation_type, values, units, vector, name='transformation',
+                           depends_on=None):
         """
         Add an NXtransformation
 
-        :param group:
-        :param transformation_type:
-        :param values:
-        :param units:
-        :param vector:
-        :param name:
-        :return:
+        :param group: The group to add the translation to, for example an instrument component
+        :param transformation_type: "translation" or "rotation"
+        :param values: Values to add to the dataset: distance to translate or angle to rotate
+        :param units: Units for the dataset's values
+        :param vector: Unit vector to translate along or rotate around
+        :param name: Name of this transformation axis, for example "rotation_angle", "phi", "panel_translate", etc
+        :param depends_on: Name of another NXtransformation which must be carried out before this one
         """
         transform_types = ['translation', 'rotation']
         if transformation_type not in transform_types:
             raise Exception('Transformation must be one of these types (' + ' '.join(transform_types) + ')')
-        transformation = nexusutils.add_nx_group(group, name, 'NXtransformation')
-        if vector is None:
-            self.add_dataset(transformation, 'AXISNAME', values, {'units': units,
-                                                                  'transformation_type': transformation_type})
-        else:
-            self.add_dataset(transformation, 'AXISNAME', values, {'units': units,
-                                                                  'vector': vector,
-                                                                  'transformation_type': transformation_type})
-        return transformation
+        attributes = {'units': units,
+                      'vector': vector,
+                      'transformation_type': transformation_type,
+                      'NXclass': 'NXtransformation'}
+        if depends_on is not None:
+            attributes['depends_on'] = depends_on
+        self.add_dataset(group, name, values, attributes)
