@@ -68,17 +68,18 @@ class NexusBuilder:
             elif isinstance(source_item, h5py.Group):
                 self.__copy_group(source_item_name, target_item_name)
 
-    def add_user(self, name, affiliation):
+    def add_user(self, name, affiliation, number=1):
         """
         Add an NXuser
         
         :param name: Name of the user 
         :param affiliation: Affiliation of the user
+        :param number: User entry number, usually starting from 1
         :return: NXuser
         """
-        user_group = nexusutils.add_nx_group(self.root, 'user_1', 'NXuser')
-        user_group.create_dataset('name', data=name)
-        user_group.create_dataset('affiliation', data=affiliation)
+        user_group = nexusutils.add_nx_group(self.root, 'user_' + str(number), 'NXuser')
+        self.add_dataset(user_group, 'name', name)
+        self.add_dataset(user_group, 'affiliation', affiliation)
         return user_group
 
     def add_dataset(self, group, name, data, attributes=None):
@@ -172,7 +173,7 @@ class NexusBuilder:
         """
         instrument_group = self.root['instrument']
         detector_group = nexusutils.add_nx_group(instrument_group, 'detector_' + str(number), 'NXdetector')
-        detector_group.create_dataset('local_name', data=name)
+        self.add_dataset(detector_group, 'local_name', name)
         return detector_group
 
     def add_shape(self, group, name, vertices, faces, detector_faces=None):
@@ -260,13 +261,13 @@ class NexusBuilder:
         :return: NXgrid_pattern group
         """
         grid_pattern = nexusutils.add_nx_group(detector_group, name, 'NXgrid_pattern')
-        grid_pattern.create_dataset('id_start', data=np.array([id_start]))
+        self.add_dataset(grid_pattern, 'id_start', np.array([id_start]))
         self.add_dataset(grid_pattern, 'position_start', position_start, {'units': 'metres'})
-        grid_pattern.create_dataset('size', data=np.array([size]))
-        grid_pattern.create_dataset('X_id_step', data=np.array([id_steps[0]]))
-        grid_pattern.create_dataset('Y_id_step', data=np.array([id_steps[1]]))
+        self.add_dataset(grid_pattern, 'size', np.array([size]))
+        self.add_dataset(grid_pattern, 'X_id_step', np.array([id_steps[0]]))
+        self.add_dataset(grid_pattern, 'Y_id_step', np.array([id_steps[1]]))
         if len(id_steps) > 2:
-            grid_pattern.create_dataset('Z_id_step', data=np.array([id_steps[2]]))
+            self.add_dataset(grid_pattern, 'Z_id_step', np.array([id_steps[2]]))
         self.add_dataset(grid_pattern, 'X_step', [steps[0]], {'units': 'metres'})
         self.add_dataset(grid_pattern, 'Y_step', [steps[1]], {'units': 'metres'})
         if len(steps) > 2:
@@ -399,7 +400,8 @@ class NexusBuilder:
             translate_vector = np.array(
                 [detector['location']['x'], detector['location']['y'], detector['location']['z']]).astype(float)
             translate_unit_vector, translate_magnitude = nexusutils.normalise(translate_vector)
-            position = self.add_transformation(detector_group, 'translation', translate_magnitude, 'metres',
+            transform_group = nexusutils.add_nx_group(detector_group, 'transformations', 'NXtransformation')
+            position = self.add_transformation(transform_group, 'translation', translate_magnitude, 'metres',
                                                translate_unit_vector, name='panel_position')
 
             # Add rotation of detector
@@ -408,8 +410,10 @@ class NexusBuilder:
                     [detector['rotation']['axis_x'], detector['rotation']['axis_y'],
                      detector['rotation']['axis_z']]).astype(float)
                 rotate_unit_vector, rotate_magnitude = nexusutils.normalise(rotate_vector)
-                self.add_transformation(detector_group, 'rotation', float(detector['rotation']['angle']), 'degrees',
+                self.add_transformation(transform_group, 'rotation', float(detector['rotation']['angle']), 'degrees',
                                         rotate_unit_vector, name='panel_orientation', depends_on=str(position.name))
+
+            self.add_dataset(detector_group, 'depends_on', str(transform_group.name))
             detector_number += 1
         return detector_number
 

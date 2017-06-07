@@ -18,9 +18,9 @@ if __name__ == '__main__':
                      ('raw_data_1/instrument/source/type', 'raw_data_1/instrument/source/type'),
                      ('raw_data_1/instrument/moderator', 'raw_data_1/instrument/moderator'),
                      ('raw_data_1/instrument/moderator/distance', 'raw_data_1/instrument/moderator/distance'),
-                     ('raw_data_1/sample', 'raw_data_1/instrument/sample'),
-                     ('raw_data_1/sample/name', 'raw_data_1/instrument/sample/name'),
-                     ('raw_data_1/sample/type', 'raw_data_1/instrument/sample/type'),
+                     ('raw_data_1/sample', 'raw_data_1/sample'),
+                     ('raw_data_1/sample/name', 'raw_data_1/sample/name'),
+                     ('raw_data_1/sample/type', 'raw_data_1/sample/type'),
                      ('raw_data_1/monitor_1', 'raw_data_1/instrument/monitor_1'),
                      ('raw_data_1/monitor_1/data', 'raw_data_1/instrument/monitor_1/data'),
                      ('raw_data_1/monitor_1/time_of_flight', 'raw_data_1/instrument/monitor_1/time_of_flight'),
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     #                        compress_type=32001)
     builder.copy_items(copy_l_to_r)
     builder.add_user('Sans2d Team', 'ISIS, STFC')
-    builder.add_dataset('instrument/sample', 'distance', 19.281)
+    builder.add_dataset('sample', 'distance', 19.281)
     # Add monitor distances
     # I got values from the Mantid IDF where monitor distances are from source not sample, hence the -19.281
     builder.add_dataset('instrument/monitor_1', 'distance', 7.217 - 19.281)
@@ -59,17 +59,17 @@ if __name__ == '__main__':
     detector_group_1 = builder.add_detector('rear-detector', 1)
     # Copy event data from the existing NeXus file
     builder.copy_items(OrderedDict([('raw_data_1/detector_1_events',
-                                     'raw_data_1/instrument/detector_1/events'),
+                                     'raw_data_1/detector_1_events'),
                                     ('raw_data_1/detector_1_events/event_id',
-                                     'raw_data_1/instrument/detector_1/events/event_id'),
+                                     'raw_data_1/detector_1_events/event_id'),
                                     ('raw_data_1/detector_1_events/total_counts',
-                                     'raw_data_1/instrument/detector_1/events/total_counts'),
+                                     'raw_data_1/detector_1_events/total_counts'),
                                     ('raw_data_1/detector_1_events/event_index',
-                                     'raw_data_1/instrument/detector_1/events/event_index'),
+                                     'raw_data_1/detector_1_events/event_index'),
                                     ('raw_data_1/detector_1_events/event_time_zero',
-                                     'raw_data_1/instrument/detector_1/events/event_time_zero'),
+                                     'raw_data_1/detector_1_events/event_time_zero'),
                                     ('raw_data_1/detector_1_events/event_time_offset',
-                                     'raw_data_1/instrument/detector_1/events/event_time_offset'),
+                                     'raw_data_1/detector_1_events/event_time_offset'),
                                     ]))
     left_tubes = builder.add_grid_pattern(detector_group_1, 'left_tubes', 1100000, [-0.5192, -0.48195, 4.0],
                                           [512, 60],
