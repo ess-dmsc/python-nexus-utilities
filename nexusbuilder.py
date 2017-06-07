@@ -164,7 +164,7 @@ class NexusBuilder:
         self.__add_detector_bank_axis(detector_bank_group, 'y', y_pixel_size, y_pixel_offset, y_beam_centre)
         return detector_bank_group
 
-    def add_detector(self, name, number, depends_on='.'):
+    def add_detector(self, name, number, depends_on=None):
         """
         Add an NXdetector with minimal details
         :param name: Name of the detector panel
@@ -175,7 +175,8 @@ class NexusBuilder:
         instrument_group = self.root['instrument']
         detector_group = nexusutils.add_nx_group(instrument_group, 'detector_' + str(number), 'NXdetector')
         self.add_dataset(detector_group, 'local_name', name)
-        self.add_dataset(detector_group, 'depends_on', depends_on)
+        if depends_on is not None:
+            self.add_dataset(detector_group, 'depends_on', depends_on)
         return detector_group
 
     def add_shape(self, group, name, vertices, faces, detector_faces=None):
