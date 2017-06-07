@@ -399,8 +399,8 @@ class NexusBuilder:
             translate_vector = np.array(
                 [detector['location']['x'], detector['location']['y'], detector['location']['z']]).astype(float)
             translate_unit_vector, translate_magnitude = nexusutils.normalise(translate_vector)
-            self.add_transformation(detector_group, 'translation', translate_magnitude, 'metres', translate_unit_vector,
-                                    name='panel_position')
+            position = self.add_transformation(detector_group, 'translation', translate_magnitude, 'metres',
+                                               translate_unit_vector, name='panel_position')
 
             # Add rotation of detector
             if detector['rotation'] is not None:
@@ -409,7 +409,7 @@ class NexusBuilder:
                      detector['rotation']['axis_z']]).astype(float)
                 rotate_unit_vector, rotate_magnitude = nexusutils.normalise(rotate_vector)
                 self.add_transformation(detector_group, 'rotation', float(detector['rotation']['angle']), 'degrees',
-                                        rotate_unit_vector, name='panel_orientation', depends_on='panel_position')
+                                        rotate_unit_vector, name='panel_orientation', depends_on=str(position.name))
             detector_number += 1
         return detector_number
 
@@ -453,7 +453,7 @@ class NexusBuilder:
         else:
             self.add_dataset(instrument, 'name', name, {'short_name': name})
 
-    def add_transformation(self, group, transformation_type, values, units, vector, name='transformation',
+    def add_transformation(self, group, transformation_type, values, units, vector, offset=None, name='transformation',
                            depends_on='.'):
         """
         Add an NXtransformation
@@ -463,8 +463,10 @@ class NexusBuilder:
         :param values: Values to add to the dataset: distance to translate or angle to rotate
         :param units: Units for the dataset's values
         :param vector: Unit vector to translate along or rotate around
+        :param offset: Offset translation to apply to the axis before applying transformation
         :param name: Name of this transformation axis, for example "rotation_angle", "phi", "panel_translate", etc
-        :param depends_on: Name of another NXtransformation which must be carried out before this one
+        :param depends_on: Name (full path) of another NXtransformation which must be carried out before this one
+        :return: The NXtransformation
         """
         transform_types = ['translation', 'rotation']
         if transformation_type not in transform_types:
@@ -472,6 +474,8 @@ class NexusBuilder:
         attributes = {'units': units,
                       'vector': vector,
                       'transformation_type': transformation_type,
-                      'depends_on': depends_on,
+                      'depends_on': depends_on,  # terminate chain with "." if no depends_on given
                       'NXclass': 'NXtransformation'}
-        self.add_dataset(group, name, values, attributes)
+        if offset is not None:
+            attributes['offset'] = offset
+        return self.add_dataset(group, name, values, attributes)
