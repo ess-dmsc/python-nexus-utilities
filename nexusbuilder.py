@@ -392,7 +392,7 @@ class NexusBuilder:
     def add_grid_shapes_from_idf(self):
         """
         Find structured detectors in the IDF and add corresponding NXgrid_shapes in the NeXus file
-        :param group: Group in which to put the NXgrid_shapes
+        
         :return: Number of grid shapes added
         """
         detector_number = 0
@@ -428,13 +428,12 @@ class NexusBuilder:
             detector_number += 1
         return detector_number
 
-    def add_monitor(self, number, distance_from_sample, distance_from_source, units='metres'):
+    def add_monitor(self, number, displacement_from_sample, displacement_from_source, units='metres'):
         """
         Add a monitor to instrument
         :param number: Monitors are usually numbered from 1
-        :param distance_from_sample: Distance from sample along z
-        :param distance_from_source: Distance from source along z
-        :param instrument_group: Instrument group, or name (full path) of it
+        :param displacement_from_sample: Distance from sample along z
+        :param displacement_from_source: Distance from source along z
         :param units: Units of the distances
         :return:
         """
@@ -442,9 +441,9 @@ class NexusBuilder:
             raise Exception('There needs to be an NXinstrument before you can add monitors')
         monitor_group = 'monitor_' + str(number)
         monitor = nexusutils.add_nx_group(self.instrument, monitor_group, 'NXmonitor')
-        self.add_dataset(monitor, 'distance', distance_from_sample, {'units': units})
+        self.add_dataset(monitor, 'distance', displacement_from_sample, {'units': units})
         transform_group = self.add_transformation_group(monitor)
-        location = self.add_transformation(transform_group, 'translation', distance_from_source, units,
+        location = self.add_transformation(transform_group, 'translation', displacement_from_source, units,
                                            [0.0, 0.0, 1.0], name='location')
         self.add_depends_on(monitor, location)
 
