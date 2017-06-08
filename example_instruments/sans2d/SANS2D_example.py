@@ -3,24 +3,12 @@ from nexusbuilder import NexusBuilder
 
 if __name__ == '__main__':
     copy_l_to_r = \
-        OrderedDict([('raw_data_1/good_frames', 'raw_data_1/good_frames'),
-                     ('raw_data_1/duration', 'raw_data_1/duration'),
-                     ('raw_data_1/start_time', 'raw_data_1/start_time'),
-                     ('raw_data_1/end_time', 'raw_data_1/end_time'),
-                     ('raw_data_1/run_cycle', 'raw_data_1/run_cycle'),
-                     ('raw_data_1/title', 'raw_data_1/title'),
-                     ('raw_data_1/definition', 'raw_data_1/definition'),
-                     ('raw_data_1/instrument', 'raw_data_1/instrument'),
-                     ('raw_data_1/instrument/name', 'raw_data_1/instrument/name'),
-                     ('raw_data_1/instrument/source', 'raw_data_1/instrument/source'),
+        OrderedDict([('raw_data_1/instrument/source', 'raw_data_1/instrument/source'),
                      ('raw_data_1/instrument/source/name', 'raw_data_1/instrument/source/name'),
                      ('raw_data_1/instrument/source/probe', 'raw_data_1/instrument/source/probe'),
                      ('raw_data_1/instrument/source/type', 'raw_data_1/instrument/source/type'),
                      ('raw_data_1/instrument/moderator', 'raw_data_1/instrument/moderator'),
                      ('raw_data_1/instrument/moderator/distance', 'raw_data_1/instrument/moderator/distance'),
-                     ('raw_data_1/sample', 'raw_data_1/sample'),
-                     ('raw_data_1/sample/name', 'raw_data_1/sample/name'),
-                     ('raw_data_1/sample/type', 'raw_data_1/sample/type'),
                      ])
 
     # builder = NexusBuilder('SANS_example_noComp.hdf5', 'SANS_test.nxs', idf_filename='SANS2D_Definition_Tubes.xml')
@@ -28,11 +16,13 @@ if __name__ == '__main__':
                            compress_type='gzip', compress_opts=1)
     # builder = NexusBuilder('SANS_example_blosc.hdf5', 'SANS_test.nxs', idf_filename='SANS2D_Definition_Tubes.xml',
     #                        compress_type=32001)
+
+    builder.add_instrument('SANS2D')
+
     builder.copy_items(copy_l_to_r)
-    builder.add_dataset('sample', 'distance', 19.281)
-    sample_transform_group = builder.add_transformation_group('sample')
-    sample_position = builder.add_transformation(sample_transform_group, 'translation', 19.281, 'metres',
-                                                 [0.0, 0.0, 1.0], name='location')
+
+    sample_group, sample_position = builder.add_sample(19.281)
+
     # Add monitors
     # I got monitor distance values from the Mantid IDF where monitor distances are from source not sample,
     # hence the 19.281 subtraction
@@ -71,7 +61,16 @@ if __name__ == '__main__':
     builder.add_user('Sans2d Team', 'ISIS, STFC')
     # Define monitor_1 to have the shape of the Utah teapot as example use of NXshape
     builder.add_shape_from_file('teapot.off', 'instrument/monitor_1', 'shape')
-    builder.copy_items(OrderedDict([('raw_data_1/detector_1_events',
+    builder.copy_items(OrderedDict([('raw_data_1/sample/name', 'raw_data_1/sample/name'),
+                                    ('raw_data_1/sample/type', 'raw_data_1/sample/type'),
+                                    ('raw_data_1/good_frames', 'raw_data_1/good_frames'),
+                                    ('raw_data_1/duration', 'raw_data_1/duration'),
+                                    ('raw_data_1/start_time', 'raw_data_1/start_time'),
+                                    ('raw_data_1/end_time', 'raw_data_1/end_time'),
+                                    ('raw_data_1/run_cycle', 'raw_data_1/run_cycle'),
+                                    ('raw_data_1/title', 'raw_data_1/title'),
+                                    ('raw_data_1/definition', 'raw_data_1/definition'),
+                                    ('raw_data_1/detector_1_events',
                                      'raw_data_1/detector_1_events'),
                                     ('raw_data_1/detector_1_events/event_id',
                                      'raw_data_1/detector_1_events/event_id'),

@@ -535,3 +535,18 @@ class NexusBuilder:
         if offset is not None:
             attributes['offset'] = offset
         return self.add_dataset(group, name, values, attributes)
+
+    def add_sample(self, distance_from_source, name='sample'):
+        """
+        Add an NXsample group
+
+        :param distance_from_source: Distance along the beam from the source
+        :param name: Name for the NXsample group
+        :return: The sample group and the sample position
+        """
+        sample_group = nexusutils.add_nx_group(self.root, name, 'NXsample')
+        self.add_dataset('sample', 'distance', distance_from_source)
+        sample_transform_group = self.add_transformation_group('sample')
+        sample_position = self.add_transformation(sample_transform_group, 'translation', distance_from_source, 'metres',
+                                                  [0.0, 0.0, 1.0], name='location')
+        return sample_group, sample_position
