@@ -22,13 +22,13 @@ class NexusBuilder:
     NB. tables import looks redundant but actually loads BLOSC compression filter
     """
 
-    def __init__(self, target_file_name, source_file_name=None, compress_type=None, compress_opts=None,
+    def __init__(self, output_nexus_filename, input_nexus_filename=None, compress_type=None, compress_opts=None,
                  nx_entry_name='raw_data_1', idf_filename=None):
         """
         compress_type=32001 for BLOSC
 
-        :param target_file_name: Name of the output file
-        :param source_file_name: Name of the input file
+        :param output_nexus_filename: Name of the output file
+        :param input_nexus_filename: Name of the input file
         :param nx_entry_name: Name of the root group (NXentry class)
         :param compress_type: Name or id of compression filter https://support.hdfgroup.org/services/contributions.html
         :param compress_opts: Compression options, for example gzip compression level
@@ -36,12 +36,12 @@ class NexusBuilder:
         """
         self.compress_type = compress_type
         self.compress_opts = compress_opts
-        nexusutils.wipe_file(target_file_name)
-        if source_file_name:
-            self.source_file = h5py.File(source_file_name, 'r')
+        nexusutils.wipe_file(output_nexus_filename)
+        if input_nexus_filename:
+            self.source_file = h5py.File(input_nexus_filename, 'r')
         else:
             self.source_file = None
-        self.target_file = h5py.File(target_file_name, 'r+')
+        self.target_file = h5py.File(output_nexus_filename, 'r+')
         # Having an NXentry root group is compulsory in NeXus format
         self.root = self.__add_nx_entry(nx_entry_name)
         if idf_filename:
@@ -453,7 +453,7 @@ class NexusBuilder:
         Add a "depends_on" dataset to a group
 
         :param group: Group to add dataset to
-        :param dependee: The dependee as a dataset object or full path string
+        :param dependee: The dependee as a dataset object or name (full path) string
         :return: The "depends_on" dataset
         """
         if isinstance(dependee, h5py._hl.dataset.Dataset):
@@ -544,7 +544,7 @@ class NexusBuilder:
 
         :param distance_from_source: Distance along the beam from the source
         :param name: Name for the NXsample group
-        :return: The sample group and the sample position
+        :return: The NXsample group and the sample position dataset
         """
         sample_group = nexusutils.add_nx_group(self.root, name, 'NXsample')
         self.add_dataset('sample', 'distance', distance_from_source)
@@ -559,9 +559,10 @@ class NexusBuilder:
 
         :param name: Name of the source
         :param group_name: Name for the NXsource group
-        :return:
+        :return: The NXsource group
         """
         if self.instrument is None:
             raise Exception('There needs to be an NXinstrument before you can add an NXsource')
         source_group = nexusutils.add_nx_group(self.instrument, group_name, 'NXsource')
         self.add_dataset(source_group, 'name', name)
+        return source_group

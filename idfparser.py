@@ -9,10 +9,28 @@ class IDFParser:
         # Our root should be the instrument
         assert (self.root.tag == '{' + self.ns['d'] + '}instrument')
 
-    def get_detector_banks(self):
+    def get_instrument_name(self):
         """
-        Get detector banks information from a Mantid IDF file
-        NB, currently only works for "RectangularDetector" panels
+        Returns the name of the instrument
+
+        :return: Instrument name
+        """
+        return self.root.get('name')
+
+    def get_source_name(self):
+        """
+        Returns the name of the source or None if no source is found
+
+        :return: Source name or None if not found
+        """
+        for xml_type in self.root.findall('d:type', self.ns):
+            if xml_type.get('is') == 'Source':
+                return xml_type.get('name')
+        return None
+
+    def get_rectangular_detectors(self):
+        """
+        Get detector banks information from a Mantid IDF file for RectangularDetector panels
 
         :returns A generator which yields details of each detector bank found in the instrument file 
         """
@@ -151,7 +169,4 @@ class IDFParser:
 
     @staticmethod
     def __none_to_zero(x):
-        if x is None:
-            return 0
-        else:
-            return x
+        return 0 if x is None else x
