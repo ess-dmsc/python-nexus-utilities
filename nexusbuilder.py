@@ -392,7 +392,7 @@ class NexusBuilder:
     def add_grid_shapes_from_idf(self):
         """
         Find structured detectors in the IDF and add corresponding NXgrid_shapes in the NeXus file
-        
+
         :return: Number of grid shapes added
         """
         detector_number = 0
@@ -552,8 +552,8 @@ class NexusBuilder:
 
         sample_position_list = self.idf_parser.get_sample_position()
         sample_group, sample_position = self.add_sample(sample_position_list)
-        logger.info('a sample at x=' + sample_position_list[0] + ', y=' + sample_position_list[1] + ' z=' +
-                    sample_position_list[2] + ' offset from source')
+        logger.info('a sample at x=' + str(sample_position_list[0]) + ', y=' + str(sample_position_list[1]) + ' z=' +
+                    str(sample_position_list[2]) + ' offset from source')
 
         number_of_detectors = self.add_grid_shapes_from_idf()
         if number_of_detectors != 0:
