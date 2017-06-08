@@ -48,6 +48,7 @@ class NexusBuilder:
             self.idf_parser = IDFParser(idf_filename)
         else:
             self.idf_parser = None
+        self.instrument = None
 
     def copy_items(self, dataset_map):
         """
@@ -172,8 +173,9 @@ class NexusBuilder:
         :param depends_on: Dataset object or name (full path) of axis the detector depends on
         :return: NXdetector group
         """
-        instrument_group = self.root['instrument']
-        detector_group = nexusutils.add_nx_group(instrument_group, 'detector_' + str(number), 'NXdetector')
+        if self.instrument is None:
+            raise Exception('There needs to be an NXinstrument before you can add detectors')
+        detector_group = nexusutils.add_nx_group(self.instrument, 'detector_' + str(number), 'NXdetector')
         self.add_dataset(detector_group, 'local_name', name)
         if depends_on is not None:
             self.add_depends_on(detector_group, depends_on)
@@ -426,8 +428,7 @@ class NexusBuilder:
             detector_number += 1
         return detector_number
 
-    def add_monitor(self, number, distance_from_sample, distance_from_source, instrument_group='instrument',
-                    units='metres'):
+    def add_monitor(self, number, distance_from_sample, distance_from_source, units='metres'):
         """
         Add a monitor to instrument
         :param number: Monitors are usually numbered from 1
@@ -437,10 +438,10 @@ class NexusBuilder:
         :param units: Units of the distances
         :return:
         """
-        if isinstance(instrument_group, h5py._hl.group.Group):
-            instrument_group = str(instrument_group.name)
+        if self.instrument is None:
+            raise Exception('There needs to be an NXinstrument before you can add monitors')
         monitor_group = 'monitor_' + str(number)
-        monitor = nexusutils.add_nx_group(self.root[instrument_group], monitor_group, 'NXmonitor')
+        monitor = nexusutils.add_nx_group(self.instrument, monitor_group, 'NXmonitor')
         self.add_dataset(monitor, 'distance', distance_from_sample, {'units': units})
         transform_group = self.add_transformation_group(monitor)
         location = self.add_transformation(transform_group, 'translation', distance_from_source, units,
@@ -496,18 +497,19 @@ class NexusBuilder:
             self.add_dataset(grid_shape, 'Z_id_step', Z_id_step)
         return grid_shape
 
-    def add_instrument(self, name):
+    def add_instrument(self, name, instrument_group_name='instrument'):
         """
         Add an NXinstrument with specified name
 
         :param name: Name of the instrument
+        :param instrument_group_name: Name for the NXinstrument group
         :return: NXinstrument
         """
-        instrument = nexusutils.add_nx_group(self.root, 'instrument', 'NXinstrument')
+        self.instrument = nexusutils.add_nx_group(self.root, instrument_group_name, 'NXinstrument')
         if len(name) > 2:
-            self.add_dataset(instrument, 'name', name, {'short_name': name[:3]})
+            self.add_dataset(self.instrument, 'name', name, {'short_name': name[:3]})
         else:
-            self.add_dataset(instrument, 'name', name, {'short_name': name})
+            self.add_dataset(self.instrument, 'name', name, {'short_name': name})
 
     def add_transformation(self, group, transformation_type, values, units, vector, offset=None, name='transformation',
                            depends_on='.'):
@@ -550,3 +552,16 @@ class NexusBuilder:
         sample_position = self.add_transformation(sample_transform_group, 'translation', distance_from_source, 'metres',
                                                   [0.0, 0.0, 1.0], name='location')
         return sample_group, sample_position
+
+    def add_source(self, name, group_name='source'):
+        """
+        Add an NXsource group
+
+        :param name: Name of the source
+        :param group_name: Name for the NXsource group
+        :return:
+        """
+        if self.instrument is None:
+            raise Exception('There needs to be an NXinstrument before you can add an NXsource')
+        source_group = nexusutils.add_nx_group(self.instrument, group_name, 'NXsource')
+        self.add_dataset(source_group, 'name', name)
