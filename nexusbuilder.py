@@ -538,19 +538,45 @@ class NexusBuilder:
             attributes['offset'] = offset
         return self.add_dataset(group, name, values, attributes)
 
-    def add_sample(self, distance_from_source, name='sample'):
+    def add_instrument_geometry_from_idf(self):
+        """
+        Get all the geometry information we can from the IDF file
+        """
+        instrument_name = self.idf_parser.get_instrument_name()
+        self.add_instrument(instrument_name)
+        logger.info('Got instrument geometry for ' + instrument_name + ' from IDF file ' + self.idf_parser.filename
+                    + ', it has:')
+
+        source_name = self.idf_parser.get_source_name()
+        self.add_source(source_name)
+        logger.info('a source called ' + source_name)
+
+        sample_position_list = self.idf_parser.get_sample_position()
+        sample_group, sample_position = self.add_sample(sample_position_list)
+        logger.info('a sample at x=' + sample_position_list[0] + ', y=' + sample_position_list[1] + ' z=' +
+                    sample_position_list[2] + ' offset from source')
+
+        number_of_detectors = self.add_grid_shapes_from_idf()
+        if number_of_detectors != 0:
+            logger.info(str(number_of_detectors) + ' topologically, grid detector panels')
+
+        return sample_position
+
+    def add_sample(self, position, name='sample'):
         """
         Add an NXsample group
 
-        :param distance_from_source: Distance along the beam from the source
+        :param position: Distance along the beam from the source
         :param name: Name for the NXsample group
         :return: The NXsample group and the sample position dataset
         """
         sample_group = nexusutils.add_nx_group(self.root, name, 'NXsample')
-        self.add_dataset('sample', 'distance', distance_from_source)
+        self.add_dataset('sample', 'distance', position[2])
         sample_transform_group = self.add_transformation_group('sample')
-        sample_position = self.add_transformation(sample_transform_group, 'translation', distance_from_source, 'metres',
-                                                  [0.0, 0.0, 1.0], name='location')
+        position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
+        sample_position = self.add_transformation(sample_transform_group, 'translation', position_magnitude, 'metres',
+                                                  position_unit_vector, name='location')
+        self.add_depends_on(sample_group, sample_position)
         return sample_group, sample_position
 
     def add_source(self, name, group_name='source'):

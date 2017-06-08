@@ -9,9 +9,7 @@ if __name__ == '__main__':
     # builder = NexusBuilder('SANS_example_blosc_compress.hdf5', 'SANS_test.nxs',
     #                        idf_filename='SANS2D_Definition_Tubes.xml', compress_type=32001)
 
-    builder.add_instrument('SANS2D')
-    builder.add_source('source')
-    sample_group, sample_position = builder.add_sample(19.281)
+    sample_position = builder.add_instrument_geometry_from_idf()
 
     # I got monitor distance values from the Mantid IDF where monitor distances are from source not sample,
     # hence the 19.281 subtraction

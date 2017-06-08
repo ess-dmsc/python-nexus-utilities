@@ -4,6 +4,7 @@ import numpy as np
 
 class IDFParser:
     def __init__(self, idf_filename):
+        self.filename = idf_filename
         self.root = xml.etree.ElementTree.parse(idf_filename).getroot()
         self.ns = {'d': 'http://www.mantidproject.org/IDF/1.0'}
         # Our root should be the instrument
@@ -26,6 +27,22 @@ class IDFParser:
         for xml_type in self.root.findall('d:type', self.ns):
             if xml_type.get('is') == 'Source':
                 return xml_type.get('name')
+        return None
+
+    def get_sample_position(self):
+        """
+        Find the sample position as an x,y,z coord list
+
+        :return: The sample position as a list
+        """
+        for xml_type in self.root.findall('d:type', self.ns):
+            if xml_type.get('is') == 'SamplePos':
+                for xml_sample_component in self.root.findall('d:component', self.ns):
+                    if xml_sample_component.get('type') == xml_type.get('name'):
+                        location_type = xml_sample_component.find('d:location', self.ns)
+                        return [self.__none_to_zero(location_type.get('x')),
+                                self.__none_to_zero(location_type.get('y')),
+                                self.__none_to_zero(location_type.get('z'))]
         return None
 
     def get_rectangular_detectors(self):
