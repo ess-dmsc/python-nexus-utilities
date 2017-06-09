@@ -21,7 +21,7 @@ if __name__ == '__main__':
     # Add the first detector panel
     # This panel is centred on the beam centre
     # 4.0 is the displacement along the beam (z-axis) from the sample (L2 distance)
-    detector_group_1 = builder.add_detector('rear-detector', 1)
+    detector_group_1 = builder.add_detector_minimal('rear-detector', 1)
     left_tubes = builder.add_grid_pattern(detector_group_1, 'left_tubes', 1100000, [-0.5192, -0.48195, 4.0],
                                           [512, 60],
                                           [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]),
@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     # Add the second detector panel
     # This panel is displaced by -1.1m on the x axis from the beam centre
-    detector_group_2 = builder.add_detector('front-detector', 2)
+    detector_group_2 = builder.add_detector_minimal('front-detector', 2)
     left_tubes_2 = builder.add_grid_pattern(detector_group_2, 'left_tubes', 1100000, [-0.5192 - 1.1, -0.48195, 4.0],
                                             [512, 60], [1, 2000], ([0.002033984375, 0, 0], [0, 0.0162, 0]),
                                             depends_on=sample_position)

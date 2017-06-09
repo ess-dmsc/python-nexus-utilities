@@ -14,6 +14,8 @@ formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logger.addHandler(console)
 
+METRES_UNIT = 'm'
+
 
 class NexusBuilder:
     """
@@ -124,18 +126,21 @@ class NexusBuilder:
         """
         if self.idf_parser is None:
             logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
-        for det_info in self.idf_parser.get_detector_banks():
-            det_bank_group = self.add_detector_bank(det_info['name'], det_info['number'], det_info['x_pixel_size'],
-                                                    det_info['y_pixel_size'], det_info['thickness'],
-                                                    det_info['distance'][2], det_info['distance'][0],
-                                                    det_info['distance'][1],
-                                                    det_info['x_pixel_offset'], det_info['y_pixel_offset'])
+        for det_info, pixel_shape in self.idf_parser.get_detector_banks():
+            det_bank_group = self.add_detector(det_info['name'], det_info['number'], det_info['detector_ids'],
+                                               det_info['x_pixel_offset'], det_info['y_pixel_offset'],
+                                               det_info['distance'][2], pixel_shape['x_pixel_size'],
+                                               pixel_shape['y_pixel_size'], pixel_shape['diameter'],
+                                               thickness=pixel_shape['thickness'],
+                                               x_beam_centre=det_info['distance'][0],
+                                               y_beam_centre=det_info['distance'][1])
             if 'transformation' in det_info:
                 pass
                 # self.add_transformation(det_bank_group, det_info['transformation'])
 
-    def add_detector_bank(self, name, number, x_pixel_size, y_pixel_size, thickness, distance, x_beam_centre,
-                          y_beam_centre, x_pixel_offset=None, y_pixel_offset=None):
+    def add_detector(self, name, number, detector_ids, x_pixel_offset,
+                     y_pixel_offset, distance=None, x_pixel_size=None, y_pixel_size=None, diameter=None, thickness=None,
+                     x_beam_centre=None, y_beam_centre=None):
         """
         Add an NXdetector, only suitable for rectangular detectors of consistent pixels
         
@@ -143,29 +148,40 @@ class NexusBuilder:
         :param number : Banks are numbered from 1
         :param x_pixel_size: Pixel width
         :param y_pixel_size: Pixel height
+        :param diameter: If detector is cylindrical this is the diameter
         :param thickness: Pixel thickness
         :param distance: Bank distance along z from parent component
+        :param detector_ids: Array of detector pixel id numbers
         :param x_beam_centre: Displacement of the centre of the bank from the beam centre along x
         :param y_beam_centre: Displacement of the centre of the bank from the beam centre along y
         :param x_pixel_offset: Pixel offsets on x axis from centre of detector
         :param y_pixel_offset: Pixel offsets on y axis from centre of detector
         :return: NXdetector group
         """
-        # TODO add pixel_numbers (ids)
-        if not nexusutils.is_scalar(x_pixel_size):
-            logger.error('In NexusBuilder.add_detector_bank x_pixel_size must be scalar')
-        if not nexusutils.is_scalar(y_pixel_size):
-            logger.error('In NexusBuilder.add_detector_bank y_pixel_size must be scalar')
-        if not nexusutils.is_scalar(thickness):
-            logger.error('In NexusBuilder.add_detector_bank thickness must be scalar')
-        detector_bank_group = self.add_detector(name, number)
-        self.add_dataset(detector_bank_group, 'sensor_thickness', thickness, {'units': 'metres'})
-        self.add_dataset(detector_bank_group, 'distance', distance, {'units': 'metres'})
-        self.__add_detector_bank_axis(detector_bank_group, 'x', x_pixel_size, x_pixel_offset, x_beam_centre)
-        self.__add_detector_bank_axis(detector_bank_group, 'y', y_pixel_size, y_pixel_offset, y_beam_centre)
-        return detector_bank_group
+        optional_scalar_in_metres = {'x_pixel_size': x_pixel_size, 'y_pixel_size': y_pixel_size, 'diameter': diameter,
+                                     'thickness': thickness, 'x_beam_centre': x_beam_centre,
+                                     'y_beam_centre': y_beam_centre, 'distance': distance}
+        self.error_if_not_none_or_scalar(optional_scalar_in_metres)
+        detector_group = self.add_detector_minimal(name, number)
+        self.__add_distance_datasets(detector_group, optional_scalar_in_metres)
+        self.add_dataset(detector_group, 'x_pixel_offset', x_pixel_offset, {'units': METRES_UNIT})
+        self.add_dataset(detector_group, 'y_pixel_offset', y_pixel_offset, {'units': METRES_UNIT})
+        self.add_dataset(detector_group, 'detector_number', detector_ids)
+        return detector_group
 
-    def add_detector(self, name, number, depends_on=None):
+    def __add_distance_datasets(self, group, scalar_params):
+        for name, data in scalar_params.items():
+            if data is not None:
+                self.add_dataset(group, name, data, {'units': METRES_UNIT})
+
+    @staticmethod
+    def error_if_not_none_or_scalar(parameters):
+        for parameter_name in parameters:
+            parameter = parameters[parameter_name]
+            if parameter is not None and not nexusutils.is_scalar(parameter):
+                raise Exception('In NexusBuilder.add_detector_bank ' + parameter_name + ' must be scalar')
+
+    def add_detector_minimal(self, name, number, depends_on=None):
         """
         Add an NXdetector with minimal details
         :param name: Name of the detector panel
@@ -268,16 +284,16 @@ class NexusBuilder:
         """
         grid_pattern = nexusutils.add_nx_group(detector_group, name, 'NXgrid_pattern')
         self.add_dataset(grid_pattern, 'id_start', np.array([id_start]))
-        self.add_dataset(grid_pattern, 'position_start', position_start, {'units': 'metres'})
+        self.add_dataset(grid_pattern, 'position_start', position_start, {'units': METRES_UNIT})
         self.add_dataset(grid_pattern, 'size', np.array([size]))
         self.add_dataset(grid_pattern, 'X_id_step', np.array([id_steps[0]]))
         self.add_dataset(grid_pattern, 'Y_id_step', np.array([id_steps[1]]))
         if len(id_steps) > 2:
             self.add_dataset(grid_pattern, 'Z_id_step', np.array([id_steps[2]]))
-        self.add_dataset(grid_pattern, 'X_step', [steps[0]], {'units': 'metres'})
-        self.add_dataset(grid_pattern, 'Y_step', [steps[1]], {'units': 'metres'})
+        self.add_dataset(grid_pattern, 'X_step', [steps[0]], {'units': METRES_UNIT})
+        self.add_dataset(grid_pattern, 'Y_step', [steps[1]], {'units': METRES_UNIT})
         if len(steps) > 2:
-            self.add_dataset(grid_pattern, 'Z_step', [steps[2]], {'units': 'metres'})
+            self.add_dataset(grid_pattern, 'Z_step', [steps[2]], {'units': METRES_UNIT})
         self.add_depends_on(grid_pattern, depends_on)
         return grid_pattern
 
@@ -290,18 +306,12 @@ class NexusBuilder:
                     ' must each have three values (corresponding to the cartesian axes)' +
                     ' Module name: ' + name)
             self.add_dataset(detector_module, name, 0, {'transformation_type': 'translation',
-                                                        'offset_units': 'metres',
+                                                        'offset_units': METRES_UNIT,
                                                         'offset': pixel_direction_offset,
                                                         'size_in_pixels': direction_size,
                                                         'pixel_number_step': pixel_direction_step})
         else:
             logger.debug('Missing arguments in __add_pixel_direction to define direction: ' + name)
-
-    def __add_detector_bank_axis(self, group, axis, pixel_size, pixel_offset, beam_centre):
-        self.add_dataset(group, axis + '_pixel_size', pixel_size, {'units': 'metres'})
-        self.add_dataset(group, 'beam_center_' + axis, beam_centre, {'units': 'metres'})
-        if pixel_offset is not None:
-            self.add_dataset(group, axis + '_pixel_offset', pixel_offset, {'units': 'metres'})
 
     def __del__(self):
         # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
@@ -398,7 +408,7 @@ class NexusBuilder:
         detector_number = 0
         for detector in self.idf_parser.get_structured_detectors():
             # Put each one in an NXdetector
-            detector_group = self.add_detector(detector['name'], detector_number)
+            detector_group = self.add_detector_minimal(detector['name'], detector_number)
             # Add the grid shape
             self.add_grid_shape_from_idf(detector_group, 'grid_shape', detector['type_name'],
                                          detector['id_start'], detector['X_id_step'],
@@ -408,7 +418,7 @@ class NexusBuilder:
                 [detector['location']['x'], detector['location']['y'], detector['location']['z']]).astype(float)
             translate_unit_vector, translate_magnitude = nexusutils.normalise(translate_vector)
             transform_group = self.add_transformation_group(detector_group)
-            position = self.add_transformation(transform_group, 'translation', translate_magnitude, 'metres',
+            position = self.add_transformation(transform_group, 'translation', translate_magnitude, METRES_UNIT,
                                                translate_unit_vector, name='panel_position')
 
             # Add rotation of detector
@@ -428,7 +438,7 @@ class NexusBuilder:
             detector_number += 1
         return detector_number
 
-    def add_monitor(self, number, displacement_from_sample, displacement_from_source, units='metres'):
+    def add_monitor(self, number, displacement_from_sample, displacement_from_source, units=METRES_UNIT):
         """
         Add a monitor to instrument
         :param number: Monitors are usually numbered from 1
@@ -483,7 +493,7 @@ class NexusBuilder:
         :return: NXgrid_shape group
         """
         if self.idf_parser is None:
-            logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
+            logger.error('No IDF file was given to the NexusBuilder, cannot call add_grid_shape_from_idf')
         if isinstance(group, str):
             group = self.root[group]
         vertices = self.idf_parser.get_structured_detector_vertices(type_name)
@@ -573,7 +583,8 @@ class NexusBuilder:
         self.add_dataset('sample', 'distance', position[2])
         sample_transform_group = self.add_transformation_group('sample')
         position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
-        sample_position = self.add_transformation(sample_transform_group, 'translation', position_magnitude, 'metres',
+        sample_position = self.add_transformation(sample_transform_group, 'translation', position_magnitude,
+                                                  METRES_UNIT,
                                                   position_unit_vector, name='location')
         self.add_depends_on(sample_group, sample_position)
         return sample_group, sample_position
