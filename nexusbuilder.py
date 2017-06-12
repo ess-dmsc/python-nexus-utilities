@@ -123,10 +123,14 @@ class NexusBuilder:
         NB, currently only works for "RectangularDetector" panels 
             currently assumes the coordinate system in the IDF is the same as the NeXus one
             (z is beam direction, x is the other horizontal, y is vertical)
+
+        :return: Number of detector panels added
         """
         if self.idf_parser is None:
             logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
-        for det_info, pixel_shape in self.idf_parser.get_detector_banks():
+        total_panels = 0
+        for det_info, pixel_shape in self.idf_parser.get_detectors():
+            total_panels += 1
             det_bank_group = self.add_detector(det_info['name'], det_info['number'], det_info['detector_ids'],
                                                det_info['x_pixel_offset'], det_info['y_pixel_offset'],
                                                det_info['distance'][2], pixel_shape['x_pixel_size'],
@@ -137,6 +141,7 @@ class NexusBuilder:
             if 'transformation' in det_info:
                 pass
                 # self.add_transformation(det_bank_group, det_info['transformation'])
+        return total_panels
 
     def add_detector(self, name, number, detector_ids, x_pixel_offset,
                      y_pixel_offset, distance=None, x_pixel_size=None, y_pixel_size=None, diameter=None, thickness=None,
@@ -562,7 +567,7 @@ class NexusBuilder:
 
         sample_position_list = self.idf_parser.get_sample_position()
         sample_group, sample_position = self.add_sample(sample_position_list)
-        logger.info('a sample at x=' + str(sample_position_list[0]) + ', y=' + str(sample_position_list[1]) + ' z=' +
+        logger.info('a sample at x=' + str(sample_position_list[0]) + ', y=' + str(sample_position_list[1]) + ', z=' +
                     str(sample_position_list[2]) + ' offset from source')
 
         number_of_detectors = self.add_grid_shapes_from_idf()

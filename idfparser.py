@@ -40,9 +40,7 @@ class IDFParser:
                 for xml_sample_component in self.root.findall('d:component', self.ns):
                     if xml_sample_component.get('type') == xml_type.get('name'):
                         location_type = xml_sample_component.find('d:location', self.ns)
-                        return [self.__none_to_zero(location_type.get('x')),
-                                self.__none_to_zero(location_type.get('y')),
-                                self.__none_to_zero(location_type.get('z'))]
+                        return self.__get_vector(location_type)
         return None
 
     def get_rectangular_detectors(self):
@@ -55,7 +53,7 @@ class IDFParser:
         detector_number = 0
         for xml_type in self.root.findall('d:type', self.ns):
             if xml_type.get('is') == 'rectangular_detector':
-                x_pixel_size, y_pixel_size, thickness = self.__get_pixel(self.root, xml_type.get('type'))
+                x_pixel_size, y_pixel_size, thickness = self.__get_pixel_shape(self.root, xml_type.get('type'))
                 bank_type_name = xml_type.get('name')
                 x_pixel_offset_1d = self.__get_1d_pixel_offsets('x', xml_type)
                 y_pixel_offset_1d = self.__get_1d_pixel_offsets('y', xml_type)
@@ -78,11 +76,87 @@ class IDFParser:
                             map(lambda x: 0 if x is None else x, distance_list)).astype(float)
                         yield det_bank_info
 
-    @staticmethod
-    def __get_point(xml_point):
-        return np.array([xml_point.get('x'), xml_point.get('y'), xml_point.get('z')]).astype(float)
+    def __get_vector(self, xml_point):
+        return np.array([self.__none_to_zero(xml_point.get('x')),
+                         self.__none_to_zero(xml_point.get('y')),
+                         self.__none_to_zero(xml_point.get('z'))]).astype(float)
 
-    def __get_pixel(self, xml_root, type_name):
+    def __get_pixel_names_and_shapes(self):
+        pixels = []
+        for xml_type in self.root.findall('d:type', self.ns):
+            if xml_type.get('is') == 'detector':
+                name = xml_type.get('name')
+                pixels.append({'name': name, 'shape': self.__get_pixel_shape(self.root, name)})
+        return pixels
+
+    def __get_detector_offsets(self, xml_type):
+        """
+        Gets list of locations from a detector component
+
+        :param xml_type: Component of a detector containing location or locations elements
+        :return: List of locations for this component
+        """
+        detector_offsets = []
+        for child in xml_type:
+            if child.tag == 'location':
+                detector_offsets.append(self.__get_vector(child))
+            elif child.tag == 'locations':
+                for axis_number, axis in enumerate(['x', 'y', 'z']):
+                    if child.get(axis):
+                        for location in np.linspace(start=float(child.get(axis)),
+                                                    stop=float(child.get(axis + '-end')),
+                                                    num=int(child.get('n-elements'))):
+                            location_vector = np.array([0.0, 0.0, 0.0]).astype(float)
+                            location_vector[axis_number] = location
+                            detector_offsets.append(location_vector)
+                        break
+        return detector_offsets
+
+    def get_detectors(self):
+        """
+        WIP
+        Will return full details for high level detector components (for example detector banks/panels) which are not
+        described using RectangularDetector or StructuredDetector in the IDF
+
+        :return:
+        """
+        raise NotImplementedError
+        pixels = self.__get_pixel_names_and_shapes()
+        detectors = []
+        for pixel in pixels:
+            detector_name = pixel['name']
+            offsets = []
+            for xml_type in self.root.findall('d:type', self.ns):
+                for smallest_component in xml_type.findall('d:component', self.ns):
+                    if smallest_component.get('type') == detector_name:
+                        if smallest_component.get('is') in ['StructuredDetector', 'RectangularDetector']:
+                            continue
+                        smallest_component_name = smallest_component.get('name')
+                        axis_1_offsets = self.__get_detector_offsets(smallest_component)
+                        self.__parse_detector_component(smallest_component_name, detectors, pixel, offsets)
+
+    def __parse_detector_component(self, smaller_component_name, detectors, pixel, offsets):
+        if smaller_component_name:
+            for xml_type in self.root.findall('d:type', self.ns):
+                for component in xml_type.findall('d:component', self.ns):
+                    if component.get('type') == smaller_component_name:
+                        if component.get('is') in ['StructuredDetector', 'RectangularDetector']:
+                            continue
+                        larger_component_name = component.get('name')
+                        idlist = component.get('idlist')
+                        if idlist:
+                            # TODO get ids and add them to the detector dictionary
+                            # TODO also check if it has a "facing"
+                            detectors.append({'name': larger_component_name, 'pixel': pixel, 'offsets': offsets})
+                        else:
+                            if len(offsets) > 2:
+                                raise Exception(
+                                    'Something went wrong when parsing detectors in '
+                                    'IDFParser.__parse_detector_component(). Recursion is deeper than expected.')
+                            offsets.append(self.__get_detector_offsets(component))
+                            self.__parse_detector_component(larger_component_name, detectors, pixel, offsets)
+
+    def __get_pixel_shape(self, xml_root, type_name):
         for xml_type in xml_root.findall('d:type', self.ns):
             if xml_type.get('name') == type_name and xml_type.get('is') == 'detector':
                 cuboid = xml_type.find('d:cuboid', self.ns)
@@ -92,14 +166,20 @@ class IDFParser:
                 elif cylinder is not None:
                     return self.__parse_cylinder(cylinder)
                 else:
-                    print('pixel is not of known shape')
-        return None, None, None
+                    raise Exception('pixel is not of known shape')
+        return None
 
     def __parse_cuboid(self, cuboid_xml):
-        left_front_bottom = self.__get_point(cuboid_xml.find('d:left-front-bottom-point', self.ns))
-        left_front_top = self.__get_point(cuboid_xml.find('d:left-front-top-point', self.ns))
-        left_back_bottom = self.__get_point(cuboid_xml.find('d:left-back-bottom-point', self.ns))
-        right_front_bottom = self.__get_point(cuboid_xml.find('d:right-front-bottom-point', self.ns))
+        """
+        Get details NeXus needs to describe a cuboid
+
+        :param cuboid_xml: The xml element describing the cuboid
+        :return: A dictionary containing dimensions of the cuboid
+        """
+        left_front_bottom = self.__get_vector(cuboid_xml.find('d:left-front-bottom-point', self.ns))
+        left_front_top = self.__get_vector(cuboid_xml.find('d:left-front-top-point', self.ns))
+        left_back_bottom = self.__get_vector(cuboid_xml.find('d:left-back-bottom-point', self.ns))
+        right_front_bottom = self.__get_vector(cuboid_xml.find('d:right-front-bottom-point', self.ns))
         # Assume x pixel size is left to right
         left_to_right = right_front_bottom - left_front_bottom
         x_pixel_size = np.sqrt(np.dot(left_to_right, left_to_right))
@@ -109,12 +189,31 @@ class IDFParser:
         # Assume thickness is top to bottom
         top_to_bottom = left_front_top - left_front_bottom
         thickness = np.sqrt(np.dot(top_to_bottom, top_to_bottom))
-        return x_pixel_size, y_pixel_size, thickness
+        return {'shape': 'cuboid', 'x_pixel_size': x_pixel_size, 'y_pixel_size': y_pixel_size, 'thickness': thickness}
 
     def __parse_cylinder(self, cylinder_xml):
-        # Map this geometry to x, y and z size (thickness) as best as we can
+        """
+        Get details NeXus needs to describe a cylinder
 
-        pass
+        :param cylinder_xml: The xml element describing the cylinder
+        :return: A dictionary containing dimensions of the cylinder
+        """
+        axis = self.__get_vector(cylinder_xml.find('d:axis', self.ns))
+        radius = float(cylinder_xml.find('d:radius', self.ns).get('val'))
+        height = float(cylinder_xml.find('d:height', self.ns).get('val'))
+        # Check axis is only finite in x or y as we only have x_pixel_size and y_pixel_size to
+        # put the height in for NeXus, otherwise throw error
+        if (int(axis[0] != 0) + int(axis[1] != 0)) != 1 or axis[3] != 0:
+            raise Exception(
+                'Cylinder found with axis not aligned with x or y axis. This cannot be represented in NeXus standard.')
+        x_pixel_size = None
+        y_pixel_size = None
+        if axis[0] != 0:
+            x_pixel_size = height
+        else:
+            y_pixel_size = height
+        return {'shape': 'cylinder', 'x_pixel_size': x_pixel_size, 'y_pixel_size': y_pixel_size,
+                'diameter': 2.0 * radius}
 
     @staticmethod
     def __get_1d_pixel_offsets(dimension_name, xml_type):
@@ -173,9 +272,7 @@ class IDFParser:
                 vertex_number_x = 0
                 vertex_number_y = 0
                 for vertex in xml_type:
-                    vertices[vertex_number_x, vertex_number_y, :] = np.array(
-                        [self.__none_to_zero(vertex.get('x')), self.__none_to_zero(vertex.get('y')),
-                         self.__none_to_zero(vertex.get('z'))])
+                    vertices[vertex_number_x, vertex_number_y, :] = self.__get_vector(vertex)
                     vertex_number_x += 1
                     if vertex_number_x > x_pixels:
                         # We've filled a row, move to the next one
