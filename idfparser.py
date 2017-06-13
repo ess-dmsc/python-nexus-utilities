@@ -120,6 +120,7 @@ class IDFParser:
 
         :return:
         """
+        raise NotImplementedError
         pixels = self.__get_pixel_names_and_shapes()
         detectors = []
         for pixel in pixels:
@@ -143,10 +144,6 @@ class IDFParser:
                         if component.get('is') in ['StructuredDetector', 'RectangularDetector']:
                             continue
                         larger_component_name = xml_type.get('name')
-                        if len(offsets) > 2:
-                            raise Exception(
-                                'Something went wrong when parsing detectors in '
-                                'IDFParser.__parse_detector_component(). Recursion is deeper than expected.')
                         offsets.append(self.__get_detector_offsets(component))
                         self.__parse_detector_component(larger_component_name, detectors, pixel, offsets)
                         return
