@@ -271,11 +271,58 @@ class IDFParser:
                        'rotation': rotation}
 
     def get_monitors(self):
+        all_monitor_type_names, monitor_types = self.__get_monitor_types()
+        # Now look for components with one of these types, they'll be grouped in another element
+        # Add them to a list, NB order matters for id assignment
         monitors = []
+        for xml_type in self.root.findall('d:type', self.ns):
+            for xml_component in xml_type.findall('d:component', self.ns):
+                type_name = xml_component.get('type')
+                if type_name in all_monitor_type_names:
+                    for xml_location in xml_component.findall('d:location', self.ns):
+                        monitors.append({'name': xml_location.get('name'), 'location': self.__get_vector(xml_location),
+                                         'type_name': type_name, 'id': None})
+                    id_list = self.__get_monitor_idlist(xml_type.get('name'))
+                    self.__assign_ids(monitors, id_list)
+        return monitors, monitor_types
+
+    @staticmethod
+    def __assign_ids(components, id_list):
+        """
+        Assign an id from id_list to each id-less component dictionary in components list in order
+        :param components: List of dictionaries, dictionary should have id key, assign an id to it if None
+        :param id_list: List of ids to assign
+        """
+        next_id = 0
+        for component in components:
+            if component.id is None:
+                component.id = id_list[next_id]
+                next_id += 1
+
+    def __get_monitor_idlist(self, type_name):
+        idlist = []
+        for xml_component in self.root.findall('d:component', self.ns):
+            if xml_component.get('type') == type_name:
+                location_xml = xml_component.find('d:location', self.ns)
+                if location_xml:
+                    if len(location_xml.attrib) > 0:
+                        raise NotImplementedError(
+                            'dealing with location in __get_monitor_idlist is not implemented yet')
+                idlist_name = xml_component.get('idlist')
+                for xml_idlist in self.root.findall('d:idlist', self.ns):
+                    if xml_idlist.get('name') == idlist_name:
+                        for xml_id in xml_idlist.findall('d:id', self.ns):
+                            idlist = idlist + list(range(int(xml_id.get('start')), int(xml_id.get('end'))))
+        return idlist
+
+    def __get_monitor_types(self):
+        monitor_types = []
         for xml_type in self.root.findall('d:type', self.ns):
             if xml_type.get('is') == 'monitor':
                 name = xml_type.get('name')
-                monitors.append({'name': name, 'shape': self.__get_shape(xml_type)})
+                monitor_types.append({'name': name, 'shape': self.__get_shape(xml_type)})
+        all_monitor_type_names = [monitor.name for monitor in monitor_types]
+        return all_monitor_type_names, monitor_types
 
     def get_structured_detector_vertices(self, type_name):
         """
