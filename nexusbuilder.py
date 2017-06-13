@@ -117,7 +117,7 @@ class NexusBuilder:
                     dataset.attrs.create(key, np.array(attributes[key]))
         return dataset
 
-    def add_detector_banks_from_idf(self):
+    def add_detectors_from_idf(self):
         """
         Add detector banks from a Mantid IDF file
         NB, currently only works for "RectangularDetector" panels 
@@ -129,18 +129,19 @@ class NexusBuilder:
         if self.idf_parser is None:
             logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
         total_panels = 0
-        for det_info, pixel_shape in self.idf_parser.get_detectors():
-            total_panels += 1
-            det_bank_group = self.add_detector(det_info['name'], det_info['number'], det_info['detector_ids'],
-                                               det_info['x_pixel_offset'], det_info['y_pixel_offset'],
-                                               det_info['distance'][2], pixel_shape['x_pixel_size'],
-                                               pixel_shape['y_pixel_size'], pixel_shape['diameter'],
-                                               thickness=pixel_shape['thickness'],
-                                               x_beam_centre=det_info['distance'][0],
-                                               y_beam_centre=det_info['distance'][1])
-            if 'transformation' in det_info:
-                pass
-                # self.add_transformation(det_bank_group, det_info['transformation'])
+        detectors = self.idf_parser.get_detectors()
+        # for det_info, pixel_shape in self.idf_parser.get_detectors():
+        #     total_panels += 1
+        #     det_bank_group = self.add_detector(det_info['name'], det_info['number'], det_info['detector_ids'],
+        #                                        det_info['x_pixel_offset'], det_info['y_pixel_offset'],
+        #                                        det_info['distance'][2], pixel_shape['x_pixel_size'],
+        #                                        pixel_shape['y_pixel_size'], pixel_shape['diameter'],
+        #                                        thickness=pixel_shape['thickness'],
+        #                                        x_beam_centre=det_info['distance'][0],
+        #                                        y_beam_centre=det_info['distance'][1])
+        #     if 'transformation' in det_info:
+        #         pass
+        #         # self.add_transformation(det_bank_group, det_info['transformation'])
         return total_panels
 
     def add_detector(self, name, number, detector_ids, x_pixel_offset,

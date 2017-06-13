@@ -98,9 +98,9 @@ class IDFParser:
         """
         detector_offsets = []
         for child in xml_type:
-            if child.tag == 'location':
+            if child.tag == '{' + self.ns['d'] + '}location':
                 detector_offsets.append(self.__get_vector(child))
-            elif child.tag == 'locations':
+            elif child.tag == '{' + self.ns['d'] + '}locations':
                 for axis_number, axis in enumerate(['x', 'y', 'z']):
                     if child.get(axis):
                         for location in np.linspace(start=float(child.get(axis)),
@@ -120,41 +120,54 @@ class IDFParser:
 
         :return:
         """
-        raise NotImplementedError
         pixels = self.__get_pixel_names_and_shapes()
         detectors = []
         for pixel in pixels:
             detector_name = pixel['name']
             offsets = []
+            smallest_component_names = []
             for xml_type in self.root.findall('d:type', self.ns):
                 for smallest_component in xml_type.findall('d:component', self.ns):
                     if smallest_component.get('type') == detector_name:
                         if smallest_component.get('is') in ['StructuredDetector', 'RectangularDetector']:
                             continue
-                        smallest_component_name = smallest_component.get('name')
-                        axis_1_offsets = self.__get_detector_offsets(smallest_component)
-                        self.__parse_detector_component(smallest_component_name, detectors, pixel, offsets)
+                        smallest_component_names.append(xml_type.get('name'))
+                        offsets.append(self.__get_detector_offsets(smallest_component))
+                        self.__parse_detector_component(smallest_component_names, detectors, pixel, offsets)
 
-    def __parse_detector_component(self, smaller_component_name, detectors, pixel, offsets):
-        if smaller_component_name:
+    def __parse_detector_component(self, smaller_component_names, detectors, pixel, offsets):
+        if smaller_component_names:
             for xml_type in self.root.findall('d:type', self.ns):
                 for component in xml_type.findall('d:component', self.ns):
-                    if component.get('type') == smaller_component_name:
+                    if component.get('type') in smaller_component_names:
                         if component.get('is') in ['StructuredDetector', 'RectangularDetector']:
                             continue
-                        larger_component_name = component.get('name')
-                        idlist = component.get('idlist')
-                        if idlist:
-                            # TODO get ids and add them to the detector dictionary
-                            # TODO also check if it has a "facing"
-                            detectors.append({'name': larger_component_name, 'pixel': pixel, 'offsets': offsets})
-                        else:
-                            if len(offsets) > 2:
-                                raise Exception(
-                                    'Something went wrong when parsing detectors in '
-                                    'IDFParser.__parse_detector_component(). Recursion is deeper than expected.')
-                            offsets.append(self.__get_detector_offsets(component))
-                            self.__parse_detector_component(larger_component_name, detectors, pixel, offsets)
+                        larger_component_name = xml_type.get('name')
+                        if len(offsets) > 2:
+                            raise Exception(
+                                'Something went wrong when parsing detectors in '
+                                'IDFParser.__parse_detector_component(). Recursion is deeper than expected.')
+                        offsets.append(self.__get_detector_offsets(component))
+                        self.__parse_detector_component(larger_component_name, detectors, pixel, offsets)
+                        return
+            self.__check_for_top_level_detector_component(smaller_component_names, detectors, pixel, offsets)
+
+    def __check_for_top_level_detector_component(self, smaller_component_names, detectors, pixel, offsets):
+        for component in self.root.findall('d:component', self.ns):
+            if component.get('type') in smaller_component_names:
+                idlist = component.get('idlist')
+                name = component.get('name')
+                if idlist:
+                    # TODO get ids and add them to the detector dictionary
+                    location_type = component.find('d:location', self.ns)
+                    location = self.__get_vector(location_type)
+                    facing_type = location_type.find('d:facing', self.ns)
+                    if facing_type:
+                        # Should add an orientation field to the detector for rotating to achieve facing
+                        raise NotImplementedError('Dealing with "facing" elements is not yet implemented.')
+                    detectors.append({'name': name, 'pixel': pixel, 'offsets': offsets, 'location': location})
+                else:
+                    raise Exception('Found a top level detector component with no idlist, name: ' + name)
 
     def __get_pixel_shape(self, xml_root, type_name):
         for xml_type in xml_root.findall('d:type', self.ns):
@@ -203,7 +216,7 @@ class IDFParser:
         height = float(cylinder_xml.find('d:height', self.ns).get('val'))
         # Check axis is only finite in x or y as we only have x_pixel_size and y_pixel_size to
         # put the height in for NeXus, otherwise throw error
-        if (int(axis[0] != 0) + int(axis[1] != 0)) != 1 or axis[3] != 0:
+        if (int(axis[0] != 0) + int(axis[1] != 0)) != 1 or axis[2] != 0:
             raise Exception(
                 'Cylinder found with axis not aligned with x or y axis. This cannot be represented in NeXus standard.')
         x_pixel_size = None
