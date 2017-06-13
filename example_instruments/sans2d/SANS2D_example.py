@@ -9,14 +9,8 @@ if __name__ == '__main__':
     # builder = NexusBuilder('SANS_example_blosc_compress.hdf5', 'SANS_test.nxs',
     #                        idf_filename='SANS2D_Definition_Tubes.xml', compress_type=32001)
 
+    # Adds all instrument geometry except non-monitor detectors
     sample_position = builder.add_instrument_geometry_from_idf()
-
-    # I got monitor distance values from the Mantid IDF where monitor distances are from source not sample,
-    # hence the 19.281 subtraction
-    builder.add_monitor(1, 7.217 - 19.281, 7.217)
-    builder.add_monitor(2, 17.937 - 19.281, 17.937)
-    builder.add_monitor(3, 19.497 - 19.281, 19.497)
-    builder.add_monitor(4, 30.0 - 19.281, 30.0)
 
     # Add the first detector panel
     # This panel is centred on the beam centre

@@ -180,7 +180,8 @@ class IDFParser:
         elif cylinder is not None:
             return self.__parse_cylinder(cylinder)
         else:
-            raise Exception('pixel is not of known shape')
+            if len(list(xml_type)) != 0:
+                raise Exception('pixel is not of known shape')
 
     def __parse_cuboid(self, cuboid_xml):
         """
@@ -216,17 +217,21 @@ class IDFParser:
         height = float(cylinder_xml.find('d:height', self.ns).get('val'))
         # Check axis is only finite in x or y as we only have x_pixel_size and y_pixel_size to
         # put the height in for NeXus, otherwise throw error
-        if (int(axis[0] != 0) + int(axis[1] != 0)) != 1 or axis[2] != 0:
+        if (int(axis[0] != 0) + int(axis[1] != 0) + int(axis[2] != 0)) != 1:
             raise Exception(
-                'Cylinder found with axis not aligned with x or y axis. This cannot be represented in NeXus standard.')
+                'Cylinder axis must be aligned with a cartesian axis, '
+                'otherwise it cannot be represented in NeXus standard.')
         x_pixel_size = None
         y_pixel_size = None
+        z_pixel_size = None
         if axis[0] != 0:
             x_pixel_size = height
-        else:
+        elif axis[1] != 0:
             y_pixel_size = height
+        else:
+            z_pixel_size = height
         return {'shape': 'cylinder', 'x_pixel_size': x_pixel_size, 'y_pixel_size': y_pixel_size,
-                'diameter': 2.0 * radius}
+                'thickness': z_pixel_size, 'diameter': 2.0 * radius}
 
     @staticmethod
     def __get_1d_pixel_offsets(dimension_name, xml_type):
@@ -276,14 +281,17 @@ class IDFParser:
         # Add them to a list, NB order matters for id assignment
         monitors = []
         for xml_type in self.root.findall('d:type', self.ns):
+            type_contains_monitors = False
             for xml_component in xml_type.findall('d:component', self.ns):
                 type_name = xml_component.get('type')
                 if type_name in all_monitor_type_names:
+                    type_contains_monitors = True
                     for xml_location in xml_component.findall('d:location', self.ns):
                         monitors.append({'name': xml_location.get('name'), 'location': self.__get_vector(xml_location),
                                          'type_name': type_name, 'id': None})
-                    id_list = self.__get_monitor_idlist(xml_type.get('name'))
-                    self.__assign_ids(monitors, id_list)
+            if type_contains_monitors:
+                id_list = self.__get_monitor_idlist(xml_type.get('name'))
+                self.__assign_ids(monitors, id_list)
         return monitors, monitor_types
 
     @staticmethod
@@ -295,8 +303,8 @@ class IDFParser:
         """
         next_id = 0
         for component in components:
-            if component.id is None:
-                component.id = id_list[next_id]
+            if component['id'] is None:
+                component['id'] = id_list[next_id]
                 next_id += 1
 
     def __get_monitor_idlist(self, type_name):
@@ -310,9 +318,9 @@ class IDFParser:
                             'dealing with location in __get_monitor_idlist is not implemented yet')
                 idlist_name = xml_component.get('idlist')
                 for xml_idlist in self.root.findall('d:idlist', self.ns):
-                    if xml_idlist.get('name') == idlist_name:
+                    if xml_idlist.get('idname') == idlist_name:
                         for xml_id in xml_idlist.findall('d:id', self.ns):
-                            idlist = idlist + list(range(int(xml_id.get('start')), int(xml_id.get('end'))))
+                            idlist = idlist + list(range(int(xml_id.get('start')), int(xml_id.get('end')) + 1))
         return idlist
 
     def __get_monitor_types(self):
@@ -321,7 +329,7 @@ class IDFParser:
             if xml_type.get('is') == 'monitor':
                 name = xml_type.get('name')
                 monitor_types.append({'name': name, 'shape': self.__get_shape(xml_type)})
-        all_monitor_type_names = [monitor.name for monitor in monitor_types]
+        all_monitor_type_names = [monitor['name'] for monitor in monitor_types]
         return all_monitor_type_names, monitor_types
 
     def get_structured_detector_vertices(self, type_name):

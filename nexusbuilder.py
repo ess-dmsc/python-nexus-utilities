@@ -144,6 +144,34 @@ class NexusBuilder:
         #         # self.add_transformation(det_bank_group, det_info['transformation'])
         return total_panels
 
+    def add_monitors_from_idf(self):
+        """
+        Add monitors from a Mantid IDF file
+
+        :return: Number of monitors added
+        """
+        if self.instrument is None:
+            raise Exception('There needs to be an NXinstrument before you can add monitors')
+
+        monitors, monitor_types = self.idf_parser.get_monitors()
+        monitor_names = [monitor['name'] for monitor in monitors]
+        repeated_names = set([name for name in monitor_names if monitor_names.count(name) > 1])
+        for monitor in monitors:
+            name = monitor['name']
+            # If multiple monitors have the same name then append the id to the name
+            if name in repeated_names:
+                name = name + '_' + str(monitor['id'])
+            monitor_group = nexusutils.add_nx_group(self.instrument, name, 'NXmonitor')
+            # detector_id is not a monitor dataset in the standard...
+            self.add_dataset(monitor_group, 'detector_id', int(monitor['id']))
+            transform_group = self.add_transformation_group(monitor_group)
+            location_unit_vector, location_magnitude = nexusutils.normalise(monitor['location'].astype(float))
+            location = self.add_transformation(transform_group, 'translation', location_magnitude, METRES_UNIT,
+                                               location_unit_vector, name='location')
+            self.add_depends_on(monitor_group, location)
+            # TODO add monitor shape definition from monitor['shape']
+        return len(monitors)
+
     def add_detector(self, name, number, detector_ids, x_pixel_offset,
                      y_pixel_offset, distance=None, x_pixel_size=None, y_pixel_size=None, diameter=None, thickness=None,
                      x_beam_centre=None, y_beam_centre=None):
@@ -570,6 +598,10 @@ class NexusBuilder:
         sample_group, sample_position = self.add_sample(sample_position_list)
         logger.info('a sample at x=' + str(sample_position_list[0]) + ', y=' + str(sample_position_list[1]) + ', z=' +
                     str(sample_position_list[2]) + ' offset from source')
+
+        number_of_monitors = self.add_monitors_from_idf()
+        if number_of_monitors != 0:
+            logger.info(str(number_of_monitors) + ' monitors')
 
         number_of_detectors = self.add_grid_shapes_from_idf()
         if number_of_detectors != 0:
