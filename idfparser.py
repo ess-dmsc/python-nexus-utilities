@@ -86,7 +86,7 @@ class IDFParser:
         for xml_type in self.root.findall('d:type', self.ns):
             if xml_type.get('is') == 'detector':
                 name = xml_type.get('name')
-                pixels.append({'name': name, 'shape': self.__get_pixel_shape(self.root, name)})
+                pixels.append({'name': name, 'shape': self.__get_shape(xml_type)})
         return pixels
 
     def __get_detector_offsets(self, xml_type):
@@ -169,15 +169,18 @@ class IDFParser:
     def __get_pixel_shape(self, xml_root, type_name):
         for xml_type in xml_root.findall('d:type', self.ns):
             if xml_type.get('name') == type_name and xml_type.get('is') == 'detector':
-                cuboid = xml_type.find('d:cuboid', self.ns)
-                cylinder = xml_type.find('d:cylinder', self.ns)
-                if cuboid is not None:
-                    return self.__parse_cuboid(cuboid)
-                elif cylinder is not None:
-                    return self.__parse_cylinder(cylinder)
-                else:
-                    raise Exception('pixel is not of known shape')
+                return self.__get_shape(xml_type)
         return None
+
+    def __get_shape(self, xml_type):
+        cuboid = xml_type.find('d:cuboid', self.ns)
+        cylinder = xml_type.find('d:cylinder', self.ns)
+        if cuboid is not None:
+            return self.__parse_cuboid(cuboid)
+        elif cylinder is not None:
+            return self.__parse_cylinder(cylinder)
+        else:
+            raise Exception('pixel is not of known shape')
 
     def __parse_cuboid(self, cuboid_xml):
         """
@@ -266,6 +269,13 @@ class IDFParser:
                        'Y_id_step': int(xml_type.get('idstep')), 'name': xml_type.get('name'),
                        'type_name': xml_type.get('type'), 'location': location,
                        'rotation': rotation}
+
+    def get_monitors(self):
+        monitors = []
+        for xml_type in self.root.findall('d:type', self.ns):
+            if xml_type.get('is') == 'monitor':
+                name = xml_type.get('name')
+                monitors.append({'name': name, 'shape': self.__get_shape(xml_type)})
 
     def get_structured_detector_vertices(self, type_name):
         """
