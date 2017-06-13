@@ -28,6 +28,8 @@ def normalise(input_vector):
     :param order: Order of the norm, see https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.norm.html
     :return: Unit vector, magnitude
     """
-    magnitude = np.sqrt(np.sum(np.square(input_vector)))
-    unit_vector = input_vector/magnitude
+    magnitude = np.sqrt(np.sum(np.square(input_vector.astype(float))))
+    if magnitude == 0:
+        return np.array([0.0, 0.0, 0.0]), 0.0
+    unit_vector = input_vector.astype(float)/magnitude
     return unit_vector, magnitude
