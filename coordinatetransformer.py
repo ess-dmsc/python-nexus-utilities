@@ -24,7 +24,7 @@ class CoordinateTransformer:
         :param angle: Angle to return in degrees
         :return: Angle in degrees
         """
-        return angle if self.angles_in_degrees else np.deg2rad(angle)
+        return angle if self.angles_in_degrees else np.rad2deg(angle)
 
     def get_nexus_coordinates(self, vector):
         """
