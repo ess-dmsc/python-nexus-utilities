@@ -79,9 +79,24 @@ class IDFParser:
                         yield det_bank_info
 
     def __get_vector(self, xml_point):
-        return np.array([self.__none_to_zero(xml_point.get('x')),
-                         self.__none_to_zero(xml_point.get('y')),
-                         self.__none_to_zero(xml_point.get('z'))]).astype(float)
+        x = xml_point.get('x')
+        y = xml_point.get('y')
+        z = xml_point.get('z')
+        if [x, y, z] == [None, None, None]:
+            # No cartesian axes, maybe there are spherical?
+            r = xml_point.get('r')
+            t = xml_point.get('t')
+            p = xml_point.get('p')
+            vector = np.array([self.__none_to_zero(r),
+                               self.__none_to_zero(t),
+                               self.__none_to_zero(p)]).astype(float)
+            vector = self.transform.spherical_to_cartesian(vector)
+        else:
+            vector = np.array([self.__none_to_zero(x),
+                               self.__none_to_zero(y),
+                               self.__none_to_zero(z)]).astype(float)
+
+        return self.transform.get_nexus_coordinates(vector)
 
     def __get_pixel_names_and_shapes(self):
         pixels = []
