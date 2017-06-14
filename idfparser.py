@@ -356,7 +356,6 @@ class IDFParser:
         if xml_along_beam is None or xml_up is None:
             raise Exception('Expected "along-beam" and "pointing-up" to be specified '
                             'in the default reference frame in the IDF')
-        nexus_x = None
         nexus_y = xml_up.get('axis')
         nexus_z = xml_along_beam.get('axis')
         handedness = 'right'
