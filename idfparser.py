@@ -353,7 +353,7 @@ class IDFParser:
         xml_ref_frame = xml_defaults.find('d:reference-frame', self.ns)
         xml_along_beam = xml_ref_frame.find('d:along-beam', self.ns)
         xml_up = xml_ref_frame.find('d:pointing-up', self.ns)
-        if not xml_along_beam or not xml_up:
+        if xml_along_beam is None or xml_up is None:
             raise Exception('Expected "along-beam" and "pointing-up" to be specified '
                             'in the default reference frame in the IDF')
         nexus_x = None
@@ -374,18 +374,20 @@ class IDFParser:
                             nexus_z[1:] if is_negative(nexus_z) else nexus_z]
 
         # Assuming right-handedness
-        if unsigned_yz_list is ['y', 'z']:
+        if unsigned_yz_list == ['y', 'z']:
             nexus_x = 'x'
-        elif unsigned_yz_list is ['z', 'y']:
+        elif unsigned_yz_list == ['z', 'y']:
             nexus_x = '-x'
-        elif unsigned_yz_list is ['x', 'y']:
+        elif unsigned_yz_list == ['x', 'y']:
             nexus_x = '-z'
-        elif unsigned_yz_list is ['y', 'x']:
+        elif unsigned_yz_list == ['y', 'x']:
             nexus_x = 'z'
-        elif unsigned_yz_list is ['x', 'z']:
+        elif unsigned_yz_list == ['x', 'z']:
             nexus_x = 'y'
-        elif unsigned_yz_list is ['z', 'x']:
+        elif unsigned_yz_list == ['z', 'x']:
             nexus_x = '-y'
+        else:
+            raise RuntimeError('Unexpected yz list in IDFParser.__get_default_coord_systems')
 
         if is_negative(nexus_y) ^ is_negative(nexus_z):
             nexus_x = flip_axis(nexus_x)
