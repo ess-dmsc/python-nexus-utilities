@@ -14,6 +14,15 @@ def wipe_file(filename):
 
 
 def add_nx_group(parent_group, group_name, nx_class_name):
+    """
+    Add an NXclass group
+
+    :param parent_group: The parent group object
+    :param group_name: Name for the group, any spaces are replaced with underscores
+    :param nx_class_name: Name of the NXclass
+    :return:
+    """
+    group_name = group_name.replace(' ', '_')
     created_group = parent_group.create_group(group_name)
     created_group.attrs.create('NX_class', np.array(nx_class_name).astype('|S' + str(len(nx_class_name))))
     return created_group
