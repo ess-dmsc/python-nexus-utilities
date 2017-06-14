@@ -49,8 +49,7 @@ class CoordinateTransformer:
         """
         return direction[0] == '-'
 
-    @staticmethod
-    def spherical_to_cartesian(rthetaphi):
+    def spherical_to_cartesian(self, rthetaphi):
         """
         Convert spherical to cartesian coordinates
 
@@ -59,8 +58,11 @@ class CoordinateTransformer:
         """
         # takes list rthetaphi (single coordinate)
         r = rthetaphi[0]
-        theta = rthetaphi[1] * np.pi / 180  # to radian
-        phi = rthetaphi[2] * np.pi / 180
+        theta = rthetaphi[1]
+        phi = rthetaphi[2]
+        if self.angles_in_degrees:
+            theta = np.deg2rad(theta)
+            phi = np.deg2rad(phi)
         x = r * np.sin(theta) * np.cos(phi)
         y = r * np.sin(theta) * np.sin(phi)
         z = r * np.cos(theta)
