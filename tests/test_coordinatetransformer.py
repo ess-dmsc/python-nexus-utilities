@@ -22,3 +22,10 @@ def test_convert_spherical_to_cartesian():
     np.testing.assert_allclose(transformer.spherical_to_cartesian([1.0, 0.0, 0.0]), [0.0, 0.0, 1.0], atol=1e-7)
     np.testing.assert_allclose(transformer.spherical_to_cartesian([1.0, 90.0, 0.0]), [1.0, 0.0, 0.0], atol=1e-7)
     np.testing.assert_allclose(transformer.spherical_to_cartesian([1.0, 90.0, 90.0]), [0.0, 1.0, 0.0], atol=1e-7)
+
+
+def test_convert_cartesian_to_spherical():
+    transformer = CoordinateTransformer()
+    np.testing.assert_allclose(transformer.cartesian_to_spherical([0.0, 0.0, 1.0]), [1.0, 0.0, 0.0], atol=1e-7)
+    np.testing.assert_allclose(transformer.cartesian_to_spherical([1.0, 0.0, 0.0]), [1.0, 90.0, 0.0], atol=1e-7)
+    np.testing.assert_allclose(transformer.cartesian_to_spherical([0.0, 1.0, 0.0]), [1.0, 90.0, 90.0], atol=1e-7)
