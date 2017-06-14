@@ -14,8 +14,6 @@ formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logger.addHandler(console)
 
-METRES_UNIT = 'm'
-
 
 class NexusBuilder:
     """
@@ -48,8 +46,10 @@ class NexusBuilder:
         self.root = self.__add_nx_entry(nx_entry_name)
         if idf_filename:
             self.idf_parser = IDFParser(idf_filename)
+            self.length_units = self.idf_parser.get_length_units()
         else:
             self.idf_parser = None
+            self.length_units = 'm'
         self.instrument = None
 
     def copy_items(self, dataset_map):
@@ -191,15 +191,15 @@ class NexusBuilder:
         self.error_if_not_none_or_scalar(optional_scalar_in_metres)
         detector_group = self.add_detector_minimal(name, number)
         self.__add_distance_datasets(detector_group, optional_scalar_in_metres)
-        self.add_dataset(detector_group, 'x_pixel_offset', x_pixel_offset, {'units': METRES_UNIT})
-        self.add_dataset(detector_group, 'y_pixel_offset', y_pixel_offset, {'units': METRES_UNIT})
+        self.add_dataset(detector_group, 'x_pixel_offset', x_pixel_offset, {'units': self.length_units})
+        self.add_dataset(detector_group, 'y_pixel_offset', y_pixel_offset, {'units': self.length_units})
         self.add_dataset(detector_group, 'detector_number', detector_ids)
         return detector_group
 
     def __add_distance_datasets(self, group, scalar_params):
         for name, data in scalar_params.items():
             if data is not None:
-                self.add_dataset(group, name, data, {'units': METRES_UNIT})
+                self.add_dataset(group, name, data, {'units': self.length_units})
 
     @staticmethod
     def error_if_not_none_or_scalar(parameters):
@@ -311,16 +311,16 @@ class NexusBuilder:
         """
         grid_pattern = nexusutils.add_nx_group(detector_group, name, 'NXgrid_pattern')
         self.add_dataset(grid_pattern, 'id_start', np.array([id_start]))
-        self.add_dataset(grid_pattern, 'position_start', position_start, {'units': METRES_UNIT})
+        self.add_dataset(grid_pattern, 'position_start', position_start, {'units': self.length_units})
         self.add_dataset(grid_pattern, 'size', np.array([size]))
         self.add_dataset(grid_pattern, 'X_id_step', np.array([id_steps[0]]))
         self.add_dataset(grid_pattern, 'Y_id_step', np.array([id_steps[1]]))
         if len(id_steps) > 2:
             self.add_dataset(grid_pattern, 'Z_id_step', np.array([id_steps[2]]))
-        self.add_dataset(grid_pattern, 'X_step', [steps[0]], {'units': METRES_UNIT})
-        self.add_dataset(grid_pattern, 'Y_step', [steps[1]], {'units': METRES_UNIT})
+        self.add_dataset(grid_pattern, 'X_step', [steps[0]], {'units': self.length_units})
+        self.add_dataset(grid_pattern, 'Y_step', [steps[1]], {'units': self.length_units})
         if len(steps) > 2:
-            self.add_dataset(grid_pattern, 'Z_step', [steps[2]], {'units': METRES_UNIT})
+            self.add_dataset(grid_pattern, 'Z_step', [steps[2]], {'units': self.length_units})
         self.add_depends_on(grid_pattern, depends_on)
         return grid_pattern
 
@@ -333,7 +333,7 @@ class NexusBuilder:
                     ' must each have three values (corresponding to the cartesian axes)' +
                     ' Module name: ' + name)
             self.add_dataset(detector_module, name, 0, {'transformation_type': 'translation',
-                                                        'offset_units': METRES_UNIT,
+                                                        'offset_units': self.length_units,
                                                         'offset': pixel_direction_offset,
                                                         'size_in_pixels': direction_size,
                                                         'pixel_number_step': pixel_direction_step})
@@ -445,7 +445,7 @@ class NexusBuilder:
                 [detector['location']['x'], detector['location']['y'], detector['location']['z']]).astype(float)
             translate_unit_vector, translate_magnitude = nexusutils.normalise(translate_vector)
             transform_group = self.add_transformation_group(detector_group)
-            position = self.add_transformation(transform_group, 'translation', translate_magnitude, METRES_UNIT,
+            position = self.add_transformation(transform_group, 'translation', translate_magnitude, self.length_units,
                                                translate_unit_vector, name='panel_position')
 
             # Add rotation of detector
@@ -465,7 +465,7 @@ class NexusBuilder:
             detector_number += 1
         return detector_number
 
-    def add_monitor(self, name, detector_id, location, units=METRES_UNIT):
+    def add_monitor(self, name, detector_id, location, units=None):
         """
         Add a monitor to instrument
 
@@ -477,6 +477,8 @@ class NexusBuilder:
         """
         if self.instrument is None:
             raise Exception('There needs to be an NXinstrument before you can add monitors')
+        if units is None:
+            units = self.length_units
         monitor_group = nexusutils.add_nx_group(self.instrument, name, 'NXmonitor')
         # detector_id is not a monitor dataset in the standard...
         self.add_dataset(monitor_group, 'detector_id', int(detector_id))
@@ -619,7 +621,7 @@ class NexusBuilder:
         sample_transform_group = self.add_transformation_group('sample')
         position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
         sample_position = self.add_transformation(sample_transform_group, 'translation', position_magnitude,
-                                                  METRES_UNIT,
+                                                  self.length_units,
                                                   position_unit_vector, name='location')
         self.add_depends_on(sample_group, sample_position)
         return sample_group, sample_position
