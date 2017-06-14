@@ -29,3 +29,27 @@ def test_convert_cartesian_to_spherical():
     np.testing.assert_allclose(transformer.cartesian_to_spherical([0.0, 0.0, 1.0]), [1.0, 0.0, 0.0], atol=1e-7)
     np.testing.assert_allclose(transformer.cartesian_to_spherical([1.0, 0.0, 0.0]), [1.0, 90.0, 0.0], atol=1e-7)
     np.testing.assert_allclose(transformer.cartesian_to_spherical([0.0, 1.0, 0.0]), [1.0, 90.0, 90.0], atol=1e-7)
+
+
+def test_axis_signs():
+    transformer = CoordinateTransformer(nexus_coords=['x', 'y', 'z'])
+    assert list(transformer.nexus_coords_signs) == [1, 1, 1]
+    transformer = CoordinateTransformer(nexus_coords=['-x', 'y', 'z'])
+    assert list(transformer.nexus_coords_signs) == [-1, 1, 1]
+    transformer = CoordinateTransformer(nexus_coords=['-x', 'y', '-z'])
+    assert list(transformer.nexus_coords_signs) == [-1, 1, -1]
+
+
+def test_axis_order():
+    transformer = CoordinateTransformer(nexus_coords=['x', 'y', 'z'])
+    assert list(transformer.nexus_coords_order) == [0, 1, 2]
+    transformer = CoordinateTransformer(nexus_coords=['-z', 'x', 'y'])
+    assert list(transformer.nexus_coords_order) == [1, 2, 0]
+    transformer = CoordinateTransformer(nexus_coords=['-z', 'y', '-x'])
+    assert list(transformer.nexus_coords_order) == [2, 1, 0]
+
+
+def test_transformation():
+    # Example IDF with along-beam = y, pointing-up = x, handedness = left
+    transformer = CoordinateTransformer(nexus_coords=['-z', 'x', 'y'])
+    assert list(transformer.get_nexus_coordinates([4.2, 1.0, 0.37])) == [1.0, 0.37, -4.2]
