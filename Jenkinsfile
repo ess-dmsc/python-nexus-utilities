@@ -3,7 +3,7 @@ node('centos7') {
     def installed = fileExists 'bin/activate'
     if (!installed) {
         stage("Install Python Virtual Enviroment") {
-            sh 'virtualenv --no-site-packages .'
+            sh 'virtualenv -p python3 --no-site-packages nexus_venv'
         }
     }
 
@@ -16,7 +16,7 @@ node('centos7') {
     // Install dependencies in the virtualenv using pip
     stage ("Install Application Dependencies") {
         sh '''
-            source bin/activate
+            source nexus_venv/bin/activate
             pip install -r requirements.txt
             deactivate
            '''
@@ -29,7 +29,7 @@ node('centos7') {
         def testsError = null
         try {
             sh '''
-                source bin/activate
+                source nexus_venv/bin/activate
                 pytest
                 deactivate
                '''
