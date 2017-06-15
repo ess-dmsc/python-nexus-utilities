@@ -445,7 +445,6 @@ class IDFParser:
                 raise ValueError('Unexpected default unit for angles in IDF file')
         return self.angle_units
 
-
     def get_length_units(self):
         return self.length_units
 
