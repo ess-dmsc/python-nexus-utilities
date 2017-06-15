@@ -29,7 +29,7 @@ node('centos7') {
         def testsError = null
         try {
             sh '''
-                source ../bin/activate
+                source bin/activate
                 pytest
                 deactivate
                '''
