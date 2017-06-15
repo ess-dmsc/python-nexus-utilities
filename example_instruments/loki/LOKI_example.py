@@ -1,7 +1,7 @@
 from nexusbuilder import NexusBuilder
 
 if __name__ == '__main__':
-    builder = NexusBuilder('LOKI_example_gzip.hdf5', idf_filename='LOKI_Definition.xml',
+    builder = NexusBuilder('LOKI_example_gzip.hdf5', idf_file='LOKI_Definition.xml',
                            compress_type='gzip', compress_opts=1)
 
     sample_position = builder.add_instrument_geometry_from_idf()

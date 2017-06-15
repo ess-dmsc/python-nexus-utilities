@@ -5,7 +5,7 @@ if __name__ == '__main__':
     # builder = NexusBuilder('SANS_example_no_compression.hdf5', 'SANS_test.nxs',
     #                        idf_filename='SANS2D_Definition_Tubes.xml')
     builder = NexusBuilder('SANS_example_gzip_compress.hdf5', 'SANS_test.nxs',
-                           idf_filename='SANS2D_Definition_Tubes.xml', compress_type='gzip', compress_opts=1)
+                           idf_file='SANS2D_Definition_Tubes.xml', compress_type='gzip', compress_opts=1)
     # builder = NexusBuilder('SANS_example_blosc_compress.hdf5', 'SANS_test.nxs',
     #                        idf_filename='SANS2D_Definition_Tubes.xml', compress_type=32001)
 
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     # Copy data from the existing NeXus file and add some other bits to flesh out the example file
     builder.add_user('Sans2d Team', 'ISIS, STFC')
     # Define monitor_1 to have the shape of the Utah teapot as example use of NXshape
-    builder.add_shape_from_file('teapot.off', 'instrument/monitor_1', 'shape')
+    builder.add_shape_from_file('teapot.off', 'instrument/monitor1', 'shape')
     builder.copy_items(OrderedDict([('raw_data_1/instrument/moderator', 'raw_data_1/instrument/moderator'),
                                     ('raw_data_1/instrument/moderator/distance',
                                      'raw_data_1/instrument/moderator/distance'),
@@ -68,16 +68,16 @@ if __name__ == '__main__':
                                      'raw_data_1/detector_1_events/event_time_zero'),
                                     ('raw_data_1/detector_1_events/event_time_offset',
                                      'raw_data_1/detector_1_events/event_time_offset'),
-                                    ('raw_data_1/monitor_1/data', 'raw_data_1/instrument/monitor_1/data'),
+                                    ('raw_data_1/monitor_1/data', 'raw_data_1/instrument/monitor1/data'),
                                     ('raw_data_1/monitor_1/time_of_flight',
-                                     'raw_data_1/instrument/monitor_1/time_of_flight'),
-                                    ('raw_data_1/monitor_2/data', 'raw_data_1/instrument/monitor_2/data'),
+                                     'raw_data_1/instrument/monitor1/time_of_flight'),
+                                    ('raw_data_1/monitor_2/data', 'raw_data_1/instrument/monitor2/data'),
                                     ('raw_data_1/monitor_2/time_of_flight',
-                                     'raw_data_1/instrument/monitor_2/time_of_flight'),
-                                    ('raw_data_1/monitor_3/data', 'raw_data_1/instrument/monitor_3/data'),
+                                     'raw_data_1/instrument/monitor2/time_of_flight'),
+                                    ('raw_data_1/monitor_3/data', 'raw_data_1/instrument/monitor3/data'),
                                     ('raw_data_1/monitor_3/time_of_flight',
-                                     'raw_data_1/instrument/monitor_3/time_of_flight'),
-                                    ('raw_data_1/monitor_4/data', 'raw_data_1/instrument/monitor_4/data'),
+                                     'raw_data_1/instrument/monitor3/time_of_flight'),
+                                    ('raw_data_1/monitor_4/data', 'raw_data_1/instrument/monitor4/data'),
                                     ('raw_data_1/monitor_4/time_of_flight',
-                                     'raw_data_1/instrument/monitor_4/time_of_flight'),
+                                     'raw_data_1/instrument/monitor4/time_of_flight'),
                                     ]))
