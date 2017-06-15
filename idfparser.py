@@ -4,9 +4,15 @@ from coordinatetransformer import CoordinateTransformer
 
 
 class IDFParser:
-    def __init__(self, idf_filename):
-        self.filename = idf_filename
-        self.root = xml.etree.ElementTree.parse(idf_filename).getroot()
+    """
+    Parses Mantid IDF files
+    """
+    def __init__(self, idf_file):
+        """
+
+        :param idf_file: IDF file name or object
+        """
+        self.root = xml.etree.ElementTree.parse(idf_file).getroot()
         self.ns = {'d': 'http://www.mantidproject.org/IDF/1.0'}
         self.__get_defaults()
         # Our root should be the instrument
@@ -355,59 +361,63 @@ class IDFParser:
 
     def __get_default_coord_systems(self, angle_units):
         xml_defaults = self.root.find('d:defaults', self.ns)
-        # Default "location" element is undocumented in
-        # http://docs.mantidproject.org/nightly/concepts/InstrumentDefinitionFile.html
-        # but it seems to define the zero axis for the spherical coordinate system
-        xml_coord_map = xml_defaults.find('d:location', self.ns)
-        if xml_coord_map:
-            if not [float(xml_coord_map.get('r')), float(xml_coord_map.get('t')), float(xml_coord_map.get('p')),
-                    float(xml_coord_map.get('ang')), float(xml_coord_map.get('x')), float(xml_coord_map.get('y')),
-                    float(xml_coord_map.get('z'))] == [0, 0, 0, 0, 0, 0, 1]:
-                raise NotImplementedError('Dealing with spherical coordinate systems where the zero'
-                                          'axis is not along the z axis is not yet implemented')
-        xml_ref_frame = xml_defaults.find('d:reference-frame', self.ns)
-        xml_along_beam = xml_ref_frame.find('d:along-beam', self.ns)
-        xml_up = xml_ref_frame.find('d:pointing-up', self.ns)
-        if xml_along_beam is None or xml_up is None:
-            raise Exception('Expected "along-beam" and "pointing-up" to be specified '
-                            'in the default reference frame in the IDF')
-        nexus_y = xml_up.get('axis')
-        nexus_z = xml_along_beam.get('axis')
-        handedness = 'right'
-        xml_handedness = xml_ref_frame.find('d:handedness', self.ns)
-        if xml_handedness:
-            handedness = xml_handedness.get('val')
+        nexus_x = 'x'
+        nexus_y = 'y'
+        nexus_z = 'z'
+        if xml_defaults:
+            # Default "location" element is undocumented in
+            # http://docs.mantidproject.org/nightly/concepts/InstrumentDefinitionFile.html
+            # but it seems to define the zero axis for the spherical coordinate system
+            xml_coord_map = xml_defaults.find('d:location', self.ns)
+            if xml_coord_map:
+                if not [float(xml_coord_map.get('r')), float(xml_coord_map.get('t')), float(xml_coord_map.get('p')),
+                        float(xml_coord_map.get('ang')), float(xml_coord_map.get('x')), float(xml_coord_map.get('y')),
+                        float(xml_coord_map.get('z'))] == [0, 0, 0, 0, 0, 0, 1]:
+                    raise NotImplementedError('Dealing with spherical coordinate systems where the zero'
+                                              'axis is not along the z axis is not yet implemented')
+            xml_ref_frame = xml_defaults.find('d:reference-frame', self.ns)
+            xml_along_beam = xml_ref_frame.find('d:along-beam', self.ns)
+            xml_up = xml_ref_frame.find('d:pointing-up', self.ns)
+            if xml_along_beam is None or xml_up is None:
+                raise Exception('Expected "along-beam" and "pointing-up" to be specified '
+                                'in the default reference frame in the IDF')
+            nexus_y = xml_up.get('axis')
+            nexus_z = xml_along_beam.get('axis')
+            handedness = 'right'
+            xml_handedness = xml_ref_frame.find('d:handedness', self.ns)
+            if xml_handedness:
+                handedness = xml_handedness.get('val')
 
-        def is_negative(direction):
-            return direction[0] == '-'
+            def is_negative(direction):
+                return direction[0] == '-'
 
-        def flip_axis(nexus_a):
-            return '-' + nexus_a if not is_negative(nexus_a) else nexus_a[1:]
+            def flip_axis(nexus_a):
+                return '-' + nexus_a if not is_negative(nexus_a) else nexus_a[1:]
 
-        unsigned_yz_list = [nexus_y[1:] if is_negative(nexus_y) else nexus_y,
-                            nexus_z[1:] if is_negative(nexus_z) else nexus_z]
+            unsigned_yz_list = [nexus_y[1:] if is_negative(nexus_y) else nexus_y,
+                                nexus_z[1:] if is_negative(nexus_z) else nexus_z]
 
-        # Assuming right-handedness
-        if unsigned_yz_list == ['y', 'z']:
-            nexus_x = 'x'
-        elif unsigned_yz_list == ['z', 'y']:
-            nexus_x = '-x'
-        elif unsigned_yz_list == ['x', 'y']:
-            nexus_x = '-z'
-        elif unsigned_yz_list == ['y', 'x']:
-            nexus_x = 'z'
-        elif unsigned_yz_list == ['x', 'z']:
-            nexus_x = 'y'
-        elif unsigned_yz_list == ['z', 'x']:
-            nexus_x = '-y'
-        else:
-            raise RuntimeError('Unexpected yz list in IDFParser.__get_default_coord_systems')
+            # Assuming right-handedness
+            if unsigned_yz_list == ['y', 'z']:
+                nexus_x = 'x'
+            elif unsigned_yz_list == ['z', 'y']:
+                nexus_x = '-x'
+            elif unsigned_yz_list == ['x', 'y']:
+                nexus_x = '-z'
+            elif unsigned_yz_list == ['y', 'x']:
+                nexus_x = 'z'
+            elif unsigned_yz_list == ['x', 'z']:
+                nexus_x = 'y'
+            elif unsigned_yz_list == ['z', 'x']:
+                nexus_x = '-y'
+            else:
+                raise RuntimeError('Unexpected yz list in IDFParser.__get_default_coord_systems')
 
-        if is_negative(nexus_y) ^ is_negative(nexus_z):
-            nexus_x = flip_axis(nexus_x)
+            if is_negative(nexus_y) ^ is_negative(nexus_z):
+                nexus_x = flip_axis(nexus_x)
 
-        if handedness == 'left':
-            nexus_x = flip_axis(nexus_x)
+            if handedness == 'left':
+                nexus_x = flip_axis(nexus_x)
 
         self.transform = CoordinateTransformer(angles_in_degrees=(angle_units == 'deg'),
                                                nexus_coords=[nexus_x, nexus_y, nexus_z])
@@ -417,21 +427,22 @@ class IDFParser:
         self.angle_units = 'deg'
 
         xml_defaults = self.root.find('d:defaults', self.ns)
-        xml_default_length = xml_defaults.find('d:length', self.ns)
-        idf_length_units = xml_default_length.get('unit')
-        # Prefer SI unit abbreviation if we can
-        if idf_length_units.lower() in ['meter', 'metre', 'meters', 'metres', 'm']:
-            self.length_units = 'm'
-        else:
-            self.length_units = idf_length_units
-        xml_default_angle = xml_defaults.find('d:angle', self.ns)
-        idf_angle_units = xml_default_angle.get('unit')
-        if idf_angle_units.lower() in ['deg', 'degree', 'degrees']:
-            self.angle_units = 'deg'
-        elif idf_angle_units.lower() in ['rad', 'radian', 'radians']:
-            self.angle_units = 'rad'
-        else:
-            raise ValueError('Unexpected default unit for angles in IDF file')
+        if xml_defaults:
+            xml_default_length = xml_defaults.find('d:length', self.ns)
+            idf_length_units = xml_default_length.get('unit')
+            # Prefer SI unit abbreviation if we can
+            if idf_length_units.lower() in ['meter', 'metre', 'meters', 'metres', 'm']:
+                self.length_units = 'm'
+            else:
+                self.length_units = idf_length_units
+            xml_default_angle = xml_defaults.find('d:angle', self.ns)
+            idf_angle_units = xml_default_angle.get('unit')
+            if idf_angle_units.lower() in ['deg', 'degree', 'degrees']:
+                self.angle_units = 'deg'
+            elif idf_angle_units.lower() in ['rad', 'radian', 'radians']:
+                self.angle_units = 'rad'
+            else:
+                raise ValueError('Unexpected default unit for angles in IDF file')
         return self.angle_units
 
     def get_length_units(self):

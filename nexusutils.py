@@ -8,11 +8,6 @@ def is_scalar(object_to_check):
     return True
 
 
-def wipe_file(filename):
-    with h5py.File(filename, 'w') as f_write:
-        pass
-
-
 def add_nx_group(parent_group, group_name, nx_class_name):
     """
     Add an NXclass group

@@ -23,7 +23,7 @@ class NexusBuilder:
     """
 
     def __init__(self, output_nexus_filename, input_nexus_filename=None, compress_type=None, compress_opts=None,
-                 nx_entry_name='raw_data_1', idf_filename=None):
+                 nx_entry_name='raw_data_1', idf_file=None, file_in_memory=False):
         """
         compress_type=32001 for BLOSC
 
@@ -32,25 +32,31 @@ class NexusBuilder:
         :param nx_entry_name: Name of the root group (NXentry class)
         :param compress_type: Name or id of compression filter https://support.hdfgroup.org/services/contributions.html
         :param compress_opts: Compression options, for example gzip compression level
-        :param idf_filename: Filename of a Mantid IDF file from which to get instrument geometry
+        :param idf_file: File name or object for a Mantid IDF file from which to get instrument geometry
+        :param file_in_memory: If true the NeXus file is built in memory and never written to disk (for testing)
         """
         self.compress_type = compress_type
         self.compress_opts = compress_opts
-        nexusutils.wipe_file(output_nexus_filename)
         if input_nexus_filename:
             self.source_file = h5py.File(input_nexus_filename, 'r')
         else:
             self.source_file = None
-        self.target_file = h5py.File(output_nexus_filename, 'r+')
+        if file_in_memory:
+            self.target_file = h5py.File(output_nexus_filename, 'w', driver='core', backing_store=False)
+        else:
+            self.target_file = h5py.File(output_nexus_filename, 'w')
         # Having an NXentry root group is compulsory in NeXus format
         self.root = self.__add_nx_entry(nx_entry_name)
-        if idf_filename:
-            self.idf_parser = IDFParser(idf_filename)
+        if idf_file:
+            self.idf_parser = IDFParser(idf_file)
             self.length_units = self.idf_parser.get_length_units()
         else:
             self.idf_parser = None
             self.length_units = 'm'
         self.instrument = None
+
+    def get_root(self):
+        return self.root
 
     def copy_items(self, dataset_map):
         """
@@ -586,8 +592,7 @@ class NexusBuilder:
         """
         instrument_name = self.idf_parser.get_instrument_name()
         self.add_instrument(instrument_name)
-        logger.info('Got instrument geometry for ' + instrument_name + ' from IDF file ' + self.idf_parser.filename
-                    + ', it has:')
+        logger.info('Got instrument geometry for ' + instrument_name + ' from IDF file, it has:')
 
         source_name = self.idf_parser.get_source_name()
         self.add_source(source_name)
