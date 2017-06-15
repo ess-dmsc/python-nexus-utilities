@@ -55,6 +55,9 @@ class NexusBuilder:
             self.length_units = 'm'
         self.instrument = None
 
+    def get_root(self):
+        return self.root
+
     def copy_items(self, dataset_map):
         """
         Copy datasets and groups from one NeXus file to another
