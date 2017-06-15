@@ -4,9 +4,15 @@ from coordinatetransformer import CoordinateTransformer
 
 
 class IDFParser:
-    def __init__(self, idf_filename):
-        self.filename = idf_filename
-        self.root = xml.etree.ElementTree.parse(idf_filename).getroot()
+    """
+    Parses Mantid IDF files
+    """
+    def __init__(self, idf_file):
+        """
+
+        :param idf_file: IDF file name or object
+        """
+        self.root = xml.etree.ElementTree.parse(idf_file).getroot()
         self.ns = {'d': 'http://www.mantidproject.org/IDF/1.0'}
         self.__get_defaults()
         # Our root should be the instrument
