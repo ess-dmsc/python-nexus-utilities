@@ -1,4 +1,4 @@
-node(centos7) {
+node('centos7') {
     // Use a virtualenv to prevent polluting the build server
     def installed = fileExists 'bin/activate'
     if (!installed) {
