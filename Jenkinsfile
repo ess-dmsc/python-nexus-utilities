@@ -17,7 +17,7 @@ node('centos7') {
     stage ("Install Application Dependencies") {
         sh '''
             source bin/activate
-            pip install -r <relative path to requirements file>
+            pip install -r requirements.txt
             deactivate
            '''
     }
