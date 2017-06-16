@@ -17,7 +17,7 @@ node('fedora && python3') {
     stage ("Install Application Dependencies") {
         sh '''
             source nexus_venv/bin/activate
-            pip install -r requirements.txt
+            pip3 install -r requirements.txt
             deactivate
            '''
     }
