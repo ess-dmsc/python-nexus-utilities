@@ -24,15 +24,14 @@ node('fedora && python3') {
            '''
     }
 
-    // After all of the dependencies are installed, you can start to run your tests.
-    // The code below assumes that you're using the django-jenkins python libary to run the test but you can
-    // also use the built in django test runner, nose or tox
+    // Run unit tests
+    // python pytest ... is again to avoid path length problems and also to ignore the venv directory
     stage ("Run Unit/Integration Tests") {
         def testsError = null
         try {
             sh '''
                 source nexus_venv/bin/activate
-                pytest
+                python pytest ../../ --ignore=../../nexus_venv
                 deactivate
                '''
         }
