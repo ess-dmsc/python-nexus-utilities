@@ -14,10 +14,12 @@ node('fedora && python3') {
     }
 
     // Install dependencies in the virtualenv using pip
+    // cd into venv bin and use "python pip" to avoid path length problem
     stage ("Install Application Dependencies") {
         sh '''
             source nexus_venv/bin/activate
-            pip3 install -r requirements.txt
+            cd nexus_venv/bin
+            python pip install -r requirements.txt
             deactivate
            '''
     }
