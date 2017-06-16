@@ -31,6 +31,7 @@ node('fedora && python3') {
         try {
             sh '''
                 source nexus_venv/bin/activate
+                cd nexus_venv/bin
                 python pytest ../../ --ignore=../../nexus_venv
                 deactivate
                '''
