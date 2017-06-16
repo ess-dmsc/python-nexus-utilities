@@ -1,4 +1,4 @@
-node('centos7 && python3') {
+node('fedora && python3') {
     // Use a virtualenv to prevent polluting the build server
     def installed = fileExists 'bin/activate'
     if (!installed) {
