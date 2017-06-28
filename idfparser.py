@@ -145,6 +145,7 @@ class IDFParser:
         '''
         for pixel in pixels:
             self.collect_detector_components(types, components, pixel['name'])
+        # TODO pretty print pixels, types and components and see what we have
 
     def collect_detector_components(self, types, components, search_type):
         for xml_type in self.root.findall('d:type', self.ns):
@@ -153,12 +154,15 @@ class IDFParser:
                     offsets = self.__get_detector_offsets(xml_component)
                     components.append({'type': search_type, 'offsets': offsets})
                     self.add_component_to_type(types, xml_type.get('name'), search_type)
+                    # TODO detector if this is a top-level type/component (have a bool for this in dict)
+                    self.collect_detector_components(types, components, xml_type.get('name'))
 
     @staticmethod
     def add_component_to_type(types, type_name, component_type):
         """
         If there is a type with type_name already in types then append component_type to its subcomponents
         otherwise add the type with subcomponent
+
         :param types: list of dictionary describing each type
         :param type_name: the name of the type which has a subcomponent of component_type
         :param component_type: name of the type of the subcomponent
