@@ -611,6 +611,8 @@ class NexusBuilder:
         if number_of_detectors != 0:
             logger.info(str(number_of_detectors) + ' topologically, grid detector panels')
 
+        self.add_detectors_from_idf()
+
         return sample_position
 
     def add_sample(self, position, name='sample'):

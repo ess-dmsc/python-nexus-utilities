@@ -135,6 +135,41 @@ class IDFParser:
                         break
         return detector_offsets
 
+    def get_detectors2(self):
+        pixels = self.__get_pixel_names_and_shapes()  # {'name': str, 'shape': shape_info_dict}
+        types = []  # {'name': str, 'subcomponents':[str]}
+        components = []  # {'type': str, 'offsets':[[int, int, int]]}
+        '''
+        this stuff may belong in nexus builder:
+        does any type have more than one subcomponent? if so those components will be detector_modules
+        '''
+        for pixel in pixels:
+            self.collect_detector_components(types, components, pixel['name'])
+
+    def collect_detector_components(self, types, components, search_type):
+        for xml_type in self.root.findall('d:type', self.ns):
+            for xml_component in xml_type.findall('d:component', self.ns):
+                if xml_component.get('type') == search_type:
+                    offsets = self.__get_detector_offsets(xml_component)
+                    components.append({'type': search_type, 'offsets': offsets})
+                    self.add_component_to_type(types, xml_type.get('name'), search_type)
+
+    @staticmethod
+    def add_component_to_type(types, type_name, component_type):
+        """
+        If there is a type with type_name already in types then append component_type to its subcomponents
+        otherwise add the type with subcomponent
+        :param types: list of dictionary describing each type
+        :param type_name: the name of the type which has a subcomponent of component_type
+        :param component_type: name of the type of the subcomponent
+        :return:
+        """
+        det_type = next((detector_type for detector_type in types if detector_type["name"] == type_name), None)
+        if det_type is not None:
+            det_type['subcomponents'].append(component_type)
+        else:
+            types.append({'name': type_name, 'subcomponents': [component_type]})
+
     def get_detectors(self):
         """
         WIP
@@ -143,7 +178,6 @@ class IDFParser:
 
         :return:
         """
-        raise NotImplementedError
         pixels = self.__get_pixel_names_and_shapes()
         detectors = []
         for pixel in pixels:
