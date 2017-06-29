@@ -142,20 +142,72 @@ class IDFParser:
         types = []  # {'name': str, 'subcomponents':[str]}
         components = []  # {'type': str, 'offsets':[[int]]}
         # detectors = []  # top-level components {'name':str, 'type':str, idlist:[[int]], location: [float]}
-        '''
-        this stuff may belong in nexus builder:
-        does any type have more than one subcomponent? if so those components will be detector_modules
-        '''
         for pixel in pixels:
             self.__collect_detector_components(types, components, pixel['name'])
 
         detectors = self.__collect_top_level_detector_components([instr_type['name'] for instr_type in types])
 
+        # Collate info for detector_modules
+        detector_modules = self.__collate_detector_module_info(types, components,
+                                                               self.__find_detector_module_names(types))
+        self.pprint_things((pixels, types, components, detectors))
+
+        if detector_modules:
+            pass
+        else:
+            raise NotImplementedError('Case of no detector_modules in the detector is not yet implemented')
+
+    @staticmethod
+    def __find_detector_module_names(types):
+        def get_det_module_names():
+            for instr_type in types:
+                if len(instr_type['subcomponents']) > 1:
+                    for subcomponent in instr_type['subcomponents']:
+                        yield subcomponent
+
+        return list(get_det_module_names())
+
+    def __collate_detector_module_info(self, types, components, detector_module_names):
+        detector_modules = []  # {'name': str, 'offsets':[[float]], 'pixel_name':str}
+        for det_type_name in detector_module_names:
+            type_chain = []
+            while True:
+                type_chain.insert(0, det_type_name)
+                det_type = \
+                    next((detector_type for detector_type in types if detector_type["name"] == det_type_name), None)
+                if det_type is not None:
+                    if len(det_type['subcomponents']) != 1:
+                        raise Exception(
+                            'Expected to find single subcomponent  in IDFParser.__collate_detector_module_info')
+                    det_type_name = det_type['subcomponents'][0]
+                else:
+                    break
+
+            pixel_name = type_chain[0]
+            offsets = next((component for component in components if component["type"] == pixel_name), None)[
+                'offsets']
+            for component_type in type_chain[1:]:
+                new_offsets = \
+                    next((component for component in components if component["type"] == component_type), None)[
+                        'offsets']
+                offsets = self.__calculate_new_offsets(offsets, new_offsets)
+            detector_modules.append({'name': det_type_name, 'pixel_name': pixel_name, 'offsets': offsets})
+        return detector_modules
+
+    @staticmethod
+    def __calculate_new_offsets(old_offsets, new_offsets):
+        offsets = []
+        for old_offset in old_offsets:
+            # apply as a translation to each new offset
+            for new_offset in new_offsets:
+                offsets.append(np.add(old_offset, new_offset))
+        return offsets
+
+    @staticmethod
+    def pprint_things(things):
         pp = pprint.PrettyPrinter(indent=4)
-        pp.pprint(pixels)
-        pp.pprint(types)
-        pp.pprint(components)
-        pp.pprint(detectors)
+        for thing in things:
+            pp.pprint(thing)
 
     def __collect_detector_components(self, types, components, search_type):
         for xml_type in self.root.findall('d:type', self.ns):
