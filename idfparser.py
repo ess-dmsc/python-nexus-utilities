@@ -389,7 +389,7 @@ class IDFParser:
         else:
             z_pixel_size = height
         return {'shape': 'cylinder', 'x_pixel_size': x_pixel_size, 'y_pixel_size': y_pixel_size,
-                'thickness': z_pixel_size, 'diameter': 2.0 * radius}
+                'thickness': z_pixel_size, 'diameter': 2.0 * radius, 'height': height, 'radius': radius}
 
     @staticmethod
     def __get_1d_pixel_offsets(dimension_name, xml_type):

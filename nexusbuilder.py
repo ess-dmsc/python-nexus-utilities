@@ -155,6 +155,10 @@ class NexusBuilder:
             location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
                                                               self.length_units, translate_unit_vector)
             self.add_depends_on(detector_group, location_transformation)
+            pixel_shape = detector['pixel']['shape']
+            if pixel_shape['shape'] == 'cylinder':
+                self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'])
+
         return total_panels
 
     def add_monitors_from_idf(self):
@@ -278,7 +282,8 @@ class NexusBuilder:
         :return: NXshape describing a single pixel
         """
         if centre is None:
-            centre = [0, 0, 0]
+            # Assume halfway along cylinder axis should be origin
+            centre = [-height/2.0, 0, 0]
         angles = np.linspace(0, 2 * np.pi, np.floor((number_of_vertices / 2) + 1))
         # The last point is the same as the first so get rid of it
         angles = angles[:-1]
@@ -286,8 +291,8 @@ class NexusBuilder:
         z = centre[2] + radius * np.sin(angles)
         num_points_at_each_tube_end = len(y)
         vertices = np.concatenate((
-            np.array(list(zip(np.zeros(len(y)), y, z))),
-            np.array(list(zip(np.ones(len(y)) * height, y, z)))))
+            np.array(list(zip(np.zeros(len(y)) + centre[0], y, z))),
+            np.array(list(zip(np.ones(len(y)) * height + centre[0], y, z)))))
         #
         # points around left circle tube-end       points around right circle tube-end
         #                                          (these follow the left ones in vertices list)
