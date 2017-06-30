@@ -159,7 +159,7 @@ class IDFParser:
             # go top down until hit modules, recording chain
             # then back up chain dealing with offsets
             detectors = self.__collate_detector_info(types, detector_module_names,
-                                                     [detector['type'] for detector in top_level_detectors],
+                                                     set([detector['type'] for detector in top_level_detectors]),
                                                      detector_modules, top_level_detectors)
         else:
             raise NotImplementedError('Case of no detector_modules in the detector is not yet implemented')
@@ -178,8 +178,7 @@ class IDFParser:
 
         return list(get_det_module_names())
 
-    @staticmethod
-    def __collate_detector_info(types, detector_module_names, detector_type_names, detector_modules,
+    def __collate_detector_info(self, types, detector_module_names, detector_type_names, detector_modules,
                                 top_level_detectors):
         detectors = []
         for det_type_name in detector_type_names:
@@ -194,19 +193,38 @@ class IDFParser:
 
             # concatenate the offsets for the detector modules
             offsets = []
+            pixel_names = []
             for detector_module_name in det_modules_in_detector:
                 det_mod = \
                     next((detector_module for detector_module in detector_modules if
                           detector_module["name"] == detector_module_name), None)
                 offsets += det_mod['offsets']
+                pixel_names.append(det_mod['pixel_name'])
+            if not self.__check_all_equal(pixel_names):
+                raise NotImplementedError(
+                    'These detector modules in IDFParser.__collate_detector_info '
+                    'cannot be combined as they have different pixel shapes. Need '
+                    'to implement using NXdetector_module for each of them instead of combining into an NXdetector')
+
             # location is the offset in the top level detector component
             detector_components = \
                 list(det_comp for det_comp in top_level_detectors if det_comp["type"] == det_type_name)
             for detector_component in detector_components:
                 detectors.append(
                     {'name': detector_component['name'], 'type': det_type_name, 'idlist': None,
-                     'location': detector_component['location'], 'offsets': offsets})
+                     'location': detector_component['location'], 'offsets': offsets,
+                     'pixel_name': pixel_names[0]})
         return detectors
+
+    @staticmethod
+    def __check_all_equal(input_list):
+        """
+        Check all elements of the input list are equal
+
+        :param input_list: List, are all its elements equal?
+        :return: Bool result
+        """
+        return input_list.count(input_list[0]) == len(input_list)
 
     def __collate_detector_module_info(self, types, components, detector_module_names):
         detector_modules = []  # {'name': str, 'offsets':[[float]], 'pixel_name':str}
