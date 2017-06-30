@@ -144,7 +144,7 @@ class IDFParser:
         types = []  # {'name': str, 'subcomponents':[str]}
         components = []  # {'type': str, 'offsets':[[int]]}
         # top-level components {'name':str, 'type':str, 'idlist':[[int]], 'location': [float], 'offsets':[[float]]}
-        # detectors = []
+        detectors = []
         for pixel in pixels:
             self.__collect_detector_components(types, components, pixel['name'])
 
@@ -160,13 +160,23 @@ class IDFParser:
             # then back up chain dealing with offsets
             detectors = self.__collate_detector_info(types, detector_module_names,
                                                      set([detector['type'] for detector in top_level_detectors]),
-                                                     detector_modules, top_level_detectors)
+                                                     detector_modules, top_level_detectors, pixels)
         else:
             raise NotImplementedError('Case of no detector_modules in the detector is not yet implemented')
             # TODO Possibly all that is required here is calling collate_det_mod_info on the detector names
 
         with open("pprint_out.txt", "w") as fout:
             self.pprint_things([detectors], fout)
+
+        return detectors
+
+    def __get_id_list(self, idname):
+        idlist = []
+        for xml_idlist in self.root.findall('d:idlist', self.ns):
+            if xml_idlist.get('idname') == idname:
+                for xml_id in xml_idlist.findall('d:id', self.ns):
+                    idlist = idlist + list(range(int(xml_id.get('start')), int(xml_id.get('end')) + 1))
+        return idlist
 
     @staticmethod
     def __find_detector_module_names(types):
@@ -179,7 +189,7 @@ class IDFParser:
         return list(get_det_module_names())
 
     def __collate_detector_info(self, types, detector_module_names, detector_type_names, detector_modules,
-                                top_level_detectors):
+                                top_level_detectors, pixels):
         detectors = []
         for det_type_name in detector_type_names:
             type_chain = []
@@ -210,10 +220,12 @@ class IDFParser:
             detector_components = \
                 list(det_comp for det_comp in top_level_detectors if det_comp["type"] == det_type_name)
             for detector_component in detector_components:
+                pixel_info = next((pixel for pixel in pixels if pixel["name"] == pixel_names[0]), None)
+                idlist = self.__get_id_list(detector_component['idlist'])
                 detectors.append(
-                    {'name': detector_component['name'], 'type': det_type_name, 'idlist': None,
+                    {'name': detector_component['name'], 'type': det_type_name, 'idlist': idlist,
                      'location': detector_component['location'], 'offsets': offsets,
-                     'pixel_name': pixel_names[0]})
+                     'pixel': pixel_info})
         return detectors
 
     @staticmethod
@@ -257,9 +269,9 @@ class IDFParser:
     @staticmethod
     def __calculate_new_offsets(old_offsets, new_offsets):
         offsets = []
-        for old_offset in old_offsets:
-            # apply as a translation to each new offset
-            for new_offset in new_offsets:
+        for new_offset in new_offsets:
+            # apply as a translation to each old offset
+            for old_offset in old_offsets:
                 offsets.append(np.add(old_offset, new_offset))
         return offsets
 
@@ -456,7 +468,6 @@ class IDFParser:
                 next_id += 1
 
     def __get_monitor_idlist(self, type_name):
-        idlist = []
         for xml_component in self.root.findall('d:component', self.ns):
             if xml_component.get('type') == type_name:
                 location_xml = xml_component.find('d:location', self.ns)
@@ -465,10 +476,7 @@ class IDFParser:
                         raise NotImplementedError(
                             'dealing with location in __get_monitor_idlist is not implemented yet')
                 idlist_name = xml_component.get('idlist')
-                for xml_idlist in self.root.findall('d:idlist', self.ns):
-                    if xml_idlist.get('idname') == idlist_name:
-                        for xml_id in xml_idlist.findall('d:id', self.ns):
-                            idlist = idlist + list(range(int(xml_id.get('start')), int(xml_id.get('end')) + 1))
+                idlist = self.__get_id_list(idlist_name)
         return idlist
 
     def __get_monitor_types(self):
