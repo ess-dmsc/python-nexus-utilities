@@ -211,6 +211,7 @@ class NexusBuilder:
         :param y_beam_centre: Displacement of the centre of the bank from the beam centre along y
         :param x_pixel_offset: Pixel offsets on x axis from centre of detector
         :param y_pixel_offset: Pixel offsets on y axis from centre of detector
+        :param z_pixel_offset: Pixel offsets on z axis from centre of detector
         :return: NXdetector group
         """
         optional_scalar_in_metres = {'x_pixel_size': x_pixel_size, 'y_pixel_size': y_pixel_size, 'diameter': diameter,
