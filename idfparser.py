@@ -95,6 +95,8 @@ class IDFParser:
             r = xml_point.get('r')
             t = xml_point.get('t')
             p = xml_point.get('p')
+            if [r, t, p] == [None, None, None]:
+                raise Exception('No x,y,z or r,t,p values found in IDFParser.__get_vector')
             vector = np.array([self.__none_to_zero(r),
                                self.__none_to_zero(t),
                                self.__none_to_zero(p)]).astype(float)

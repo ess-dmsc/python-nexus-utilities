@@ -415,6 +415,7 @@ class NexusBuilder:
                 return None
             counts = off_file.readline().split()
             number_of_vertices = int(counts[0])
+            # These values are also in the first line, although we don't need them:
             # number_of_faces = int(counts[1])
             # number_of_edges = int(counts[2])
 
