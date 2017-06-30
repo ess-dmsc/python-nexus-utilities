@@ -141,21 +141,30 @@ class IDFParser:
         pixels = self.__get_pixel_names_and_shapes()  # {'name': str, 'shape': shape_info_dict}
         types = []  # {'name': str, 'subcomponents':[str]}
         components = []  # {'type': str, 'offsets':[[int]]}
-        # detectors = []  # top-level components {'name':str, 'type':str, idlist:[[int]], location: [float]}
+        # top-level components {'name':str, 'type':str, 'idlist':[[int]], 'location': [float], 'offsets':[[float]]}
+        # detectors = []
         for pixel in pixels:
             self.__collect_detector_components(types, components, pixel['name'])
 
-        detectors = self.__collect_top_level_detector_components([instr_type['name'] for instr_type in types])
+        top_level_detectors = self.__collect_top_level_detector_components([instr_type['name'] for instr_type in types])
 
         # Collate info for detector_modules
-        detector_modules = self.__collate_detector_module_info(types, components,
-                                                               self.__find_detector_module_names(types))
-        self.pprint_things((pixels, types, components, detectors))
+        detector_module_names = self.__find_detector_module_names(types)
+        detector_modules = self.__collate_detector_module_info(types, components, detector_module_names)
+        self.pprint_things((pixels, types, components, top_level_detectors))
 
         if detector_modules:
-            pass
+            # go top down until hit modules, recording chain
+            # then back up chain dealing with offsets
+            detectors = self.__collate_detector_info(types, components, detector_module_names,
+                                                     [detector['type'] for detector in top_level_detectors],
+                                                     detector_modules, top_level_detectors)
         else:
             raise NotImplementedError('Case of no detector_modules in the detector is not yet implemented')
+            # TODO Possibly all that is required here is calling collate_det_mod_info on the detector names
+
+        with open("pprint_out.txt", "w") as fout:
+            self.pprint_things([detectors], fout)
 
     @staticmethod
     def __find_detector_module_names(types):
@@ -167,9 +176,40 @@ class IDFParser:
 
         return list(get_det_module_names())
 
+    @staticmethod
+    def __collate_detector_info(types, components, detector_module_names, detector_type_names, detector_modules,
+                                top_level_detectors):
+        detectors = []
+        for det_type_name in detector_type_names:
+            type_chain = []
+            while True:
+                type_chain.insert(0, det_type_name)
+                det_type = \
+                    next((detector_type for detector_type in types if detector_type["name"] == det_type_name), None)
+                if det_type['subcomponents'][0] in detector_module_names:
+                    det_modules_in_detector = det_type['subcomponents']
+                    break
+
+            # concatenate the offsets for the detector modules
+            offsets = []
+            for detector_module_name in det_modules_in_detector:
+                det_mod = \
+                    next((detector_module for detector_module in detector_modules if
+                          detector_module["name"] == detector_module_name), None)
+                offsets += det_mod['offsets']
+            # location is the offset in the top level detector component
+            detector_components = \
+                list(det_comp for det_comp in top_level_detectors if det_comp["type"] == det_type_name)
+            for detector_component in detector_components:
+                detectors.append(
+                    {'name': detector_component['name'], 'type': det_type_name, 'idlist': None,
+                     'location': detector_component['location'], 'offsets': offsets})
+        return detectors
+
     def __collate_detector_module_info(self, types, components, detector_module_names):
         detector_modules = []  # {'name': str, 'offsets':[[float]], 'pixel_name':str}
         for det_type_name in detector_module_names:
+            top_det_type_name = det_type_name
             type_chain = []
             while True:
                 type_chain.insert(0, det_type_name)
@@ -191,7 +231,7 @@ class IDFParser:
                     next((component for component in components if component["type"] == component_type), None)[
                         'offsets']
                 offsets = self.__calculate_new_offsets(offsets, new_offsets)
-            detector_modules.append({'name': det_type_name, 'pixel_name': pixel_name, 'offsets': offsets})
+            detector_modules.append({'name': top_det_type_name, 'pixel_name': pixel_name, 'offsets': offsets})
         return detector_modules
 
     @staticmethod
@@ -204,8 +244,8 @@ class IDFParser:
         return offsets
 
     @staticmethod
-    def pprint_things(things):
-        pp = pprint.PrettyPrinter(indent=4)
+    def pprint_things(things, fileobject=None):
+        pp = pprint.PrettyPrinter(indent=4, stream=fileobject)
         for thing in things:
             pp.pprint(thing)
 
