@@ -147,17 +147,27 @@ class NexusBuilder:
             z_offsets = offsets[:, 2]
             if np.count_nonzero(z_offsets) == 0:
                 z_offsets = None
-            detector_group = self.add_detector(detector['name'], total_panels, detector['idlist'],
-                                               offsets[:, 0], offsets[:, 1],
-                                               z_pixel_offset=z_offsets)
+            pixel_shape = detector['pixel']['shape']
+            if pixel_shape['shape'] == 'cuboid':
+                detector_group = self.add_detector(detector['name'], total_panels, detector['idlist'],
+                                                   offsets[:, 0], offsets[:, 1],
+                                                   z_pixel_offset=z_offsets, x_pixel_size=pixel_shape['x_pixel_size'],
+                                                   y_pixel_size=pixel_shape['y_pixel_size'],
+                                                   thickness=pixel_shape['thickness'])
+            else:
+                detector_group = self.add_detector(detector['name'], total_panels, detector['idlist'],
+                                                   offsets[:, 0], offsets[:, 1],
+                                                   z_pixel_offset=z_offsets)
             location = detector['location']
             translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
             location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
                                                               self.length_units, translate_unit_vector)
             self.add_depends_on(detector_group, location_transformation)
-            pixel_shape = detector['pixel']['shape']
             if pixel_shape['shape'] == 'cylinder':
                 self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'])
+                if pixel_shape != 'cuboid':
+                    raise NotImplementedError('Pixel shape other than cuboid or cylinder '
+                                              'in NexusBuilder.add_detectors_from_idf')
 
         return total_panels
 
@@ -283,7 +293,7 @@ class NexusBuilder:
         """
         if centre is None:
             # Assume halfway along cylinder axis should be origin
-            centre = [-height/2.0, 0, 0]
+            centre = [-height / 2.0, 0, 0]
         angles = np.linspace(0, 2 * np.pi, np.floor((number_of_vertices / 2) + 1))
         # The last point is the same as the first so get rid of it
         angles = angles[:-1]

@@ -373,23 +373,7 @@ class IDFParser:
         axis = self.__get_vector(cylinder_xml.find('d:axis', self.ns))
         radius = float(cylinder_xml.find('d:radius', self.ns).get('val'))
         height = float(cylinder_xml.find('d:height', self.ns).get('val'))
-        # Check axis is only finite in x or y as we only have x_pixel_size and y_pixel_size to
-        # put the height in for NeXus, otherwise throw error
-        if (int(axis[0] != 0) + int(axis[1] != 0) + int(axis[2] != 0)) != 1:
-            raise Exception(
-                'Cylinder axis must be aligned with a cartesian axis, '
-                'otherwise it cannot be represented in NeXus standard.')
-        x_pixel_size = None
-        y_pixel_size = None
-        z_pixel_size = None
-        if axis[0] != 0:
-            x_pixel_size = height
-        elif axis[1] != 0:
-            y_pixel_size = height
-        else:
-            z_pixel_size = height
-        return {'shape': 'cylinder', 'x_pixel_size': x_pixel_size, 'y_pixel_size': y_pixel_size,
-                'thickness': z_pixel_size, 'diameter': 2.0 * radius, 'height': height, 'radius': radius, 'axis': axis}
+        return {'shape': 'cylinder', 'height': height, 'radius': radius, 'axis': axis}
 
     @staticmethod
     def __get_1d_pixel_offsets(dimension_name, xml_type):
