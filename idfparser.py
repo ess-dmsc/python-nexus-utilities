@@ -156,7 +156,7 @@ class IDFParser:
         if detector_modules:
             # go top down until hit modules, recording chain
             # then back up chain dealing with offsets
-            detectors = self.__collate_detector_info(types, components, detector_module_names,
+            detectors = self.__collate_detector_info(types, detector_module_names,
                                                      [detector['type'] for detector in top_level_detectors],
                                                      detector_modules, top_level_detectors)
         else:
@@ -177,7 +177,7 @@ class IDFParser:
         return list(get_det_module_names())
 
     @staticmethod
-    def __collate_detector_info(types, components, detector_module_names, detector_type_names, detector_modules,
+    def __collate_detector_info(types, detector_module_names, detector_type_names, detector_modules,
                                 top_level_detectors):
         detectors = []
         for det_type_name in detector_type_names:
