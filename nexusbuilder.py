@@ -246,20 +246,20 @@ class NexusBuilder:
 
     def add_shape(self, group, name, vertices, faces, detector_faces=None):
         """
-        Add an NXshape to define geometry in OFF-like format
+        Add an NXsolid_geometry to define geometry in OFF-like format
 
-        :param group: Group or group name to add the NXshape group to
-        :param name: Name of the NXshape group
+        :param group: Group or group name to add the NXsolid_geometry group to
+        :param name: Name of the NXsolid_geometry group
         :param vertices: 2D numpy array list of [x,y,z] coordinates of vertices
         :param faces: 2D numpy array list of vertex indices in each face, right-hand rule for face normal
                       or a list of these where with an arrays for faces with different number of vertices
         :param detector_faces: Optional 2D numpy array list of face number-detector id pairs
-        :return: NXshape group
+        :return: NXsolid_geometry group
         """
         if isinstance(group, str):
             group = self.root[group]
 
-        shape = nexusutils.add_nx_group(group, name, 'NXshape')
+        shape = nexusutils.add_nx_group(group, name, 'NXsolid_geometry')
         self.add_dataset(shape, 'vertices', vertices)
         if isinstance(faces, list):
             for face_types in faces:
@@ -279,7 +279,7 @@ class NexusBuilder:
         :param radius: Radius of the tube
         :param centre: On-axis centre at the end of the tube in form [x, y, z]
         :param number_of_vertices: Maximum number of vertices to use to describe pixel
-        :return: NXshape describing a single pixel
+        :return: NXsolid_geometry describing a single pixel
         """
         if centre is None:
             # Assume halfway along cylinder axis should be origin
@@ -370,12 +370,12 @@ class NexusBuilder:
 
     def add_shape_from_file(self, filename, group, name):
         """
-        Add an NXshape shape definition from an OFF file
+        Add an NXsolid_geometry shape definition from an OFF file
 
         :param filename: Name of the OFF file from which to get the geometry
-        :param group: Group to add the NXshape to
-        :param name: Name of the NXshape group to be created
-        :return: NXshape group
+        :param group: Group to add the NXsolid_geometry to
+        :param name: Name of the NXsolid_geometry group to be created
+        :return: NXsolid_geometry group
         """
         with open(filename) as off_file:
             file_start = off_file.readline()
