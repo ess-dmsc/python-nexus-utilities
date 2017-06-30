@@ -315,52 +315,6 @@ class NexusBuilder:
         pixel_shape = self.add_shape(group, 'pixel_shape', vertices, faces)
         return pixel_shape
 
-    def add_grid_pattern(self, detector_group, name, id_start, position_start, size, id_steps, steps, depends_on='.'):
-        """
-        Add an NXgrid_pattern
-        NB, will need to add a pixel_shape definition to it afterwards
-
-        :param detector_group: NXdetector group to add grid pattern to
-        :param name: Name of the NXgrid_pattern group
-        :param id_start: The lowest detector id in the grid
-        :param position_start: Vector defining the position of the detector pixel with the lowest id
-        :param size: Iterable containing the number of pixels in each dimension of the grid
-        :param id_steps: Iterable of scalars defining increase in id number along each grid dimension
-        :param steps: Iterable of vectors defining translation along each grid dimension to get to next pixel
-        :param depends_on: Name (full path) of axis that this component depends on
-        :return: NXgrid_pattern group
-        """
-        grid_pattern = nexusutils.add_nx_group(detector_group, name, 'NXgrid_pattern')
-        self.add_dataset(grid_pattern, 'id_start', np.array([id_start]))
-        self.add_dataset(grid_pattern, 'position_start', position_start, {'units': self.length_units})
-        self.add_dataset(grid_pattern, 'size', np.array([size]))
-        self.add_dataset(grid_pattern, 'X_id_step', np.array([id_steps[0]]))
-        self.add_dataset(grid_pattern, 'Y_id_step', np.array([id_steps[1]]))
-        if len(id_steps) > 2:
-            self.add_dataset(grid_pattern, 'Z_id_step', np.array([id_steps[2]]))
-        self.add_dataset(grid_pattern, 'X_step', [steps[0]], {'units': self.length_units})
-        self.add_dataset(grid_pattern, 'Y_step', [steps[1]], {'units': self.length_units})
-        if len(steps) > 2:
-            self.add_dataset(grid_pattern, 'Z_step', [steps[2]], {'units': self.length_units})
-        self.add_depends_on(grid_pattern, depends_on)
-        return grid_pattern
-
-    def __add_pixel_direction(self, detector_module, name, pixel_direction_offset, pixel_direction_step,
-                              direction_size):
-        if all(arg is not None for arg in [name, pixel_direction_offset, pixel_direction_step, direction_size]):
-            if len(pixel_direction_offset) != 3:
-                logger.error(
-                    'In add_detector_module the pixel direction offset' +
-                    ' must each have three values (corresponding to the cartesian axes)' +
-                    ' Module name: ' + name)
-            self.add_dataset(detector_module, name, 0, {'transformation_type': 'translation',
-                                                        'offset_units': self.length_units,
-                                                        'offset': pixel_direction_offset,
-                                                        'size_in_pixels': direction_size,
-                                                        'pixel_number_step': pixel_direction_step})
-        else:
-            logger.debug('Missing arguments in __add_pixel_direction to define direction: ' + name)
-
     def __del__(self):
         # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
         try:
@@ -623,11 +577,13 @@ class NexusBuilder:
         if number_of_monitors != 0:
             logger.info(str(number_of_monitors) + ' monitors')
 
-        number_of_detectors = self.add_grid_shapes_from_idf()
-        if number_of_detectors != 0:
-            logger.info(str(number_of_detectors) + ' topologically, grid detector panels')
-
-        self.add_detectors_from_idf()
+        number_of_grid_detectors = self.add_grid_shapes_from_idf()
+        if number_of_grid_detectors != 0:
+            logger.info(str(number_of_grid_detectors) + ' topologically, grid detector panels')
+        else:
+            number_of_detectors = self.add_detectors_from_idf()
+            if number_of_detectors != 0:
+                logger.info(str(number_of_detectors) + ' detector panels')
 
         return sample_position
 

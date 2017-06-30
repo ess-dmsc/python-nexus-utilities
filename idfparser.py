@@ -154,7 +154,7 @@ class IDFParser:
         # Collate info for detector_modules
         detector_module_names = self.__find_detector_module_names(types)
         detector_modules = self.__collate_detector_module_info(types, components, detector_module_names)
-        self.pprint_things((pixels, types, components, top_level_detectors))
+        # self.pprint_things((pixels, types, components, top_level_detectors))
 
         if detector_modules:
             # go top down until hit modules, recording chain
@@ -389,7 +389,7 @@ class IDFParser:
         else:
             z_pixel_size = height
         return {'shape': 'cylinder', 'x_pixel_size': x_pixel_size, 'y_pixel_size': y_pixel_size,
-                'thickness': z_pixel_size, 'diameter': 2.0 * radius, 'height': height, 'radius': radius}
+                'thickness': z_pixel_size, 'diameter': 2.0 * radius, 'height': height, 'radius': radius, 'axis': axis}
 
     @staticmethod
     def __get_1d_pixel_offsets(dimension_name, xml_type):
