@@ -123,31 +123,38 @@ class NexusBuilder:
                     dataset.attrs.create(key, np.array(attributes[key]))
         return dataset
 
-    def add_detectors_from_idf(self):
+    def add_detectors_from_idf(self, reshape=None):
         """
         Add detector banks from a Mantid IDF file
         NB, currently only works for "RectangularDetector" panels 
             currently assumes the coordinate system in the IDF is the same as the NeXus one
             (z is beam direction, x is the other horizontal, y is vertical)
 
+        :param reshape:
         :return: Number of detector panels added
         """
         if self.idf_parser is None:
             logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
         total_panels = 0
-        self.idf_parser.get_detectors()
-        # for det_info, pixel_shape in self.idf_parser.get_detectors():
-        #     total_panels += 1
-        #     det_bank_group = self.add_detector(det_info['name'], det_info['number'], det_info['detector_ids'],
-        #                                        det_info['x_pixel_offset'], det_info['y_pixel_offset'],
-        #                                        det_info['distance'][2], pixel_shape['x_pixel_size'],
-        #                                        pixel_shape['y_pixel_size'], pixel_shape['diameter'],
-        #                                        thickness=pixel_shape['thickness'],
-        #                                        x_beam_centre=det_info['distance'][0],
-        #                                        y_beam_centre=det_info['distance'][1])
-        #     if 'transformation' in det_info:
-        #         pass
-        #         # self.add_transformation(det_bank_group, det_info['transformation'])
+        detectors = self.idf_parser.get_detectors()
+
+        # with open("pprint_out.txt", "w") as fout:
+        #    self.idf_parser.pprint_things([detectors], fout)
+
+        for detector in detectors:
+            total_panels += 1
+            offsets = np.array(detector['offsets'])
+            z_offsets = offsets[:, 2]
+            if np.count_nonzero(z_offsets) == 0:
+                z_offsets = None
+            detector_group = self.add_detector(detector['name'], total_panels, detector['idlist'],
+                                               offsets[:, 0], offsets[:, 1],
+                                               z_pixel_offset=z_offsets)
+            location = detector['location']
+            translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
+            location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
+                                                              self.length_units, translate_unit_vector)
+            self.add_depends_on(detector_group, location_transformation)
         return total_panels
 
     def add_monitors_from_idf(self):
@@ -172,7 +179,8 @@ class NexusBuilder:
         return len(monitors)
 
     def add_detector(self, name, number, detector_ids, x_pixel_offset,
-                     y_pixel_offset, distance=None, x_pixel_size=None, y_pixel_size=None, diameter=None, thickness=None,
+                     y_pixel_offset, z_pixel_offset=None, distance=None, x_pixel_size=None, y_pixel_size=None,
+                     diameter=None, thickness=None,
                      x_beam_centre=None, y_beam_centre=None):
         """
         Add an NXdetector, only suitable for rectangular detectors of consistent pixels
@@ -199,6 +207,8 @@ class NexusBuilder:
         self.__add_distance_datasets(detector_group, optional_scalar_in_metres)
         self.add_dataset(detector_group, 'x_pixel_offset', x_pixel_offset, {'units': self.length_units})
         self.add_dataset(detector_group, 'y_pixel_offset', y_pixel_offset, {'units': self.length_units})
+        if z_pixel_offset is not None:
+            self.add_dataset(detector_group, 'z_pixel_offset', z_pixel_offset, {'units': self.length_units})
         self.add_dataset(detector_group, 'detector_number', detector_ids)
         return detector_group
 

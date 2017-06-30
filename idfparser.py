@@ -143,7 +143,8 @@ class IDFParser:
         pixels = self.__get_pixel_names_and_shapes()  # {'name': str, 'shape': shape_info_dict}
         types = []  # {'name': str, 'subcomponents':[str]}
         components = []  # {'type': str, 'offsets':[[int]]}
-        # top-level components {'name':str, 'type':str, 'idlist':[[int]], 'location': [float], 'offsets':[[float]]}
+        # top-level components {'name':str, 'type':str, 'idlist':[[int]],
+        # 'location': [float], 'offsets':[[float]], 'idlist':[int]}
         detectors = []
         for pixel in pixels:
             self.__collect_detector_components(types, components, pixel['name'])
@@ -164,9 +165,6 @@ class IDFParser:
         else:
             raise NotImplementedError('Case of no detector_modules in the detector is not yet implemented')
             # TODO Possibly all that is required here is calling collate_det_mod_info on the detector names
-
-        with open("pprint_out.txt", "w") as fout:
-            self.pprint_things([detectors], fout)
 
         return detectors
 
