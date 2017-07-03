@@ -86,7 +86,7 @@ class NexusBuilder:
         :param number: User entry number, usually starting from 1
         :return: NXuser
         """
-        user_group = nexusutils.add_nx_group(self.root, 'user_' + str(number), 'NXuser')
+        user_group = self.add_nx_group(self.root, 'user_' + str(number), 'NXuser')
         self.add_dataset(user_group, 'name', name)
         self.add_dataset(user_group, 'affiliation', affiliation)
         return user_group
@@ -164,10 +164,10 @@ class NexusBuilder:
                                                               self.length_units, translate_unit_vector)
             self.add_depends_on(detector_group, location_transformation)
             if pixel_shape['shape'] == 'cylinder':
-                self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'])
-                if pixel_shape != 'cuboid':
-                    raise NotImplementedError('Pixel shape other than cuboid or cylinder '
-                                              'in NexusBuilder.add_detectors_from_idf')
+                self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'], pixel_shape['axis'])
+            elif pixel_shape != 'cuboid':
+                raise NotImplementedError('Pixel shape other than cuboid or cylinder '
+                                          'in NexusBuilder.add_detectors_from_idf')
 
         return total_panels
 
@@ -249,7 +249,7 @@ class NexusBuilder:
         """
         if self.instrument is None:
             raise Exception('There needs to be an NXinstrument before you can add detectors')
-        detector_group = nexusutils.add_nx_group(self.instrument, 'detector_' + str(number), 'NXdetector')
+        detector_group = self.add_nx_group(self.instrument, 'detector_' + str(number), 'NXdetector')
         self.add_dataset(detector_group, 'local_name', name)
         if depends_on is not None:
             self.add_depends_on(detector_group, depends_on)
@@ -270,7 +270,7 @@ class NexusBuilder:
         if isinstance(group, str):
             group = self.root[group]
 
-        shape = nexusutils.add_nx_group(group, name, 'NXsolid_geometry')
+        shape = self.add_nx_group(group, name, 'NXsolid_geometry')
         self.add_dataset(shape, 'vertices', vertices)
         if isinstance(faces, list):
             for face_types in faces:
@@ -282,28 +282,36 @@ class NexusBuilder:
             self.add_dataset(shape, 'detector_vertices', detector_faces)
         return shape
 
-    def add_tube_pixel(self, group, height, radius, centre=None, number_of_vertices=100):
+    def add_tube_pixel(self, group, height, radius, axis, centre=None, number_of_vertices=100):
         """
-        Axis is assumed to be along x
+        Construct an NXsolid_geometry description of a tube
+
         :param group: Group to add the pixel geometry to
         :param height: Height of the tube
         :param radius: Radius of the tube
-        :param centre: On-axis centre at the end of the tube in form [x, y, z]
+        :param axis: Axis of the tube as a unit vector
+        :param centre: On-axis centre of the tube in form [x, y, z]
         :param number_of_vertices: Maximum number of vertices to use to describe pixel
         :return: NXsolid_geometry describing a single pixel
         """
+        # Construct the geometry as if the tube axis is along x, rotate everything later
         if centre is None:
-            # Assume halfway along cylinder axis should be origin
-            centre = [-height / 2.0, 0, 0]
+            centre = [0, 0, 0]
+        end_centre = [centre[0] - (height / 2.0), centre[1], centre[2]]
         angles = np.linspace(0, 2 * np.pi, np.floor((number_of_vertices / 2) + 1))
         # The last point is the same as the first so get rid of it
         angles = angles[:-1]
-        y = centre[1] + radius * np.cos(angles)
-        z = centre[2] + radius * np.sin(angles)
+        y = end_centre[1] + radius * np.cos(angles)
+        z = end_centre[2] + radius * np.sin(angles)
         num_points_at_each_tube_end = len(y)
         vertices = np.concatenate((
-            np.array(list(zip(np.zeros(len(y)) + centre[0], y, z))),
-            np.array(list(zip(np.ones(len(y)) * height + centre[0], y, z)))))
+            np.array(list(zip(np.zeros(len(y)) + end_centre[0], y, z))),
+            np.array(list(zip(np.ones(len(y)) * height + end_centre[0], y, z)))))
+
+        # Rotate vertices to correct the tube axis
+        rotation_matrix = nexusutils.find_rotation(np.array(axis), np.array([1., 0., 0.]))
+        vertices = rotation_matrix.dot(vertices.T).T
+
         #
         # points around left circle tube-end       points around right circle tube-end
         #                                          (these follow the left ones in vertices list)
@@ -466,7 +474,7 @@ class NexusBuilder:
             raise Exception('There needs to be an NXinstrument before you can add monitors')
         if units is None:
             units = self.length_units
-        monitor_group = nexusutils.add_nx_group(self.instrument, name, 'NXmonitor')
+        monitor_group = self.add_nx_group(self.instrument, name, 'NXmonitor')
         # detector_id is not a monitor dataset in the standard...
         self.add_dataset(monitor_group, 'detector_id', int(detector_id))
         transform_group = self.add_transformation_group(monitor_group)
@@ -497,7 +505,7 @@ class NexusBuilder:
         """
         if isinstance(group, str):
             group = self.root[group]
-        return nexusutils.add_nx_group(group, 'transformations', 'NXtransformation')
+        return self.add_nx_group(group, 'transformations', 'NXtransformation')
 
     def add_grid_shape_from_idf(self, group, name, type_name, id_start, X_id_step, Y_id_step, Z_id_step=None):
         """
@@ -517,7 +525,7 @@ class NexusBuilder:
         if isinstance(group, str):
             group = self.root[group]
         vertices = self.idf_parser.get_structured_detector_vertices(type_name)
-        grid_shape = nexusutils.add_nx_group(group, name, 'NXgrid_shape')
+        grid_shape = self.add_nx_group(group, name, 'NXgrid_shape')
         self.add_dataset(grid_shape, 'vertices', vertices, {'units': 'metres'})
         self.add_dataset(grid_shape, 'id_start', id_start)
         self.add_dataset(grid_shape, 'X_id_step', X_id_step)
@@ -534,7 +542,7 @@ class NexusBuilder:
         :param instrument_group_name: Name for the NXinstrument group
         :return: NXinstrument
         """
-        self.instrument = nexusutils.add_nx_group(self.root, instrument_group_name, 'NXinstrument')
+        self.instrument = self.add_nx_group(self.root, instrument_group_name, 'NXinstrument')
         if len(name) > 2:
             self.add_dataset(self.instrument, 'name', name, {'short_name': name[:3]})
         else:
@@ -606,7 +614,7 @@ class NexusBuilder:
         :param name: Name for the NXsample group
         :return: The NXsample group and the sample position dataset
         """
-        sample_group = nexusutils.add_nx_group(self.root, name, 'NXsample')
+        sample_group = self.add_nx_group(self.root, name, 'NXsample')
         self.add_dataset('sample', 'distance', position[2])
         sample_transform_group = self.add_transformation_group('sample')
         position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
@@ -626,6 +634,21 @@ class NexusBuilder:
         """
         if self.instrument is None:
             raise Exception('There needs to be an NXinstrument before you can add an NXsource')
-        source_group = nexusutils.add_nx_group(self.instrument, group_name, 'NXsource')
+        source_group = self.add_nx_group(self.instrument, group_name, 'NXsource')
         self.add_dataset(source_group, 'name', name)
         return source_group
+
+    @staticmethod
+    def add_nx_group(parent_group, group_name, nx_class_name):
+        """
+        Add an NXclass group
+
+        :param parent_group: The parent group object
+        :param group_name: Name for the group, any spaces are replaced with underscores
+        :param nx_class_name: Name of the NXclass
+        :return:
+        """
+        group_name = group_name.replace(' ', '_')
+        created_group = parent_group.create_group(group_name)
+        created_group.attrs.create('NX_class', np.array(nx_class_name).astype('|S' + str(len(nx_class_name))))
+        return created_group
