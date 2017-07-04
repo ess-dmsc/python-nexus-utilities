@@ -309,7 +309,7 @@ class NexusBuilder:
             np.array(list(zip(np.ones(len(y)) * height + end_centre[0], y, z)))))
 
         # Rotate vertices to correct the tube axis
-        rotation_matrix = nexusutils.find_rotation(np.array(axis), np.array([1., 0., 0.]))
+        rotation_matrix = nexusutils.find_rotation_between_vectors(np.array(axis), np.array([1., 0., 0.]))
         vertices = rotation_matrix.dot(vertices.T).T
 
         #
