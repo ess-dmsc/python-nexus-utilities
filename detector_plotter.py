@@ -13,7 +13,13 @@ class DetectorPlotter:
     def __init__(self, nexus_filename):
         self.source_file = h5py.File(nexus_filename, 'r')
 
-    def plot_detectors(self, detector_group_paths):
+    def plot_detectors(self):
+        instrument_group = self.source_file['/raw_data_1/instrument']
+        detector_group_paths = []
+        for name, dataset_or_group in instrument_group.items():
+            if 'NX_class' in dataset_or_group.attrs:
+                if str(dataset_or_group.attrs['NX_class'].astype(str)) == 'NXdetector':
+                    detector_group_paths.append(dataset_or_group.name)
         fig, ax = plt.subplots(nrows=2, ncols=1)
         for detector_path in detector_group_paths:
             detector_group = self.source_file.get(detector_path)
@@ -77,17 +83,6 @@ class DetectorPlotter:
 
 
 if __name__ == '__main__':
-    INSTRUMENT = 'WISH'
-    if INSTRUMENT == 'SANS2D':
-        plotter = DetectorPlotter('example_instruments/sans2d/SANS_example_gzip_compress.hdf5')
-        plotter.plot_detectors(['/raw_data_1/instrument/detector_1', '/raw_data_1/instrument/detector_2'])
-    elif INSTRUMENT == 'WISH':
-        plotter = DetectorPlotter('example_instruments/wish/WISH_example_gzip_compress.hdf5')
-        plotter.plot_detectors(
-            ['/raw_data_1/instrument/detector_1', '/raw_data_1/instrument/detector_2',
-             '/raw_data_1/instrument/detector_3',
-             '/raw_data_1/instrument/detector_4', '/raw_data_1/instrument/detector_5',
-             '/raw_data_1/instrument/detector_6',
-             '/raw_data_1/instrument/detector_7', '/raw_data_1/instrument/detector_8',
-             '/raw_data_1/instrument/detector_9',
-             '/raw_data_1/instrument/detector_10'])
+    # plotter = DetectorPlotter('example_instruments/sans2d/SANS_example_gzip_compress.hdf5')
+    plotter = DetectorPlotter('example_instruments/wish/WISH_example_gzip_compress.hdf5')
+    plotter.plot_detectors()
