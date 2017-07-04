@@ -1,12 +1,14 @@
 import xml.etree.ElementTree
 import numpy as np
 from coordinatetransformer import CoordinateTransformer
+import pprint
 
 
 class IDFParser:
     """
     Parses Mantid IDF files
     """
+
     def __init__(self, idf_file):
         """
 
@@ -93,6 +95,8 @@ class IDFParser:
             r = xml_point.get('r')
             t = xml_point.get('t')
             p = xml_point.get('p')
+            if [r, t, p] == [None, None, None]:
+                raise Exception('No x,y,z or r,t,p values found in IDFParser.__get_vector')
             vector = np.array([self.__none_to_zero(r),
                                self.__none_to_zero(t),
                                self.__none_to_zero(p)]).astype(float)
@@ -136,58 +140,189 @@ class IDFParser:
         return detector_offsets
 
     def get_detectors(self):
-        """
-        WIP
-        Will return full details for high level detector components (for example detector banks/panels) which are not
-        described using RectangularDetector or StructuredDetector in the IDF
-
-        :return:
-        """
-        raise NotImplementedError
-        pixels = self.__get_pixel_names_and_shapes()
+        pixels = self.__get_pixel_names_and_shapes()  # {'name': str, 'shape': shape_info_dict}
+        types = []  # {'name': str, 'subcomponents':[str]}
+        components = []  # {'type': str, 'offsets':[[int]]}
+        # top-level components {'name':str, 'type':str, 'idlist':[[int]],
+        # 'location': [float], 'offsets':[[float]], 'idlist':[int]}
         detectors = []
         for pixel in pixels:
-            detector_name = pixel['name']
+            self.__collect_detector_components(types, components, pixel['name'])
+
+        top_level_detectors = self.__collect_top_level_detector_components([instr_type['name'] for instr_type in types])
+
+        # Collate info for detector_modules
+        detector_module_names = self.__find_detector_module_names(types)
+        detector_modules = self.__collate_detector_module_info(types, components, detector_module_names)
+        # self.pprint_things((pixels, types, components, top_level_detectors))
+
+        if detector_modules:
+            # go top down until hit modules, recording chain
+            # then back up chain dealing with offsets
+            detectors = self.__collate_detector_info(types, detector_module_names,
+                                                     set([detector['type'] for detector in top_level_detectors]),
+                                                     detector_modules, top_level_detectors, pixels)
+        else:
+            raise NotImplementedError('Case of no detector_modules in the detector is not yet implemented')
+            # TODO Possibly all that is required here is calling collate_det_mod_info on the detector names
+
+        return detectors
+
+    def __get_id_list(self, idname):
+        idlist = []
+        for xml_idlist in self.root.findall('d:idlist', self.ns):
+            if xml_idlist.get('idname') == idname:
+                for xml_id in xml_idlist.findall('d:id', self.ns):
+                    idlist = idlist + list(range(int(xml_id.get('start')), int(xml_id.get('end')) + 1))
+        return idlist
+
+    @staticmethod
+    def __find_detector_module_names(types):
+        def get_det_module_names():
+            for instr_type in types:
+                if len(instr_type['subcomponents']) > 1:
+                    for subcomponent in instr_type['subcomponents']:
+                        yield subcomponent
+
+        return list(get_det_module_names())
+
+    def __collate_detector_info(self, types, detector_module_names, detector_type_names, detector_modules,
+                                top_level_detectors, pixels):
+        detectors = []
+        for det_type_name in detector_type_names:
+            type_chain = []
+            while True:
+                type_chain.insert(0, det_type_name)
+                det_type = \
+                    next((detector_type for detector_type in types if detector_type["name"] == det_type_name), None)
+                if det_type['subcomponents'][0] in detector_module_names:
+                    det_modules_in_detector = det_type['subcomponents']
+                    break
+
+            # concatenate the offsets for the detector modules
             offsets = []
-            smallest_component_names = []
-            for xml_type in self.root.findall('d:type', self.ns):
-                for smallest_component in xml_type.findall('d:component', self.ns):
-                    if smallest_component.get('type') == detector_name:
-                        if smallest_component.get('is') in ['StructuredDetector', 'RectangularDetector']:
-                            continue
-                        smallest_component_names.append(xml_type.get('name'))
-                        offsets.append(self.__get_detector_offsets(smallest_component))
-                        self.__parse_detector_component(smallest_component_names, detectors, pixel, offsets)
+            pixel_names = []
+            for detector_module_name in det_modules_in_detector:
+                det_mod = \
+                    next((detector_module for detector_module in detector_modules if
+                          detector_module["name"] == detector_module_name), None)
+                offsets += det_mod['offsets']
+                pixel_names.append(det_mod['pixel_name'])
+            if not self.__check_all_equal(pixel_names):
+                raise NotImplementedError(
+                    'These detector modules in IDFParser.__collate_detector_info '
+                    'cannot be combined as they have different pixel shapes. Need '
+                    'to implement using NXdetector_module for each of them instead of combining into an NXdetector')
 
-    def __parse_detector_component(self, smaller_component_names, detectors, pixel, offsets):
-        if smaller_component_names:
-            for xml_type in self.root.findall('d:type', self.ns):
-                for component in xml_type.findall('d:component', self.ns):
-                    if component.get('type') in smaller_component_names:
-                        if component.get('is') in ['StructuredDetector', 'RectangularDetector']:
-                            continue
-                        larger_component_name = xml_type.get('name')
-                        offsets.append(self.__get_detector_offsets(component))
-                        self.__parse_detector_component(larger_component_name, detectors, pixel, offsets)
-                        return
-            self.__check_for_top_level_detector_component(smaller_component_names, detectors, pixel, offsets)
+            # location is the offset in the top level detector component
+            detector_components = \
+                list(det_comp for det_comp in top_level_detectors if det_comp["type"] == det_type_name)
+            for detector_component in detector_components:
+                pixel_info = next((pixel for pixel in pixels if pixel["name"] == pixel_names[0]), None)
+                idlist = self.__get_id_list(detector_component['idlist'])
+                detectors.append(
+                    {'name': detector_component['name'], 'type': det_type_name, 'idlist': idlist,
+                     'location': detector_component['location'], 'offsets': offsets,
+                     'pixel': pixel_info})
+        return detectors
 
-    def __check_for_top_level_detector_component(self, smaller_component_names, detectors, pixel, offsets):
+    @staticmethod
+    def __check_all_equal(input_list):
+        """
+        Check all elements of the input list are equal
+
+        :param input_list: List, are all its elements equal?
+        :return: Bool result
+        """
+        return input_list.count(input_list[0]) == len(input_list)
+
+    def __collate_detector_module_info(self, types, components, detector_module_names):
+        detector_modules = []  # {'name': str, 'offsets':[[float]], 'pixel_name':str}
+        for det_type_name in detector_module_names:
+            top_det_type_name = det_type_name
+            type_chain = []
+            while True:
+                type_chain.insert(0, det_type_name)
+                det_type = \
+                    next((detector_type for detector_type in types if detector_type["name"] == det_type_name), None)
+                if det_type is not None:
+                    if len(det_type['subcomponents']) != 1:
+                        raise Exception(
+                            'Expected to find single subcomponent  in IDFParser.__collate_detector_module_info')
+                    det_type_name = det_type['subcomponents'][0]
+                else:
+                    break
+
+            pixel_name = type_chain[0]
+            offsets = next((component for component in components if component["type"] == pixel_name), None)[
+                'offsets']
+            for component_type in type_chain[1:]:
+                new_offsets = \
+                    next((component for component in components if component["type"] == component_type), None)[
+                        'offsets']
+                offsets = self.__calculate_new_offsets(offsets, new_offsets)
+            detector_modules.append({'name': top_det_type_name, 'pixel_name': pixel_name, 'offsets': offsets})
+        return detector_modules
+
+    @staticmethod
+    def __calculate_new_offsets(old_offsets, new_offsets):
+        offsets = []
+        for new_offset in new_offsets:
+            # apply as a translation to each old offset
+            for old_offset in old_offsets:
+                offsets.append(np.add(old_offset, new_offset))
+        return offsets
+
+    @staticmethod
+    def pprint_things(things, fileobject=None):
+        pp = pprint.PrettyPrinter(indent=4, stream=fileobject)
+        for thing in things:
+            pp.pprint(thing)
+
+    def __collect_detector_components(self, types, components, search_type):
+        for xml_type in self.root.findall('d:type', self.ns):
+            for xml_component in xml_type.findall('d:component', self.ns):
+                if xml_component.get('type') == search_type:
+                    offsets = self.__get_detector_offsets(xml_component)
+                    components.append({'type': search_type, 'offsets': offsets})
+                    self.__add_component_to_type(types, xml_type.get('name'), search_type)
+                    self.__collect_detector_components(types, components, xml_type.get('name'))
+
+    @staticmethod
+    def __add_component_to_type(types, type_name, component_type):
+        """
+        If there is a type with type_name already in types then append component_type to its subcomponents
+        otherwise add the type with subcomponent
+
+        :param types: list of dictionary describing each type
+        :param type_name: the name of the type which has a subcomponent of component_type
+        :param component_type: name of the type of the subcomponent
+        :return:
+        """
+        det_type = next((detector_type for detector_type in types if detector_type["name"] == type_name), None)
+        if det_type is not None:
+            det_type['subcomponents'].append(component_type)
+        else:
+            types.append({'name': type_name, 'subcomponents': [component_type]})
+
+    def __collect_top_level_detector_components(self, smaller_type_names):
+        detectors = []
         for component in self.root.findall('d:component', self.ns):
-            if component.get('type') in smaller_component_names:
+            if component.get('type') in smaller_type_names:
                 idlist = component.get('idlist')
                 name = component.get('name')
                 if idlist:
-                    # TODO get ids and add them to the detector dictionary
                     location_type = component.find('d:location', self.ns)
                     location = self.__get_vector(location_type)
                     facing_type = location_type.find('d:facing', self.ns)
                     if facing_type:
                         # Should add an orientation field to the detector for rotating to achieve facing
                         raise NotImplementedError('Dealing with "facing" elements is not yet implemented.')
-                    detectors.append({'name': name, 'pixel': pixel, 'offsets': offsets, 'location': location})
+                    detectors.append({'name': name, 'type': component.get('type'), 'location': location,
+                                      'idlist': component.get('idlist')})
                 else:
                     raise Exception('Found a top level detector component with no idlist, name: ' + name)
+        return detectors
 
     def __get_pixel_shape(self, xml_root, type_name):
         for xml_type in xml_root.findall('d:type', self.ns):
@@ -238,23 +373,7 @@ class IDFParser:
         axis = self.__get_vector(cylinder_xml.find('d:axis', self.ns))
         radius = float(cylinder_xml.find('d:radius', self.ns).get('val'))
         height = float(cylinder_xml.find('d:height', self.ns).get('val'))
-        # Check axis is only finite in x or y as we only have x_pixel_size and y_pixel_size to
-        # put the height in for NeXus, otherwise throw error
-        if (int(axis[0] != 0) + int(axis[1] != 0) + int(axis[2] != 0)) != 1:
-            raise Exception(
-                'Cylinder axis must be aligned with a cartesian axis, '
-                'otherwise it cannot be represented in NeXus standard.')
-        x_pixel_size = None
-        y_pixel_size = None
-        z_pixel_size = None
-        if axis[0] != 0:
-            x_pixel_size = height
-        elif axis[1] != 0:
-            y_pixel_size = height
-        else:
-            z_pixel_size = height
-        return {'shape': 'cylinder', 'x_pixel_size': x_pixel_size, 'y_pixel_size': y_pixel_size,
-                'thickness': z_pixel_size, 'diameter': 2.0 * radius}
+        return {'shape': 'cylinder', 'height': height, 'radius': radius, 'axis': axis}
 
     @staticmethod
     def __get_1d_pixel_offsets(dimension_name, xml_type):
@@ -331,7 +450,6 @@ class IDFParser:
                 next_id += 1
 
     def __get_monitor_idlist(self, type_name):
-        idlist = []
         for xml_component in self.root.findall('d:component', self.ns):
             if xml_component.get('type') == type_name:
                 location_xml = xml_component.find('d:location', self.ns)
@@ -340,10 +458,7 @@ class IDFParser:
                         raise NotImplementedError(
                             'dealing with location in __get_monitor_idlist is not implemented yet')
                 idlist_name = xml_component.get('idlist')
-                for xml_idlist in self.root.findall('d:idlist', self.ns):
-                    if xml_idlist.get('idname') == idlist_name:
-                        for xml_id in xml_idlist.findall('d:id', self.ns):
-                            idlist = idlist + list(range(int(xml_id.get('start')), int(xml_id.get('end')) + 1))
+                idlist = self.__get_id_list(idlist_name)
         return idlist
 
     def __get_monitor_types(self):
