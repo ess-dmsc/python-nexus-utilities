@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import nexusutils
 
 
 class DetectorPlotter:
@@ -42,7 +43,8 @@ class DetectorPlotter:
                 transform_path = depends_on.decode()
             if transform_path != '.':
                 transform = self.source_file.get(transform_path)
-                next_depends_on = self.__do_transformation(transform, x_offsets, y_offsets, z_offsets)
+                next_depends_on, x_offsets, y_offsets, z_offsets = self.__do_transformation(transform, x_offsets,
+                                                                                            y_offsets, z_offsets)
                 self.__do_transformations(next_depends_on, x_offsets, y_offsets, z_offsets)
 
     @staticmethod
@@ -55,8 +57,15 @@ class DetectorPlotter:
             y_offsets += vector[1]
             z_offsets += vector[2]
         if str(attributes['transformation_type'].astype(str)) == 'rotation':
-            raise NotImplementedError('Dealing with rotations in DetectorPlotter.__do_transformation')
-        return attributes['depends_on']
+            axis = attributes['vector'] * transform[...].astype(float)
+            angle = transform[...].astype(float)
+            rotation_matrix = nexusutils.rotation_matrix_from_axis_and_angle(axis, angle)
+            offsets = np.hstack((x_offsets, y_offsets, z_offsets))
+            offsets = rotation_matrix.dot(offsets.T)
+            x_offsets = offsets[:, 1]
+            y_offsets = offsets[:, 2]
+            z_offsets = offsets[:, 3]
+        return attributes['depends_on'], x_offsets, y_offsets, z_offsets
 
     def __del__(self):
         # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
