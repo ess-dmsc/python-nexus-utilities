@@ -2,6 +2,9 @@ import xml.etree.ElementTree
 import numpy as np
 from coordinatetransformer import CoordinateTransformer
 import pprint
+import logging
+
+logger = logging.getLogger('NeXus_Builder')
 
 
 class IDFParser:
@@ -50,8 +53,12 @@ class IDFParser:
                 for xml_sample_component in self.root.findall('d:component', self.ns):
                     if xml_sample_component.get('type') == xml_type.get('name'):
                         location_type = xml_sample_component.find('d:location', self.ns)
-                        return self.__get_vector(location_type)
-        return None
+                        location = self.__get_vector(location_type)
+                        if location is not None:
+                            return location
+                        else:
+                            return np.array([0.0, 0.0, 0.0])
+        raise Exception('SamplePos tag not found in IDF')
 
     def get_rectangular_detectors(self):
         """
@@ -96,7 +103,8 @@ class IDFParser:
             t = xml_point.get('t')
             p = xml_point.get('p')
             if [r, t, p] == [None, None, None]:
-                raise Exception('No x,y,z or r,t,p values found in IDFParser.__get_vector')
+                logger.warning('No x,y,z or r,t,p values found in IDFParser.__get_vector')
+                return None
             vector = np.array([self.__none_to_zero(r),
                                self.__none_to_zero(t),
                                self.__none_to_zero(p)]).astype(float)

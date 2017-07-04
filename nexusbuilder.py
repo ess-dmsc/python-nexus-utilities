@@ -615,8 +615,11 @@ class NexusBuilder:
         :return: The NXsample group and the sample position dataset
         """
         sample_group = self.add_nx_group(self.root, name, 'NXsample')
-        self.add_dataset('sample', 'distance', position[2])
+        if position is None:
+            position = np.array([0.0, 0.0, 0.0])
+
         sample_transform_group = self.add_transformation_group('sample')
+        self.add_dataset('sample', 'distance', position[2])
         position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
         sample_position = self.add_transformation(sample_transform_group, 'translation', position_magnitude,
                                                   self.length_units,
