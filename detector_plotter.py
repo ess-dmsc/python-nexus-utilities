@@ -26,16 +26,24 @@ class DetectorPlotter:
             z_offsets = z_offsets[:]
 
             depends_on = detector_group.get('depends_on')
-            if depends_on is not None:
-                transform_path = str(depends_on[...].astype(str))
-                transform = self.source_file.get(transform_path)
-                self.__do_transformation(transform, x_offsets, y_offsets, z_offsets)
+            self.__do_transformations(depends_on, x_offsets, y_offsets, z_offsets)
 
             ax[0].scatter(x_offsets, y_offsets, s=0.5)
             ax[0].set_title('XY-plane pixel locations')
             ax[1].scatter(x_offsets, z_offsets, s=0.5)
             ax[1].set_title('XZ-plane pixel locations')
         plt.show()
+
+    def __do_transformations(self, depends_on, x_offsets, y_offsets, z_offsets):
+        if depends_on is not None:
+            try:
+                transform_path = str(depends_on[...].astype(str))
+            except:
+                transform_path = depends_on.decode()
+            if transform_path != '.':
+                transform = self.source_file.get(transform_path)
+                next_depends_on = self.__do_transformation(transform, x_offsets, y_offsets, z_offsets)
+                self.__do_transformations(next_depends_on, x_offsets, y_offsets, z_offsets)
 
     @staticmethod
     def __do_transformation(transform, x_offsets, y_offsets, z_offsets):
@@ -46,6 +54,9 @@ class DetectorPlotter:
             x_offsets += vector[0]
             y_offsets += vector[1]
             z_offsets += vector[2]
+        if str(attributes['transformation_type'].astype(str)) == 'rotation':
+            raise NotImplementedError('Dealing with rotations in DetectorPlotter.__do_transformation')
+        return attributes['depends_on']
 
     def __del__(self):
         # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
