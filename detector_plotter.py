@@ -33,6 +33,7 @@ class DetectorPlotter:
             ax[0].set_title('XY-plane pixel locations')
             ax[1].scatter(x_offsets, z_offsets, s=0.5)
             ax[1].set_title('XZ-plane pixel locations')
+        plt.axis('equal')
         plt.show()
 
     def __do_transformations(self, depends_on, x_offsets, y_offsets, z_offsets):
@@ -76,5 +77,17 @@ class DetectorPlotter:
 
 
 if __name__ == '__main__':
-    plotter = DetectorPlotter('example_instruments/sans2d/SANS_example_gzip_compress.hdf5')
-    plotter.plot_detectors(['/raw_data_1/instrument/detector_1', '/raw_data_1/instrument/detector_2'])
+    INSTRUMENT = 'WISH'
+    if INSTRUMENT == 'SANS2D':
+        plotter = DetectorPlotter('example_instruments/sans2d/SANS_example_gzip_compress.hdf5')
+        plotter.plot_detectors(['/raw_data_1/instrument/detector_1', '/raw_data_1/instrument/detector_2'])
+    elif INSTRUMENT == 'WISH':
+        plotter = DetectorPlotter('example_instruments/wish/WISH_example_gzip_compress.hdf5')
+        plotter.plot_detectors(
+            ['/raw_data_1/instrument/detector_1', '/raw_data_1/instrument/detector_2',
+             '/raw_data_1/instrument/detector_3',
+             '/raw_data_1/instrument/detector_4', '/raw_data_1/instrument/detector_5',
+             '/raw_data_1/instrument/detector_6',
+             '/raw_data_1/instrument/detector_7', '/raw_data_1/instrument/detector_8',
+             '/raw_data_1/instrument/detector_9',
+             '/raw_data_1/instrument/detector_10'])
