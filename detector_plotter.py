@@ -64,14 +64,17 @@ class DetectorPlotter:
             y_offsets += vector[1]
             z_offsets += vector[2]
         if str(attributes['transformation_type'].astype(str)) == 'rotation':
-            axis = attributes['vector'] * transform[...].astype(float)
-            angle = transform[...].astype(float)
+            axis = attributes['vector']
+            angle = np.deg2rad(transform[...].astype(float))[0][0]
+            print(axis)
+            print(angle)
             rotation_matrix = nexusutils.rotation_matrix_from_axis_and_angle(axis, angle)
-            offsets = np.hstack((x_offsets, y_offsets, z_offsets))
-            offsets = rotation_matrix.dot(offsets.T)
-            x_offsets = offsets[:, 1]
-            y_offsets = offsets[:, 2]
-            z_offsets = offsets[:, 3]
+            print(rotation_matrix)
+            offsets = np.vstack((x_offsets, y_offsets, z_offsets))
+            offsets = rotation_matrix.dot(offsets)
+            x_offsets = offsets[0, :]
+            y_offsets = offsets[1, :]
+            z_offsets = offsets[2, :]
         return attributes['depends_on'], x_offsets, y_offsets, z_offsets
 
     def __del__(self):

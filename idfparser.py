@@ -3,6 +3,7 @@ import numpy as np
 from coordinatetransformer import CoordinateTransformer
 import pprint
 import logging
+import nexusutils
 
 logger = logging.getLogger('NeXus_Builder')
 
@@ -155,7 +156,8 @@ class IDFParser:
         # 'location': [float], 'offsets':[[float]], 'idlist':[int]}
         detectors = []
         for pixel in pixels:
-            self.__collect_detector_components(types, components, pixel['name'])
+            searched_already = list()
+            self.__collect_detector_components(types, components, pixel['name'], searched_already)
 
         top_level_detectors = self.__collect_top_level_detector_components([instr_type['name'] for instr_type in types])
 
@@ -200,6 +202,8 @@ class IDFParser:
         for det_type_name in detector_type_names:
             type_chain = []
             while True:
+                # TODO I think this is supposed to make its way down to the thing which has subcomponents?
+                # But it isn't working, infinite loop unless it terminates on the first try (maybe)
                 type_chain.insert(0, det_type_name)
                 det_type = \
                     next((detector_type for detector_type in types if detector_type["name"] == det_type_name), None)
@@ -230,8 +234,8 @@ class IDFParser:
                 idlist = self.__get_id_list(detector_component['idlist'])
                 detectors.append(
                     {'name': detector_component['name'], 'type': det_type_name, 'idlist': idlist,
-                     'location': detector_component['location'], 'offsets': offsets,
-                     'pixel': pixel_info})
+                     'location': detector_component['location'], 'orientation': detector_component['orientation'],
+                     'offsets': offsets, 'pixel': pixel_info})
         return detectors
 
     @staticmethod
@@ -287,14 +291,18 @@ class IDFParser:
         for thing in things:
             pp.pprint(thing)
 
-    def __collect_detector_components(self, types, components, search_type):
+    def __collect_detector_components(self, types, components, search_type, searched_already):
+        if search_type in searched_already:
+            return
+        else:
+            searched_already.append(search_type)
         for xml_type in self.root.findall('d:type', self.ns):
             for xml_component in xml_type.findall('d:component', self.ns):
                 if xml_component.get('type') == search_type:
                     offsets = self.__get_detector_offsets(xml_component)
                     components.append({'type': search_type, 'offsets': offsets})
                     self.__add_component_to_type(types, xml_type.get('name'), search_type)
-                    self.__collect_detector_components(types, components, xml_type.get('name'))
+                    self.__collect_detector_components(types, components, xml_type.get('name'), searched_already)
 
     @staticmethod
     def __add_component_to_type(types, type_name, component_type):
@@ -323,11 +331,15 @@ class IDFParser:
                     location_type = component.find('d:location', self.ns)
                     location = self.__get_vector(location_type)
                     facing_type = location_type.find('d:facing', self.ns)
-                    if facing_type:
-                        # Should add an orientation field to the detector for rotating to achieve facing
-                        raise NotImplementedError('Dealing with "facing" elements is not yet implemented.')
+                    orientation = None
+                    if facing_type is not None:
+                        facing_point = self.__get_vector(facing_type)
+                        vector_to_face_point = facing_point - location
+                        axis, angle = nexusutils.find_rotation_axis_and_angle_between_vectors(vector_to_face_point,
+                                                                                              np.array([0, 0, -1.0]))
+                        orientation = {'axis': axis, 'angle': angle}
                     detectors.append({'name': name, 'type': component.get('type'), 'location': location,
-                                      'idlist': component.get('idlist')})
+                                      'orientation': orientation, 'idlist': component.get('idlist')})
                 else:
                     raise Exception('Found a top level detector component with no idlist, name: ' + name)
         return detectors

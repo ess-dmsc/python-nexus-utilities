@@ -161,8 +161,17 @@ class NexusBuilder:
             location = detector['location']
             translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
             location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
-                                                              self.length_units, translate_unit_vector)
-            self.add_depends_on(detector_group, location_transformation)
+                                                              self.length_units, translate_unit_vector, name='location')
+            orientation = detector['orientation']
+            if orientation is not None:
+                orientation_transformation = self.add_transformation(detector_group, 'rotation',
+                                                                     [np.rad2deg(orientation['angle'])],
+                                                                     'degrees', orientation['axis'],
+                                                                     depends_on=location_transformation,
+                                                                     name='orientation')
+                self.add_depends_on(detector_group, orientation_transformation)
+            else:
+                self.add_depends_on(detector_group, location_transformation)
             if pixel_shape['shape'] == 'cylinder':
                 self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'], pixel_shape['axis'])
             elif pixel_shape != 'cuboid':
@@ -309,7 +318,7 @@ class NexusBuilder:
             np.array(list(zip(np.ones(len(y)) * height + end_centre[0], y, z)))))
 
         # Rotate vertices to correct the tube axis
-        rotation_matrix = nexusutils.find_rotation_between_vectors(np.array(axis), np.array([1., 0., 0.]))
+        rotation_matrix = nexusutils.find_rotation_matrix_between_vectors(np.array(axis), np.array([1., 0., 0.]))
         vertices = rotation_matrix.dot(vertices.T).T
 
         #
@@ -566,6 +575,8 @@ class NexusBuilder:
         transform_types = ['translation', 'rotation']
         if transformation_type not in transform_types:
             raise Exception('Transformation must be one of these types (' + ' '.join(transform_types) + ')')
+        if isinstance(depends_on, h5py._hl.dataset.Dataset):
+            depends_on = str(depends_on.name)
         attributes = {'units': units,
                       'vector': vector,
                       'transformation_type': transformation_type,
