@@ -160,18 +160,22 @@ class NexusBuilder:
                                                    z_pixel_offset=z_offsets)
             location = detector['location']
             translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
-            location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
-                                                              self.length_units, translate_unit_vector, name='location')
+
             orientation = detector['orientation']
             if orientation is not None:
                 orientation_transformation = self.add_transformation(detector_group, 'rotation',
                                                                      [np.rad2deg(orientation['angle'])],
                                                                      'degrees', orientation['axis'],
-                                                                     depends_on=location_transformation,
                                                                      name='orientation')
-                self.add_depends_on(detector_group, orientation_transformation)
+                location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
+                                                                  self.length_units, translate_unit_vector,
+                                                                  depends_on=orientation_transformation,
+                                                                  name='location')
             else:
-                self.add_depends_on(detector_group, location_transformation)
+                location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
+                                                                  self.length_units, translate_unit_vector,
+                                                                  name='location')
+            self.add_depends_on(detector_group, location_transformation)
             if pixel_shape['shape'] == 'cylinder':
                 self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'], pixel_shape['axis'])
             elif pixel_shape != 'cuboid':
