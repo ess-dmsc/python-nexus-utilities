@@ -65,7 +65,7 @@ def find_rotation_axis_and_angle_between_vectors(vector_a, vector_b):
     cross_prod = np.cross(vector_a, vector_b)
     unit_cross, mag_cross = normalise(cross_prod)
     axis = cross_prod / mag_cross
-    angle = np.arccos(np.dot(vector_a, vector_b) / (mag_a * mag_b))
+    angle = -1.0 * np.arccos(np.dot(vector_a, vector_b) / (mag_a * mag_b))
 
     return axis, angle
 
