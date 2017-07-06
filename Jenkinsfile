@@ -19,7 +19,7 @@ node('fedora && python3') {
         sh '''
             source nexus_venv/bin/activate
             cd nexus_venv/bin
-            python pip install -r ../../requirements.txt --proxy=$HTTP_PROXY
+            python pip install -r ../../requirements.txt --proxy=$http_proxy_not_overridden
             deactivate
            '''
     }
