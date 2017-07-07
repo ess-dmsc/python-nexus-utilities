@@ -97,9 +97,3 @@ class DetectorPlotter:
             self.source_file.close()
         except Exception:
             pass
-
-
-if __name__ == '__main__':
-    #plotter = DetectorPlotter('example_instruments/sans2d/SANS_example_gzip_compress.hdf5')
-    plotter = DetectorPlotter('example_instruments/wish/WISH_example_gzip_compress.hdf5')
-    plotter.plot_detectors()
