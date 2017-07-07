@@ -150,21 +150,24 @@ class IDFParser:
 
     def get_detectors(self):
         pixels = self.__get_pixel_names_and_shapes()  # {'name': str, 'shape': shape_info_dict}
-        types = []  # {'name': str, 'subcomponents':[str]}
-        components = []  # {'type': str, 'offsets':[[int]]}
-        # top-level components {'name':str, 'type':str, 'idlist':[[int]],
-        # 'location': [float], 'offsets':[[float]], 'idlist':[int]}
+        components = []  # {'name': str, 'sub_components': [str], 'offsets':[[int]]}
+        # if the component is top-level then it has an 'idlist'=[int] and a 'location':[float] instead of 'offsets'
         detectors = []
         for pixel in pixels:
             searched_already = list()
-            self.__collect_detector_components(types, components, pixel['name'], searched_already)
+            self.__collect_detector_components(components, pixel['name'], searched_already)
 
-        top_level_detectors = self.__collect_top_level_detector_components([instr_type['name'] for instr_type in types])
+        with open('temp_log.txt', 'w') as log_file:
+            self.pprint_things(components, log_file)
+        return
+
+        #top_level_detectors = self.__collect_top_level_detector_components([instr_type['name'] for instr_type in types])
 
         # Collate info for detector_modules
         detector_module_names = self.__find_detector_module_names(types)
         detector_modules = self.__collate_detector_module_info(types, components, detector_module_names)
-        # self.pprint_things((pixels, types, components, top_level_detectors))
+        #with open('temp_log.txt', 'w') as log_file:
+        #    self.pprint_things(detector_modules, log_file)
 
         if detector_modules:
             # go top down until hit modules, recording chain
@@ -291,18 +294,31 @@ class IDFParser:
         for thing in things:
             pp.pprint(thing)
 
-    def __collect_detector_components(self, types, components, search_type, searched_already):
+    def __collect_detector_components(self, components, search_type, searched_already):
         if search_type in searched_already:
             return
-        else:
-            searched_already.append(search_type)
+        searched_already.append(search_type)
         for xml_type in self.root.findall('d:type', self.ns):
             for xml_component in xml_type.findall('d:component', self.ns):
                 if xml_component.get('type') == search_type:
-                    offsets = self.__get_detector_offsets(xml_component)
-                    components.append({'type': search_type, 'offsets': offsets})
-                    self.__add_component_to_type(types, xml_type.get('name'), search_type)
-                    self.__collect_detector_components(types, components, xml_type.get('name'), searched_already)
+                    name = xml_type.get('name')
+                    self.__append_component(name, xml_component, components, search_type, searched_already)
+        for xml_top_component in self.root.findall('d:component', self.ns):
+            if xml_top_component.get('type') == search_type:
+                name = xml_top_component.get('name')
+                self.__append_component(name, xml_top_component, components, search_type, searched_already)
+
+    def __append_component(self, name, xml_component, components, search_type, searched_already):
+        offsets = self.__get_detector_offsets(xml_component)
+        component = next((component for component in components if component['name'] == name), None)
+        if component is not None:
+            component['sub_components'].append(search_type)
+            #idlist
+            component['offsets'].append(offsets)
+        else:
+            components.append(
+                {'name': name, 'sub_components': [search_type], 'offsets': [offsets]})
+        self.__collect_detector_components(components, name, searched_already)
 
     @staticmethod
     def __add_component_to_type(types, type_name, component_type):
@@ -315,7 +331,7 @@ class IDFParser:
         :param component_type: name of the type of the subcomponent
         :return:
         """
-        det_type = next((detector_type for detector_type in types if detector_type["name"] == type_name), None)
+        det_type = next((detector_type for detector_type in types if detector_type['name'] == type_name), None)
         if det_type is not None:
             det_type['subcomponents'].append(component_type)
         else:

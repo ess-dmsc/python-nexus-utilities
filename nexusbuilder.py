@@ -141,46 +141,47 @@ class NexusBuilder:
         # with open("pprint_out.txt", "w") as fout:
         #    self.idf_parser.pprint_things([detectors], fout)
 
-        for detector in detectors:
-            total_panels += 1
-            offsets = np.array(detector['offsets'])
-            z_offsets = offsets[:, 2]
-            if np.count_nonzero(z_offsets) == 0:
-                z_offsets = None
-            pixel_shape = detector['pixel']['shape']
-            if pixel_shape['shape'] == 'cuboid':
-                detector_group = self.add_detector(detector['name'], total_panels, detector['idlist'],
-                                                   offsets[:, 0], offsets[:, 1],
-                                                   z_pixel_offset=z_offsets, x_pixel_size=pixel_shape['x_pixel_size'],
-                                                   y_pixel_size=pixel_shape['y_pixel_size'],
-                                                   thickness=pixel_shape['thickness'])
-            else:
-                detector_group = self.add_detector(detector['name'], total_panels, detector['idlist'],
-                                                   offsets[:, 0], offsets[:, 1],
-                                                   z_pixel_offset=z_offsets)
-            location = detector['location']
-            translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
+        if detectors is not None:
+            for detector in detectors:
+                total_panels += 1
+                offsets = np.array(detector['offsets'])
+                z_offsets = offsets[:, 2]
+                if np.count_nonzero(z_offsets) == 0:
+                    z_offsets = None
+                pixel_shape = detector['pixel']['shape']
+                if pixel_shape['shape'] == 'cuboid':
+                    detector_group = self.add_detector(detector['name'], total_panels, detector['idlist'],
+                                                       offsets[:, 0], offsets[:, 1],
+                                                       z_pixel_offset=z_offsets, x_pixel_size=pixel_shape['x_pixel_size'],
+                                                       y_pixel_size=pixel_shape['y_pixel_size'],
+                                                       thickness=pixel_shape['thickness'])
+                else:
+                    detector_group = self.add_detector(detector['name'], total_panels, detector['idlist'],
+                                                       offsets[:, 0], offsets[:, 1],
+                                                       z_pixel_offset=z_offsets)
+                location = detector['location']
+                translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
 
-            orientation = detector['orientation']
-            if orientation is not None:
-                orientation_transformation = self.add_transformation(detector_group, 'rotation',
-                                                                     [np.rad2deg(orientation['angle'])],
-                                                                     'degrees', orientation['axis'],
-                                                                     name='orientation')
-                location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
-                                                                  self.length_units, translate_unit_vector,
-                                                                  depends_on=orientation_transformation,
-                                                                  name='location')
-            else:
-                location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
-                                                                  self.length_units, translate_unit_vector,
-                                                                  name='location')
-            self.add_depends_on(detector_group, location_transformation)
-            if pixel_shape['shape'] == 'cylinder':
-                self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'], pixel_shape['axis'])
-            elif pixel_shape != 'cuboid':
-                raise NotImplementedError('Pixel shape other than cuboid or cylinder '
-                                          'in NexusBuilder.add_detectors_from_idf')
+                orientation = detector['orientation']
+                if orientation is not None:
+                    orientation_transformation = self.add_transformation(detector_group, 'rotation',
+                                                                         [np.rad2deg(orientation['angle'])],
+                                                                         'degrees', orientation['axis'],
+                                                                         name='orientation')
+                    location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
+                                                                      self.length_units, translate_unit_vector,
+                                                                      depends_on=orientation_transformation,
+                                                                      name='location')
+                else:
+                    location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
+                                                                      self.length_units, translate_unit_vector,
+                                                                      name='location')
+                self.add_depends_on(detector_group, location_transformation)
+                if pixel_shape['shape'] == 'cylinder':
+                    self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'], pixel_shape['axis'])
+                elif pixel_shape != 'cuboid':
+                    raise NotImplementedError('Pixel shape other than cuboid or cylinder '
+                                              'in NexusBuilder.add_detectors_from_idf')
 
         return total_panels
 
