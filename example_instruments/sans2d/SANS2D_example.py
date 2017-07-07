@@ -1,9 +1,11 @@
 from collections import OrderedDict
 from nexusbuilder import NexusBuilder
+from detector_plotter import DetectorPlotter
 
 if __name__ == '__main__':
+    output_filename = 'SANS_example_gzip_compress.hdf5'
     # compress_type=32001 for BLOSC, or don't specify compress_type and opts to get non-compressed datasets
-    builder = NexusBuilder('SANS_example_gzip_compress.hdf5', input_nexus_filename='SANS_test.nxs',
+    builder = NexusBuilder(output_filename, input_nexus_filename='SANS_test.nxs',
                            idf_file='SANS2D_Definition_Tubes.xml', compress_type='gzip', compress_opts=1)
 
     # Adds all instrument geometry except non-monitor detectors
@@ -53,3 +55,7 @@ if __name__ == '__main__':
                                     ('raw_data_1/monitor_4/time_of_flight',
                                      'raw_data_1/instrument/monitor4/time_of_flight'),
                                     ]))
+    del builder
+
+    plotter = DetectorPlotter(output_filename)
+    plotter.plot_detectors()
