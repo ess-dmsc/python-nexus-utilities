@@ -157,11 +157,11 @@ class IDFParser:
             searched_already = list()
             self.__collect_detector_components(components, pixel['name'], searched_already)
 
-        with open('temp_log.txt', 'w') as log_file:
-            self.pprint_things(components, log_file)
-
         detectors = self.collate_detector_info(pixels, components)
-        return
+
+        #with open('temp_log.txt', 'w') as log_file:
+        #    self.pprint_things(detectors, log_file)
+
         return detectors
 
     def collate_detector_info(self, pixels, components):
@@ -199,6 +199,7 @@ class IDFParser:
                         pixel_name = component['pixels'][0]
                         pixel = next((pixel for pixel in pixels if pixel["name"] == pixel_name), None)
                         component['pixel'] = pixel
+                        component['location'] = component['locations'][0]
                         detectors.append(component)
                     else:
                         component['offsets'] = self.__calculate_new_offsets(sub_component_offsets,
