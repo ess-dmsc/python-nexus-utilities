@@ -4,6 +4,7 @@ from coordinatetransformer import CoordinateTransformer
 import pprint
 import logging
 import nexusutils
+import itertools
 
 logger = logging.getLogger('NeXus_Builder')
 
@@ -159,7 +160,7 @@ class IDFParser:
 
         detectors = self.collate_detector_info(pixels, components)
 
-        #with open('temp_log.txt', 'w') as log_file:
+        # with open('temp_log.txt', 'w') as log_file:
         #    self.pprint_things(detectors, log_file)
 
         return detectors
@@ -183,27 +184,29 @@ class IDFParser:
                 if set(sub_component_names).issubset(component_names_offsets_known):
                     # Get offset lists of the sub components
                     sub_component_offsets = []
-                    for sub_component_name in sub_component_names:
+                    for sub_comp_index, sub_component_name in enumerate(sub_component_names):
                         if sub_component_name in pixel_names:
-                            sub_component_offsets.append(np.array([0.0, 0.0, 0.0]))
+                            sub_component_offsets.append([np.array([0.0, 0.0, 0.0])])
                             component['pixels'].append(sub_component_name)
                         else:
                             component['pixels'].extend(self.__get_component_pixels(components, sub_component_name))
-                            sub_component_offsets.extend(self.__get_component_offsets(components, sub_component_name))
+                            sub_component_offsets.append(self.__get_component_offsets(components, sub_component_name))
                     if not self.__all_elements_equal(component['pixels']):
                         raise Exception(component['name'] +
                                         ' has multiple pixel types, need to implement treating '
                                         'its sub-components as NXdetector_modules')
                     if component['name'] in top_level_detector_names:
-                        component['offsets'] = sub_component_offsets
+                        component['offsets'] = list(itertools.chain.from_iterable(sub_component_offsets))
                         pixel_name = component['pixels'][0]
                         pixel = next((pixel for pixel in pixels if pixel["name"] == pixel_name), None)
                         component['pixel'] = pixel
-                        component['location'] = component['locations'][0]
+                        component['location'] = component['locations'][0][0]
                         detectors.append(component)
                     else:
-                        component['offsets'] = self.__calculate_new_offsets(sub_component_offsets,
-                                                                            component['locations'])
+                        component['offsets'] = []
+                        for sub_comp_index, offset_list in enumerate(sub_component_offsets):
+                            component['offsets'].extend(
+                                self.__calculate_new_offsets(offset_list, component['locations'][sub_comp_index]))
                     component_names_offsets_known.add(component['name'])
 
         return detectors
@@ -256,8 +259,7 @@ class IDFParser:
         offsets = []
         for new_offset in new_offsets:
             # apply as a translation to each old offset
-            for old_offset in old_offsets:
-                offsets.append(np.add(old_offset, new_offset))
+            offsets.extend(old_offsets + np.expand_dims(new_offset, 1).T)
         return offsets
 
     @staticmethod
@@ -288,19 +290,17 @@ class IDFParser:
             idlist = xml_component.get('idlist')
             if idlist is not None:
                 component['idlist'] = idlist
-                component['locations'] = offsets
-            else:
-                component['locations'].extend(offsets)
+            component['locations'].append(offsets)
         else:
             idlist = xml_component.get('idlist')
             if idlist is not None:
                 orientation = self.__parse_facing_element(xml_component)
                 components.append(
-                    {'name': name, 'sub_components': [search_type], 'locations': offsets,
+                    {'name': name, 'sub_components': [search_type], 'locations': [offsets],
                      'idlist': self.__get_id_list(idlist), 'orientation': orientation, 'pixels': []})
             else:
                 components.append(
-                    {'name': name, 'sub_components': [search_type], 'locations': offsets, 'pixels': []})
+                    {'name': name, 'sub_components': [search_type], 'locations': [offsets], 'pixels': []})
         self.__collect_detector_components(components, name, searched_already)
 
     def __parse_facing_element(self, xml_component):

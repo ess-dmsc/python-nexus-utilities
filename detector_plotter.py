@@ -38,8 +38,6 @@ class DetectorPlotter:
             x_offsets, y_offsets, z_offsets = self.__do_transformations(transformations,
                                                                         x_offsets, y_offsets, z_offsets)
 
-            print(str(x_offsets[0])+' to '+str(x_offsets[511]))
-            print(str(x_offsets[30720]) + ' to ' + str(x_offsets[31231]))
             ax[0].scatter(x_offsets, y_offsets, s=0.75, marker='x')
             ax[1].scatter(x_offsets, z_offsets, s=0.75, marker='x')
 
