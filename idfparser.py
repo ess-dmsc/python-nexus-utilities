@@ -186,23 +186,48 @@ class IDFParser:
                     for sub_component_name in sub_component_names:
                         if sub_component_name in pixel_names:
                             sub_component_offsets.append(np.array([0.0, 0.0, 0.0]))
+                            component['pixels'].append(sub_component_name)
                         else:
+                            component['pixels'].extend(self.__get_component_pixels(components, sub_component_name))
                             sub_component_offsets.extend(self.__get_component_offsets(components, sub_component_name))
+                    if not self.__all_elements_equal(component['pixels']):
+                        raise Exception(component['name'] +
+                                        ' has multiple pixel types, need to implement treating '
+                                        'its sub-components as NXdetector_modules')
                     if component['name'] in top_level_detector_names:
                         component['offsets'] = sub_component_offsets
+                        pixel_name = component['pixels'][0]
+                        pixel = next((pixel for pixel in pixels if pixel["name"] == pixel_name), None)
+                        component['pixel'] = pixel
                         detectors.append(component)
-                        # TODO add pixel information in from pixels
                     else:
-                        component['offsets'] = self.__calculate_new_offsets(sub_component_offsets, component['locations'])
+                        component['offsets'] = self.__calculate_new_offsets(sub_component_offsets,
+                                                                            component['locations'])
                     component_names_offsets_known.add(component['name'])
 
         return detectors
+
+    @staticmethod
+    def __all_elements_equal(input_list):
+        """
+        Check all elements of the input list are equal
+
+        :param input_list: List, are all its elements equal?
+        :return: Bool result
+        """
+        return input_list.count(input_list[0]) == len(input_list)
 
     @staticmethod
     def __get_component_offsets(components, component_name):
         locations = \
             next((component['offsets'] for component in components if component["name"] == component_name), None)
         return locations
+
+    @staticmethod
+    def __get_component_pixels(components, component_name):
+        pixel = \
+            next((component['pixels'] for component in components if component["name"] == component_name), None)
+        return pixel
 
     def __get_id_list(self, idname):
         idlist = []
@@ -271,10 +296,10 @@ class IDFParser:
                 orientation = self.__parse_facing_element(xml_component)
                 components.append(
                     {'name': name, 'sub_components': [search_type], 'locations': offsets,
-                     'idlist': self.__get_id_list(idlist), 'orientation': orientation})
+                     'idlist': self.__get_id_list(idlist), 'orientation': orientation, 'pixels': []})
             else:
                 components.append(
-                    {'name': name, 'sub_components': [search_type], 'locations': offsets})
+                    {'name': name, 'sub_components': [search_type], 'locations': offsets, 'pixels': []})
         self.__collect_detector_components(components, name, searched_already)
 
     def __parse_facing_element(self, xml_component):
