@@ -150,6 +150,11 @@ class IDFParser:
         return detector_offsets
 
     def get_detectors(self):
+        """
+        Get detector information from the IDF
+
+        :return: List of detector dictionaries
+        """
         pixels = self.__get_pixel_names_and_shapes()  # {'name': str, 'shape': shape_info_dict}
         components = []  # {'name': str, 'sub_components': [str], 'offsets':[[int]]}
         # if the component is top-level then it has an 'idlist'=[int] and a 'location':[float] and
@@ -158,14 +163,14 @@ class IDFParser:
             searched_already = list()
             self.__collect_detector_components(components, pixel['name'], searched_already)
 
-        detectors = self.collate_detector_info(pixels, components)
+        detectors = self.__collate_detector_info(pixels, components)
 
         # with open('temp_log.txt', 'w') as log_file:
         #    self.pprint_things(detectors, log_file)
 
         return detectors
 
-    def collate_detector_info(self, pixels, components):
+    def __collate_detector_info(self, pixels, components):
         top_level_detector_names = self.__find_top_level_detector_names(components)
         detectors = list()
         # Components where we don't need to calculate offsets or we have already calculated the offsets
@@ -410,6 +415,11 @@ class IDFParser:
                        'rotation': rotation}
 
     def get_monitors(self):
+        """
+        Get monitor information from the IDF
+
+        :return: List of monitor dictionaries, list of monitor type names
+        """
         all_monitor_type_names, monitor_types = self.__get_monitor_types()
         # Now look for components with one of these types, they'll be grouped in another element
         # Add them to a list, NB order matters for id assignment
