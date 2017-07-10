@@ -25,25 +25,49 @@ def normalise(input_vector):
     return unit_vector, magnitude
 
 
-def find_rotation_between_vectors(vector_a, vector_b):
+def find_rotation_matrix_between_vectors(vector_a, vector_b):
     """
     Find the 3D rotation matrix to rotate vector_a onto vector_b
 
-    :param vector_a: 3D unit vector
-    :param vector_b: 3D unit vector
+    :param vector_a: 3D vector
+    :param vector_b: 3D vector
     :return: 3D rotation matrix
     """
+    unit_a, mag_a = normalise(vector_a)
+    unit_b, mag_b = normalise(vector_b)
+
     identity_matrix = np.identity(3)
-    cross_product = np.cross(vector_a, vector_b)
-    cosine_of_angle = np.dot(vector_a, vector_b)
-    if cosine_of_angle == -1.0:
-        raise NotImplementedError('Need to implement calculation of rotation '
-                                  'matrix when vectors point in opposite directions')
-    elif np.array_equal(vector_a, vector_b):
+    axis, angle = find_rotation_axis_and_angle_between_vectors(vector_a, vector_b)
+
+    skew_symmetric = np.array([np.array([0.0, -axis[2], axis[1]]),
+                               np.array([axis[2], 0.0, -axis[0]]),
+                               np.array([-axis[1], axis[0], 0.0])])
+
+    if np.array_equal(unit_a, unit_b):
         rotation_matrix = identity_matrix
     else:
-        rotation_matrix = identity_matrix + cross_product + (cross_product ** 2.0) * (1.0 / (1 + cosine_of_angle))
+        rotation_matrix = identity_matrix + np.sin(angle) * skew_symmetric + \
+                          ((1.0 - np.cos(angle)) * (skew_symmetric ** 2.0))
     return rotation_matrix
+
+
+def find_rotation_axis_and_angle_between_vectors(vector_a, vector_b):
+    """
+    Find the axis and angle of rotation to rotate vector_a onto vector_b
+
+    :param vector_a: 3D vector
+    :param vector_b: 3D vector
+    :return: axis, angle
+    """
+    unit_a, mag_a = normalise(vector_a)
+    unit_b, mag_b = normalise(vector_b)
+
+    cross_prod = np.cross(vector_a, vector_b)
+    unit_cross, mag_cross = normalise(cross_prod)
+    axis = cross_prod / mag_cross
+    angle = -1.0 * np.arccos(np.dot(vector_a, vector_b) / (mag_a * mag_b))
+
+    return axis, angle
 
 
 def rotation_matrix_from_axis_and_angle(axis, theta):

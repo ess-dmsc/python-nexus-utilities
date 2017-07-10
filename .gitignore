@@ -1,3 +1,4 @@
 *.pyc
 .idea
 *.hdf5
+.cache

@@ -160,8 +160,21 @@ class NexusBuilder:
                                                    z_pixel_offset=z_offsets)
             location = detector['location']
             translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
-            location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
-                                                              self.length_units, translate_unit_vector)
+
+            orientation = detector['orientation']
+            if orientation is not None:
+                orientation_transformation = self.add_transformation(detector_group, 'rotation',
+                                                                     [np.rad2deg(orientation['angle'])],
+                                                                     'degrees', orientation['axis'],
+                                                                     name='orientation')
+                location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
+                                                                  self.length_units, translate_unit_vector,
+                                                                  depends_on=orientation_transformation,
+                                                                  name='location')
+            else:
+                location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
+                                                                  self.length_units, translate_unit_vector,
+                                                                  name='location')
             self.add_depends_on(detector_group, location_transformation)
             if pixel_shape['shape'] == 'cylinder':
                 self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'], pixel_shape['axis'])
@@ -309,7 +322,7 @@ class NexusBuilder:
             np.array(list(zip(np.ones(len(y)) * height + end_centre[0], y, z)))))
 
         # Rotate vertices to correct the tube axis
-        rotation_matrix = nexusutils.find_rotation_between_vectors(np.array(axis), np.array([1., 0., 0.]))
+        rotation_matrix = nexusutils.find_rotation_matrix_between_vectors(np.array(axis), np.array([1., 0., 0.]))
         vertices = rotation_matrix.dot(vertices.T).T
 
         #
@@ -566,6 +579,8 @@ class NexusBuilder:
         transform_types = ['translation', 'rotation']
         if transformation_type not in transform_types:
             raise Exception('Transformation must be one of these types (' + ' '.join(transform_types) + ')')
+        if isinstance(depends_on, h5py._hl.dataset.Dataset):
+            depends_on = str(depends_on.name)
         attributes = {'units': units,
                       'vector': vector,
                       'transformation_type': transformation_type,
@@ -615,8 +630,11 @@ class NexusBuilder:
         :return: The NXsample group and the sample position dataset
         """
         sample_group = self.add_nx_group(self.root, name, 'NXsample')
-        self.add_dataset('sample', 'distance', position[2])
+        if position is None:
+            position = np.array([0.0, 0.0, 0.0])
+
         sample_transform_group = self.add_transformation_group('sample')
+        self.add_dataset('sample', 'distance', position[2])
         position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
         sample_position = self.add_transformation(sample_transform_group, 'translation', position_magnitude,
                                                   self.length_units,
