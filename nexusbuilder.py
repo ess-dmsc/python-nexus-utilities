@@ -452,18 +452,35 @@ class NexusBuilder:
 
             vertices = self.idf_parser.get_structured_detector_vertices(detector['type_name'])
 
-            detector_ids = self.__create_detector_ids_for_structured_detector(vertices, detector)
+            # There is one fewer pixel than vertex in each dimension because vertices mark the pixel corners
+            pixels_in_first_dimension = vertices.shape[0] - 1
+            pixels_in_second_dimension = vertices.shape[1] - 1
 
-            # TODO create quadralaterals dataset (each pixel made up of 4 indices in vertices dataset)
+            detector_ids = self.__create_detector_ids_for_structured_detector(pixels_in_first_dimension,
+                                                                              pixels_in_second_dimension, detector)
+            quadrilaterals = self.__create_quadrilaterals_dataset(pixels_in_first_dimension,
+                                                                  pixels_in_second_dimension)
 
-            # TODO create detector_faces dataset (maps entry in quadralaterals with detector id)
+            # TODO create detector_faces dataset (maps entry in quadrilaterals with detector id)
 
-            # TODO Add the NXsolid_geometry describing the detector to file
+            # TODO Add the NXsolid_geometry describing the detector to file, reshape vertices to "1D"
+            # (1D list of vector positions) in the process
 
             self.__add_transformations_for_structured_detector(detector, detector_group)
 
             detector_number += 1
         return detector_number
+
+    @staticmethod
+    def __create_quadrilaterals_dataset(pixels_in_first_dimension, pixels_in_second_dimension):
+        quadrilaterals = []
+        for row_index in range(pixels_in_first_dimension):
+            for column_index in range(pixels_in_second_dimension):
+                first_pixel = column_index + row_index
+                quadrilaterals.append(np.array([first_pixel, first_pixel + pixels_in_first_dimension,
+                                                first_pixel + pixels_in_first_dimension + 1,
+                                                first_pixel + 1]))
+        return quadrilaterals
 
     def __add_transformations_for_structured_detector(self, detector, detector_group):
         # Add position of detector
@@ -472,7 +489,7 @@ class NexusBuilder:
         # Add orientation of detector
         if detector['orientation'] is not None:
             rotate_unit_vector, rotate_magnitude = nexusutils.normalise(detector['orientation']['axis'])
-            rotation = self.add_transformation(transform_group, 'rotation', float(detector['rotation']['angle']),
+            rotation = self.add_transformation(transform_group, 'rotation', float(detector['orientation']['angle']),
                                                'degrees',
                                                rotate_unit_vector, name='orientation')
             position = self.add_transformation(transform_group, 'translation', translate_magnitude,
@@ -486,16 +503,15 @@ class NexusBuilder:
         self.add_depends_on(detector_group, position)
 
     @staticmethod
-    def __create_detector_ids_for_structured_detector(self, vertices, detector):
+    def __create_detector_ids_for_structured_detector(pixels_in_first_dimension, pixels_in_second_dimension, detector):
         # Create the id list (detector_number dataset)
-        # There is one fewer pixel than vertex in each dimension because vertices mark the pixel corners
-        detector_ids = np.linspace(detector['id_start'], (vertices.size[0] - 1) * detector['X_id_step'],
+        detector_ids = np.linspace(detector['id_start'], pixels_in_first_dimension * detector['X_id_step'],
                                    detector['X_id_step'])
         np.expand_dims(detector_ids, axis=0)
-        for row_number in range(1, vertices.size[1] - 1):
+        for row_number in range(1, pixels_in_second_dimension):
             row_increment = row_number * detector['Y_id_step']
             new_row = np.linspace(detector['id_start'] + row_increment,
-                                  ((vertices.size[0] - 1) * detector['X_id_step']) + row_increment,
+                                  (pixels_in_first_dimension * detector['X_id_step']) + row_increment,
                                   detector['X_id_step'])
             np.expand_dims(new_row, axis=0)
             detector_ids = np.vstack([detector_ids, new_row])

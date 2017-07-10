@@ -404,8 +404,8 @@ class IDFParser:
                     angle = location_type.get('rot')
                     if angle is not None:
                         rotation = {'angle': location_type.get('rot'),
-                                    'axis': np.array(location_type.get('axis-x'), location_type.get('axis-y'),
-                                                     location_type.get('axis-z')).astype(float)}
+                                    'axis': np.array([location_type.get('axis-x'), location_type.get('axis-y'),
+                                                     location_type.get('axis-z')]).astype(float)}
                     else:
                         rotation = None
                 yield {'id_start': int(xml_type.get('idstart')), 'X_id_step': int(xml_type.get('idstepbyrow')),
