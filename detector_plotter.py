@@ -38,8 +38,8 @@ class DetectorPlotter:
             x_offsets, y_offsets, z_offsets = self.__do_transformations(transformations,
                                                                         x_offsets, y_offsets, z_offsets)
 
-            ax[0].scatter(x_offsets, y_offsets, s=0.5)
-            ax[1].scatter(x_offsets, z_offsets, s=0.5)
+            ax[0].scatter(x_offsets, y_offsets, s=0.75, marker='x')
+            ax[1].scatter(x_offsets, z_offsets, s=0.75, marker='x')
 
         ax[0].set_title('XY-plane pixel locations')
         ax[1].set_title('XZ-plane pixel locations')
