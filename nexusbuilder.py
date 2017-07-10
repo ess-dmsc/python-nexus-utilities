@@ -458,10 +458,9 @@ class NexusBuilder:
 
             detector_ids = self.__create_detector_ids_for_structured_detector(pixels_in_first_dimension,
                                                                               pixels_in_second_dimension, detector)
-            quadrilaterals = self.__create_quadrilaterals_dataset(pixels_in_first_dimension,
-                                                                  pixels_in_second_dimension)
-
-            # TODO create detector_faces dataset (maps entry in quadrilaterals with detector id)
+            quadrilaterals, detector_faces = self.__create_quadrilaterals_dataset(pixels_in_first_dimension,
+                                                                                  pixels_in_second_dimension,
+                                                                                  detector_ids)
 
             # TODO Add the NXsolid_geometry describing the detector to file, reshape vertices to "1D"
             # (1D list of vector positions) in the process
@@ -472,15 +471,19 @@ class NexusBuilder:
         return detector_number
 
     @staticmethod
-    def __create_quadrilaterals_dataset(pixels_in_first_dimension, pixels_in_second_dimension):
+    def __create_quadrilaterals_dataset(pixels_in_first_dimension, pixels_in_second_dimension, detector_ids):
         quadrilaterals = []
+        detector_faces = []
+        face_number = 0
         for row_index in range(pixels_in_first_dimension):
             for column_index in range(pixels_in_second_dimension):
                 first_pixel = column_index + row_index
                 quadrilaterals.append(np.array([first_pixel, first_pixel + pixels_in_first_dimension,
                                                 first_pixel + pixels_in_first_dimension + 1,
                                                 first_pixel + 1]))
-        return quadrilaterals
+                detector_faces.append([face_number, detector_ids[row_index][column_index]])
+                face_number += 1
+        return quadrilaterals, detector_faces
 
     def __add_transformations_for_structured_detector(self, detector, detector_group):
         # Add position of detector
