@@ -457,16 +457,24 @@ class NexusBuilder:
             pixels_in_first_dimension = vertices.shape[0] - 1
             pixels_in_second_dimension = vertices.shape[1] - 1
 
-            detector_ids = self.__create_detector_ids_for_structured_detector(pixels_in_first_dimension,
-                                                                              pixels_in_second_dimension, detector)
-            quadrilaterals, detector_faces = self.__create_quadrilaterals_dataset(pixels_in_first_dimension,
-                                                                                  pixels_in_second_dimension,
-                                                                                  detector_ids)
             # Reshape vertices into a 1D list
             vertices = np.reshape(vertices, (vertices.shape[0] * vertices.shape[1], 3))
 
+            detector_ids = self.__create_detector_ids_for_structured_detector(pixels_in_first_dimension,
+                                                                              pixels_in_second_dimension, detector)
+            quadrilaterals, detector_faces, pixel_offsets = self.__create_quadrilaterals_dataset(
+                pixels_in_first_dimension,
+                pixels_in_second_dimension,
+                detector_ids, vertices)
+
             self.__add_detector_shape(detector_group, vertices, quadrilaterals, detector_faces)
             self.add_dataset(detector_group, 'detector_number', detector_ids)
+            self.add_dataset(detector_group, 'x_pixel_offset', pixel_offsets[:, :, 0], {'units': self.length_units})
+            self.add_dataset(detector_group, 'y_pixel_offset', pixel_offsets[:, :, 1], {'units': self.length_units})
+            z_offsets = pixel_offsets[:, :, 2]
+            # Only include z offsets if they are not zero everywhere
+            if z_offsets.any():
+                self.add_dataset(detector_group, 'z_pixel_offset', z_offsets, {'units': self.length_units})
 
             self.__add_transformations_for_structured_detector(detector, detector_group)
 
@@ -482,19 +490,28 @@ class NexusBuilder:
         return detector_shape_group
 
     @staticmethod
-    def __create_quadrilaterals_dataset(pixels_in_first_dimension, pixels_in_second_dimension, detector_ids):
+    def __create_quadrilaterals_dataset(pixels_in_first_dimension, pixels_in_second_dimension, detector_ids, vertices):
         quadrilaterals = []
         detector_faces = []
+        pixel_offsets = np.zeros((pixels_in_second_dimension, pixels_in_first_dimension, 3))
         face_number = 0
-        for row_index in range(pixels_in_second_dimension - 1):
-            for column_index in range(pixels_in_first_dimension - 1):
+        for row_index in range(pixels_in_second_dimension):
+            for column_index in range(pixels_in_first_dimension):
                 first_pixel = column_index + (row_index * pixels_in_first_dimension)
-                quadrilaterals.append(np.array([first_pixel, first_pixel + pixels_in_first_dimension,
-                                                first_pixel + pixels_in_first_dimension + 1,
-                                                first_pixel + 1]))
-                detector_faces.append([face_number, detector_ids[row_index, column_index]])
+                pixel_corner_indices = np.array([first_pixel, first_pixel + pixels_in_first_dimension,
+                                                 first_pixel + pixels_in_first_dimension + 1,
+                                                 first_pixel + 1])
+
+                if row_index != pixels_in_second_dimension and column_index != pixels_in_first_dimension:
+                    quadrilaterals.append(pixel_corner_indices)
+                    detector_faces.append([face_number, detector_ids[row_index, column_index]])
+
+                pixel_corner_positions = vertices[pixel_corner_indices]
+                pixel_centre = np.mean(pixel_corner_positions, axis=0)
+                pixel_offsets[row_index, column_index] = pixel_centre
+
                 face_number += 1
-        return quadrilaterals, detector_faces
+        return quadrilaterals, detector_faces, pixel_offsets
 
     def __add_transformations_for_structured_detector(self, detector, detector_group):
         # Add position of detector
@@ -520,16 +537,16 @@ class NexusBuilder:
     def __create_detector_ids_for_structured_detector(pixels_in_first_dimension, pixels_in_second_dimension, detector):
         # Create the id list (detector_number dataset)
         detector_ids = np.arange(detector['id_start'],
-                                 (pixels_in_first_dimension * detector['X_id_step']) + detector['id_start'],
+                                 pixels_in_second_dimension + detector['id_start'],
                                  detector['X_id_step'])
-        np.expand_dims(detector_ids, axis=1)
-        for row_number in range(1, pixels_in_second_dimension):
-            row_increment = row_number * detector['Y_id_step']
-            new_row = np.arange(detector['id_start'] + row_increment,
-                                (pixels_in_first_dimension * detector['X_id_step']) + row_increment + detector['id_start'],
+        detector_ids = np.expand_dims(detector_ids, axis=1)
+        for column_number in range(1, pixels_in_first_dimension):
+            row_increment = column_number * pixels_in_second_dimension
+            new_column = np.arange(detector['id_start'] + row_increment,
+                                   detector['id_start'] + row_increment + pixels_in_second_dimension,
                                 detector['X_id_step'])
-            np.expand_dims(new_row, axis=1)
-            detector_ids = np.vstack([detector_ids, new_row])
+            new_column = np.expand_dims(new_column, axis=1)
+            detector_ids = np.hstack([detector_ids, new_column])
         return detector_ids
 
     def add_monitor(self, name, detector_id, location, units=None):
