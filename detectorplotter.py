@@ -80,6 +80,10 @@ class DetectorPlotter:
 
     @staticmethod
     def __do_transformations(transformations, x_offsets, y_offsets, z_offsets):
+        if len(x_offsets.shape) > 1:
+            x_offsets = np.reshape(x_offsets, (1, np.prod(x_offsets.shape)))
+            y_offsets = np.reshape(y_offsets, (1, np.prod(x_offsets.shape)))
+            z_offsets = np.reshape(z_offsets, (1, np.prod(x_offsets.shape)))
         offsets = np.vstack((x_offsets, y_offsets, z_offsets))
         # Transformations must be carried out in reverse order
         for transformation in reversed(transformations):

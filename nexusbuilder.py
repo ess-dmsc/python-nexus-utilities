@@ -515,19 +515,19 @@ class NexusBuilder:
     def __add_transformations_for_structured_detector(self, detector, detector_group):
         # Add position of detector
         translate_unit_vector, translate_magnitude = nexusutils.normalise(detector['location'])
-        transform_group = self.add_transformation_group(detector_group)
         # Add orientation of detector
         if detector['orientation'] is not None:
             rotate_unit_vector, rotate_magnitude = nexusutils.normalise(detector['orientation']['axis'])
-            rotation = self.add_transformation(transform_group, 'rotation', float(detector['orientation']['angle']),
+            rotation = self.add_transformation(detector_group, 'rotation',
+                                               np.array([detector['orientation']['angle']]).astype(float),
                                                'degrees',
                                                rotate_unit_vector, name='orientation')
-            position = self.add_transformation(transform_group, 'translation', translate_magnitude,
+            position = self.add_transformation(detector_group, 'translation', translate_magnitude,
                                                self.length_units,
                                                translate_unit_vector, name='panel_position',
                                                depends_on=rotation)
         else:
-            position = self.add_transformation(transform_group, 'translation', translate_magnitude,
+            position = self.add_transformation(detector_group, 'translation', translate_magnitude,
                                                self.length_units,
                                                translate_unit_vector, name='panel_position')
         self.add_depends_on(detector_group, position)
@@ -543,7 +543,7 @@ class NexusBuilder:
             row_increment = column_number * pixels_in_second_dimension
             new_column = np.arange(detector['id_start'] + row_increment,
                                    detector['id_start'] + row_increment + pixels_in_second_dimension,
-                                detector['X_id_step'])
+                                   detector['X_id_step'])
             new_column = np.expand_dims(new_column, axis=1)
             detector_ids = np.hstack([detector_ids, new_column])
         return detector_ids
