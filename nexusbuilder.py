@@ -445,7 +445,7 @@ class NexusBuilder:
 
         :return: Number of grid shapes added
         """
-        detector_number = 0
+        detector_number = 1
         for detector in self.idf_parser.get_structured_detectors():
             # Put each one in an NXdetector
             detector_group = self.add_detector_minimal(detector['name'], detector_number)
@@ -461,27 +461,36 @@ class NexusBuilder:
             quadrilaterals, detector_faces = self.__create_quadrilaterals_dataset(pixels_in_first_dimension,
                                                                                   pixels_in_second_dimension,
                                                                                   detector_ids)
+            # Reshape vertices into a 1D list
+            vertices = np.reshape(vertices, (vertices.shape[0] * vertices.shape[1], 3))
 
-            # TODO Add the NXsolid_geometry describing the detector to file, reshape vertices to "1D"
-            # (1D list of vector positions) in the process
+            self.__add_detector_shape(detector_group, vertices, quadrilaterals, detector_faces)
+            self.add_dataset(detector_group, 'detector_number', detector_ids)
 
             self.__add_transformations_for_structured_detector(detector, detector_group)
 
             detector_number += 1
         return detector_number
 
+    def __add_detector_shape(self, detector_group, vertices, quadrilaterals, detector_faces):
+        detector_shape_group = self.add_nx_group(detector_group, 'detector_shape', 'NXsolid_geometry')
+        self.add_dataset(detector_shape_group, 'vertices', vertices, {'units': self.length_units})
+        self.add_dataset(detector_shape_group, 'quadrilaterals', quadrilaterals, {'vertices_per_face': 4})
+        self.add_dataset(detector_shape_group, 'detector_faces', detector_faces)
+        return detector_shape_group
+
     @staticmethod
     def __create_quadrilaterals_dataset(pixels_in_first_dimension, pixels_in_second_dimension, detector_ids):
         quadrilaterals = []
         detector_faces = []
         face_number = 0
-        for row_index in range(pixels_in_first_dimension):
-            for column_index in range(pixels_in_second_dimension):
-                first_pixel = column_index + row_index
+        for row_index in range(pixels_in_second_dimension - 1):
+            for column_index in range(pixels_in_first_dimension - 1):
+                first_pixel = column_index + (row_index * pixels_in_first_dimension)
                 quadrilaterals.append(np.array([first_pixel, first_pixel + pixels_in_first_dimension,
                                                 first_pixel + pixels_in_first_dimension + 1,
                                                 first_pixel + 1]))
-                detector_faces.append([face_number, detector_ids[row_index][column_index]])
+                detector_faces.append([face_number, detector_ids[row_index, column_index]])
                 face_number += 1
         return quadrilaterals, detector_faces
 
@@ -508,15 +517,16 @@ class NexusBuilder:
     @staticmethod
     def __create_detector_ids_for_structured_detector(pixels_in_first_dimension, pixels_in_second_dimension, detector):
         # Create the id list (detector_number dataset)
-        detector_ids = np.linspace(detector['id_start'], pixels_in_first_dimension * detector['X_id_step'],
-                                   detector['X_id_step'])
-        np.expand_dims(detector_ids, axis=0)
+        detector_ids = np.arange(detector['id_start'],
+                                 (pixels_in_first_dimension * detector['X_id_step']) + detector['id_start'],
+                                 detector['X_id_step'])
+        np.expand_dims(detector_ids, axis=1)
         for row_number in range(1, pixels_in_second_dimension):
             row_increment = row_number * detector['Y_id_step']
-            new_row = np.linspace(detector['id_start'] + row_increment,
-                                  (pixels_in_first_dimension * detector['X_id_step']) + row_increment,
-                                  detector['X_id_step'])
-            np.expand_dims(new_row, axis=0)
+            new_row = np.arange(detector['id_start'] + row_increment,
+                                (pixels_in_first_dimension * detector['X_id_step']) + row_increment + detector['id_start'],
+                                detector['X_id_step'])
+            np.expand_dims(new_row, axis=1)
             detector_ids = np.vstack([detector_ids, new_row])
         return detector_ids
 
