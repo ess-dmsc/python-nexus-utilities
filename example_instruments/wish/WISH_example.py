@@ -1,5 +1,5 @@
 from nexusbuilder import NexusBuilder
-from detector_plotter import DetectorPlotter
+from detectorplotter import DetectorPlotter
 
 if __name__ == '__main__':
     output_filename = 'WISH_example_gzip_compress.hdf5'
