@@ -497,10 +497,10 @@ class NexusBuilder:
         face_number = 0
         for row_index in range(pixels_in_second_dimension):
             for column_index in range(pixels_in_first_dimension):
-                first_pixel = row_index + (column_index * pixels_in_second_dimension)
-                pixel_corner_indices = np.array([first_pixel, first_pixel + 1,
-                                                 first_pixel + pixels_in_second_dimension + 1,
-                                                 first_pixel + pixels_in_second_dimension])
+                first_pixel = column_index + (row_index * pixels_in_first_dimension)
+                pixel_corner_indices = np.array([first_pixel, first_pixel + pixels_in_first_dimension,
+                                                 first_pixel + pixels_in_first_dimension + 1,
+                                                 first_pixel + 1])
 
                 if row_index != pixels_in_second_dimension and column_index != pixels_in_first_dimension:
                     quadrilaterals.append(pixel_corner_indices)
