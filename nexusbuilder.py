@@ -458,7 +458,7 @@ class NexusBuilder:
             pixels_in_second_dimension = vertices.shape[1] - 1
 
             # Reshape vertices into a 1D list
-            vertices = np.reshape(vertices, (vertices.shape[0] * vertices.shape[1], 3))
+            vertices = np.reshape(vertices, (vertices.shape[0] * vertices.shape[1], 3), order='F')
 
             detector_ids = self.__create_detector_ids_for_structured_detector(pixels_in_first_dimension,
                                                                               pixels_in_second_dimension, detector)
