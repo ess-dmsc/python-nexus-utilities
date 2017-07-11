@@ -318,7 +318,7 @@ class IDFParser:
             vector_to_face_point = facing_point - location
             axis, angle = nexusutils.find_rotation_axis_and_angle_between_vectors(vector_to_face_point,
                                                                                   np.array([0, 0, -1.0]))
-            orientation = {'axis': axis, 'angle': angle}
+            orientation = {'axis': axis, 'angle': np.rad2deg(angle)}
         return orientation
 
     def __get_pixel_shape(self, xml_root, type_name):
@@ -403,7 +403,7 @@ class IDFParser:
                     location = self.__get_vector(location_type)
                     angle = location_type.get('rot')
                     if angle is not None:
-                        rotation = {'angle': location_type.get('rot'),
+                        rotation = {'angle': float(location_type.get('rot')),
                                     'axis': np.array([location_type.get('axis-x'), location_type.get('axis-y'),
                                                      location_type.get('axis-z')]).astype(float)}
                     else:

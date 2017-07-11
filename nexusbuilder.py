@@ -108,7 +108,6 @@ class NexusBuilder:
             dataset = group.create_dataset(name, data=np.array(data).astype('|S' + str(len(data))))
         elif nexusutils.is_scalar(data):
             # Don't try to use compression with scalar datasets
-            data = [data]
             dataset = group.create_dataset(name, data=data)
         else:
             dataset = group.create_dataset(name, data=data, compression=self.compress_type,
@@ -166,17 +165,17 @@ class NexusBuilder:
                 orientation = detector['orientation']
                 if orientation is not None:
                     orientation_transformation = self.add_transformation(detector_group, 'rotation',
-                                                                         [np.rad2deg(orientation['angle'])],
+                                                                         orientation['angle'],
                                                                          'degrees', orientation['axis'],
                                                                          name='orientation')
                     location_transformation = self.add_transformation(detector_group, 'translation',
-                                                                      [translate_magnitude],
+                                                                      translate_magnitude,
                                                                       self.length_units, translate_unit_vector,
                                                                       depends_on=orientation_transformation,
                                                                       name='location')
                 else:
                     location_transformation = self.add_transformation(detector_group, 'translation',
-                                                                      [translate_magnitude],
+                                                                      translate_magnitude,
                                                                       self.length_units, translate_unit_vector,
                                                                       name='location')
                 self.add_depends_on(detector_group, location_transformation)
@@ -519,7 +518,7 @@ class NexusBuilder:
         if detector['orientation'] is not None:
             rotate_unit_vector, rotate_magnitude = nexusutils.normalise(detector['orientation']['axis'])
             rotation = self.add_transformation(detector_group, 'rotation',
-                                               np.array([detector['orientation']['angle']]).astype(float),
+                                               detector['orientation']['angle'],
                                                'degrees',
                                                rotate_unit_vector, name='orientation')
             position = self.add_transformation(detector_group, 'translation', translate_magnitude,

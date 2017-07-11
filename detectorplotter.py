@@ -69,11 +69,10 @@ class DetectorPlotter:
         attributes = transform.attrs
         if str(attributes['transformation_type'].astype(str)) == 'translation':
             vector = attributes['vector'] * transform[...].astype(float)
-            vector = vector[0]
             transformations.append({'type': 'translation', 'matrix': vector})
         if str(attributes['transformation_type'].astype(str)) == 'rotation':
             axis = attributes['vector']
-            angle = np.deg2rad(transform[...].astype(float))[0][0]
+            angle = np.deg2rad(transform[...])
             rotation_matrix = nexusutils.rotation_matrix_from_axis_and_angle(axis, angle)
             transformations.append({'type': 'rotation', 'matrix': rotation_matrix})
         return attributes['depends_on']
