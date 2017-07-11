@@ -13,7 +13,7 @@ class DetectorPlotter:
     def __init__(self, nexus_filename):
         self.source_file = h5py.File(nexus_filename, 'r')
 
-    def plot_detectors(self):
+    def plot_pixel_positions(self):
         instrument_group = self.source_file['/raw_data_1/instrument']
         detector_group_paths = []
         for name, dataset_or_group in instrument_group.items():

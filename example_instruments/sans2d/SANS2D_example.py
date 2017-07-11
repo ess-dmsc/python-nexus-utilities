@@ -58,4 +58,4 @@ if __name__ == '__main__':
     del builder
 
     plotter = DetectorPlotter(output_filename)
-    plotter.plot_detectors()
+    plotter.plot_pixel_positions()

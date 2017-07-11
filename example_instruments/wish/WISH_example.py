@@ -10,4 +10,4 @@ if __name__ == '__main__':
     del builder  # file is closed in the builder destructor
 
     plotter = DetectorPlotter(output_filename)
-    plotter.plot_detectors()
+    plotter.plot_pixel_positions()
