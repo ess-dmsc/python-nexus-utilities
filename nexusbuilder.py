@@ -470,7 +470,8 @@ class NexusBuilder:
             self.__add_transformations_for_structured_detector(detector, detector_group)
 
             detector_number += 1
-        return detector_number
+        total_detectors = detector_number - 1
+        return total_detectors
 
     def __add_detector_shape(self, detector_group, vertices, quadrilaterals, detector_faces):
         detector_shape_group = self.add_nx_group(detector_group, 'detector_shape', 'NXsolid_geometry')
