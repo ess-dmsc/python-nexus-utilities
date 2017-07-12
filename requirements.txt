@@ -9,3 +9,4 @@ tables==3.4.2
 pytest
 seaborn
 matplotlib
+tabulate
