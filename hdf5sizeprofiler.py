@@ -2,6 +2,8 @@ import h5py
 from tabulate import tabulate
 from operator import itemgetter
 import numpy as np
+import seaborn
+import matplotlib.pylab as pl
 
 
 class HDF5SizeProfiler:
@@ -33,7 +35,12 @@ class HDF5SizeProfiler:
         print(tabulate(datasets_sorted_by_size, headers='keys'))
 
     def draw_pie_chart(self):
-        pass
+        plot_data = list([[dataset['% of total size'], dataset['Dataset name']] for dataset in self.datasets if
+                          dataset['% of total size'] > 1.])
+        values = np.array(plot_data)[:, 0]
+        names = np.array(plot_data)[:, 1]
+        pl.pie(values, labels=names, autopct='%1.1f%%', shadow=True, startangle=90)
+        pl.show()
 
     def __del__(self):
         # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
