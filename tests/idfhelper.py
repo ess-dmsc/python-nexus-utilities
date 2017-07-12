@@ -1,8 +1,36 @@
 from io import StringIO
+import numpy as np
 
 
-def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, defaults=None, monitors=None,
+def dict_compare(d1, d2):
+    """
+    Return True if the two dictionaries are equal,
+    supports values containing numpy arrays
+
+    :param d1: first dictionary
+    :param d2: second dictionary
+    :return: True if dictionaries are equal, False otherwise
+    """
+    d1_keys = set(d1.keys())
+    d2_keys = set(d2.keys())
+    intersect_keys = d1_keys.intersection(d2_keys)
+    same = set(o for o in intersect_keys if np.array_equal(np.array(d1[o]), np.array(d2[o])))
+    return (len(d1_keys) == len(d2_keys)) and (len(d1_keys) == len(same))
+
+
+def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, defaults=None, monitor_name=None,
                          structured_detector_name=None):
+    """
+    Create a fake IDF, in-memory, file object for use in unit tests of the IDF parser
+
+    :param instrument_name: A name for the instrument
+    :param source_name: A name for the source
+    :param sample: Dictionary with "name" and "position" of the sample
+    :param defaults: Dictionary with "length_units" and "angle_units"
+    :param monitor_name: A name for a monitor
+    :param structured_detector_name: A name for a structured detector
+    :return: Python file object
+    """
     fake_idf_file = StringIO()
 
     # instrument
@@ -16,8 +44,8 @@ def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, 
         __write_sample(fake_idf_file, sample)
     if defaults is not None:
         __write_defaults(defaults, fake_idf_file)
-    if monitors is not None:
-        __write_monitors(fake_idf_file, monitors)
+    if monitor_name is not None:
+        __write_monitors(fake_idf_file, monitor_name)
     if structured_detector_name is not None:
         __write_structured_detector(fake_idf_file, structured_detector_name)
 
@@ -49,10 +77,10 @@ def __write_structured_detector(fake_idf_file, structured_detector_name):
                         '<type is="detector" name="pixel"/>')
 
 
-def __write_monitors(fake_idf_file, monitors):
+def __write_monitors(fake_idf_file, monitor_name):
     fake_idf_file.write('<component type="monitors" idlist="monitors"><location/></component>\n')
     fake_idf_file.write('<type name="monitors"><component type="monitor-tbd">'
-                        '<location z="7.217" name="' + monitors['name'] + '"/></component></type>\n')
+                        '<location z="7.217" name="' + monitor_name + '"/></component></type>\n')
     fake_idf_file.write('<type name="monitor-tbd" is="monitor"><cylinder id="some-shape"><centre-of-bottom-base '
                         'r="0.0" t="0.0" p="0.0" /><axis x="0.0" y="0.0" z="1.0" /> <radius val="0.01" />'
                         '<height val="0.03" /></cylinder></type>\n')
