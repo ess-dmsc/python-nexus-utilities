@@ -67,10 +67,31 @@ def test_get_monitors():
 
 
 def test_get_structured_detectors():
+    x_pos = np.hstack((np.linspace(-3., 3., 4), np.linspace(-1.5, 1.5, 4), np.linspace(-0.3, 0.3, 4)))
+    y_pos = np.hstack(np.array([[1.] * 4, [0.] * 4, [-1.] * 4]))
+    z_pos = np.array([0.] * 12)
+    input_vertices = np.hstack((np.expand_dims(x_pos, 1), np.expand_dims(y_pos, 1), np.expand_dims(z_pos, 1)))
     expected_output = {'type_name': 'fan', 'orientation': None, 'Y_id_step': 2, 'location': np.array([0., 0.01, 9.23]),
                        'id_start': 0, 'X_id_step': 1, 'name': 'TEST_STRUCT_DET'}
-    fake_idf_file = create_fake_idf_file(structured_detector_name=expected_output['name'])
+    fake_idf_file = create_fake_idf_file(structured_detector={'name': expected_output['name'],
+                                                              'type': expected_output['type_name'],
+                                                              'vertices': input_vertices})
     parser = IDFParser(fake_idf_file)
     for detector in parser.get_structured_detectors():
         assert dict_compare(expected_output, detector)
+    fake_idf_file.close()
+
+
+def test_get_structured_detector_vertices():
+    x_pos = np.hstack((np.linspace(-3., 3., 4), np.linspace(-1.5, 1.5, 4), np.linspace(-0.3, 0.3, 4)))
+    y_pos = np.hstack(np.array([[1.] * 4, [0.] * 4, [-1.] * 4]))
+    z_pos = np.array([0.] * 12)
+    input_vertices = np.hstack((np.expand_dims(x_pos, 1), np.expand_dims(y_pos, 1), np.expand_dims(z_pos, 1)))
+    detector = {'name': 'TEST_STRUCT_DET', 'type': 'fan', 'vertices': input_vertices}
+    fake_idf_file = create_fake_idf_file(structured_detector=detector)
+    parser = IDFParser(fake_idf_file)
+    output_vertices = parser.get_structured_detector_vertices(detector['type'])
+
+    reshaped_input = np.reshape(input_vertices, (4, 3, 3), order='F')
+    assert np.allclose(reshaped_input, output_vertices)
     fake_idf_file.close()

@@ -19,7 +19,7 @@ def dict_compare(d1, d2):
 
 
 def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, defaults=None, monitor_name=None,
-                         structured_detector_name=None):
+                         structured_detector=None):
     """
     Create a fake IDF, in-memory, file object for use in unit tests of the IDF parser
 
@@ -28,7 +28,7 @@ def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, 
     :param sample: Dictionary with "name" and "position" of the sample
     :param defaults: Dictionary with "length_units" and "angle_units"
     :param monitor_name: A name for a monitor
-    :param structured_detector_name: A name for a structured detector
+    :param structured_detector: Dictionary with "name" and "type" for a structured detector
     :return: Python file object
     """
     fake_idf_file = StringIO()
@@ -46,34 +46,25 @@ def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, 
         __write_defaults(defaults, fake_idf_file)
     if monitor_name is not None:
         __write_monitors(fake_idf_file, monitor_name)
-    if structured_detector_name is not None:
-        __write_structured_detector(fake_idf_file, structured_detector_name)
+    if structured_detector is not None:
+        __write_structured_detector(fake_idf_file, structured_detector)
 
     fake_idf_file.write('</instrument>\n')
     fake_idf_file.seek(0)  # So that the xml parser reads from the start of the file
     return fake_idf_file
 
 
-def __write_structured_detector(fake_idf_file, structured_detector_name):
+def __write_structured_detector(fake_idf_file, structured_detector):
     fake_idf_file.write(
-        '<component name ="' + structured_detector_name + '" type="fan" idstart="0" idfillbyfirst="x" idstepbyrow="1" '
-                                                          'idstep="2">\n'
-                                                          '  <location x="0" y="0.01" z=" 9.23"/>\n'
-                                                          '</component>')
-    fake_idf_file.write('<type name="fan" is="StructuredDetector" xpixels="3" ypixels="2" type="pixel">\n'
-                        '  <vertex x="-2.0" y="1.0" />\n'
-                        '  <vertex x="-1.0" y="1.0" />\n'
-                        '  <vertex x="1.0" y="1.0" />\n'
-                        '  <vertex x="2.0" y="1.0" />\n'
-                        '  <vertex x="-1.0" y="0.0" />\n'
-                        '  <vertex x="-0.5" y="0.0" />\n'
-                        '  <vertex x="0.5" y="0.0" />\n'
-                        '  <vertex x="1.0" y="0.0" />\n'
-                        '  <vertex x="-0.5" y="-1.0" />\n'
-                        '  <vertex x="-0.25" y="-1.0" />\n'
-                        '  <vertex x="0.25" y="-1.0" />\n'
-                        '  <vertex x="0.5" y="-1.0" />\n'
-                        '  </type>\n'
+        '<component name ="' + structured_detector['name'] + '" type="' + structured_detector[
+            'type'] + '" idstart="0" idfillbyfirst="x" idstepbyrow="1" idstep="2">\n'
+                      '  <location x="0" y="0.01" z=" 9.23"/>\n'
+                      '</component>')
+    fake_idf_file.write('<type name="' + structured_detector['type'] +
+                        '" is="StructuredDetector" xpixels="3" ypixels="2" type="pixel">\n')
+    for vertex in structured_detector['vertices']:
+        fake_idf_file.write('  <vertex x="' + str(vertex[0]) + '" y="' + str(vertex[1]) + '" />\n')
+    fake_idf_file.write('  </type>\n'
                         '<type is="detector" name="pixel"/>')
 
 
