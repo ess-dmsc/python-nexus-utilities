@@ -314,14 +314,24 @@ class NexusBuilder:
         if isinstance(group, str):
             group = self.root[group]
 
+        def polygon_names(number_of_sides):
+            if number_of_sides < 3:
+                raise ValueError('Polygon must have more than two sides in NexusBuilder.add_shape')
+            elif number_of_sides == 3:
+                return 'triangles'
+            elif number_of_sides == 4:
+                return 'quadrilaterals'
+            else:
+                return str(number_of_sides) + '-agons'
+
         shape = self.add_nx_group(group, name, 'NXsolid_geometry')
         self.add_dataset(shape, 'vertices', vertices, {'units': self.length_units})
         if isinstance(faces, list):
             for face_types in faces:
-                self.add_dataset(shape, 'faces_' + str(face_types.shape[1]), face_types,
+                self.add_dataset(shape, polygon_names(face_types.shape[1]), face_types,
                                  {'vertices_per_face': face_types.shape[1]})
         else:
-            self.add_dataset(shape, 'faces', faces, {'vertices_per_face': faces.shape[1]})
+            self.add_dataset(shape, polygon_names(faces.shape[1]), faces, {'vertices_per_face': faces.shape[1]})
         if detector_faces is not None:
             self.add_dataset(shape, 'detector_vertices', detector_faces)
         return shape
