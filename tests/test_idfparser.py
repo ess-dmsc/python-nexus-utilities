@@ -58,11 +58,11 @@ def test_angle_unit_other_than_rad_or_deg_fails():
 
 
 def test_get_monitors():
-    monitors = {'name': 'TEST_MONITOR'}
-    fake_idf_file = create_fake_idf_file(monitors=monitors)
+    monitor_name = 'TEST_MONITOR'
+    fake_idf_file = create_fake_idf_file(monitor_name=monitor_name)
     parser = IDFParser(fake_idf_file)
     monitors_out, monitor_types = parser.get_monitors()
-    assert monitors_out[0]['name'] == monitors['name']
+    assert monitors_out[0]['name'] == monitor_name
     fake_idf_file.close()
 
 
