@@ -2,7 +2,7 @@ import env
 import pytest
 import numpy as np
 from idfparser import IDFParser
-from tests.idfhelper import create_fake_idf_file
+from idfhelper import create_fake_idf_file, dict_compare
 
 
 def test_get_instrument_name():
@@ -63,4 +63,14 @@ def test_get_monitors():
     parser = IDFParser(fake_idf_file)
     monitors_out, monitor_types = parser.get_monitors()
     assert monitors_out[0]['name'] == monitors['name']
+    fake_idf_file.close()
+
+
+def test_get_structured_detectors():
+    expected_output = {'type_name': 'fan', 'orientation': None, 'Y_id_step': 2, 'location': np.array([0., 0.01, 9.23]),
+                       'id_start': 0, 'X_id_step': 1, 'name': 'TEST_STRUCT_DET'}
+    fake_idf_file = create_fake_idf_file(structured_detector_name=expected_output['name'])
+    parser = IDFParser(fake_idf_file)
+    for detector in parser.get_structured_detectors():
+        assert dict_compare(expected_output, detector)
     fake_idf_file.close()
