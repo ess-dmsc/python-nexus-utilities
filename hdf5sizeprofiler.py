@@ -1,5 +1,4 @@
 import h5py
-import seaborn
 from tabulate import tabulate
 from operator import itemgetter
 import numpy as np
@@ -14,11 +13,11 @@ class HDF5SizeProfiler:
             if isinstance(node, h5py.Dataset):
                 # node is a dataset
                 data_size = node.size * node.dtype.itemsize
-                self.datasets.append({'Dataset name': name, 'Datatype': node.dtype, 'Size (elements)': node.size,
+                datatype = str(node.dtype)
+                if datatype[:2] == '|S':
+                    datatype = 'str'
+                self.datasets.append({'Dataset name': name, 'Datatype': datatype, 'Size (elements)': node.size,
                                       'Size (bytes)': data_size})
-            else:
-                # node is a group
-                pass
 
         # NB it doesn't visit nodes which are any kind of link
         self.source_file.visititems(__visitor_func)

@@ -268,7 +268,7 @@ class NexusBuilder:
                     detector_group[dataset_name] = offset_dataset
                 else:
                     self.add_dataset(detector_group, dataset_name, offset_dataset, {'units': self.length_units})
-        self.add_dataset(detector_group, 'detector_number', detector_ids)
+        self.add_dataset(detector_group, 'detector_number', np.array(detector_ids).astype(np.dtype('int32')))
         return detector_group
 
     def __add_distance_datasets(self, group, scalar_params):
