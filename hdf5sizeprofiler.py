@@ -14,7 +14,8 @@ class HDF5SizeProfiler:
             if isinstance(node, h5py.Dataset):
                 # node is a dataset
                 data_size = node.size * node.dtype.itemsize
-                self.datasets.append({'Dataset name': name, 'Size (bytes)': data_size})
+                self.datasets.append({'Dataset name': name, 'Datatype': node.dtype, 'Size (elements)': node.size,
+                                      'Size (bytes)': data_size})
             else:
                 # node is a group
                 pass
