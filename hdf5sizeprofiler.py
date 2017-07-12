@@ -10,8 +10,6 @@ class HDF5SizeProfiler:
         self.source_file = h5py.File(filename, 'r')
         self.datasets = []
 
-    def profile(self):
-
         def __visitor_func(name, node):
             if isinstance(node, h5py.Dataset):
                 # node is a dataset
@@ -24,9 +22,13 @@ class HDF5SizeProfiler:
         # NB it doesn't visit nodes which are any kind of link
         self.source_file.visititems(__visitor_func)
 
+        self.total_bytes = np.sum(list([dataset['Size (bytes)'] for dataset in self.datasets]))
+        size_factor = 100. / self.total_bytes
+        for dataset in self.datasets:
+            dataset['% of total size'] = dataset['Size (bytes)'] * size_factor
+
     def print_stats_table(self):
-        total_bytes = np.sum(list([dataset['Size (bytes)'] for dataset in self.datasets]))
-        print('Total uncompressed size is ' + str(total_bytes/1000000.) + ' megabytes\n')
+        print('Total uncompressed size is ' + str(self.total_bytes / 1000000.) + ' megabytes\n')
         datasets_sorted_by_size = sorted(self.datasets, key=itemgetter('Size (bytes)'), reverse=True)
         print(tabulate(datasets_sorted_by_size, headers='keys'))
 
@@ -44,6 +46,5 @@ class HDF5SizeProfiler:
 if __name__ == '__main__':
     # Example usage
     profiler = HDF5SizeProfiler('example_instruments/wish/WISH_example_gzip_compress.hdf5')
-    profiler.profile()
     profiler.print_stats_table()
     profiler.draw_pie_chart()
