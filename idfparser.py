@@ -1,7 +1,6 @@
 import xml.etree.ElementTree
 import numpy as np
 from coordinatetransformer import CoordinateTransformer
-import pprint
 import logging
 import nexusutils
 import itertools
@@ -165,9 +164,6 @@ class IDFParser:
 
         detectors = self.__collate_detector_info(pixels, components)
 
-        # with open('temp_log.txt', 'w') as log_file:
-        #    self.pprint_things(detectors, log_file)
-
         return detectors
 
     def __collate_detector_info(self, pixels, components):
@@ -266,12 +262,6 @@ class IDFParser:
             # apply as a translation to each old offset
             offsets.extend(old_offsets + np.expand_dims(new_offset, 1).T)
         return offsets
-
-    @staticmethod
-    def pprint_things(things, fileobject=None):
-        pp = pprint.PrettyPrinter(indent=4, stream=fileobject)
-        for thing in things:
-            pp.pprint(thing)
 
     def __collect_detector_components(self, components, search_type, searched_already):
         if search_type in searched_already:

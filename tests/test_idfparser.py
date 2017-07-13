@@ -21,12 +21,28 @@ def test_get_source_name():
     fake_idf_file.close()
 
 
+def test_get_source_name_none():
+    name = 'TEST_SOURCE'
+    fake_idf_file = create_fake_idf_file()
+    parser = IDFParser(fake_idf_file)
+    assert parser.get_source_name() is None
+    fake_idf_file.close()
+
+
 def test_get_sample_position():
     test_sample = {'name': 'TEST_SAMPLE',
                    'position': [-0.54, 42.0, 0.48]}
     fake_idf_file = create_fake_idf_file(sample=test_sample)
     parser = IDFParser(fake_idf_file)
     np.testing.assert_allclose(parser.get_sample_position(), test_sample['position'])
+    fake_idf_file.close()
+
+
+def test_get_sample_position_none():
+    fake_idf_file = create_fake_idf_file()
+    parser = IDFParser(fake_idf_file)
+    with pytest.raises(Exception):
+        parser.get_sample_position()
     fake_idf_file.close()
 
 
