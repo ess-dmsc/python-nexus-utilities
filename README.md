@@ -23,7 +23,12 @@ Examples can be found in the `example_instruments` directory. Example scripts sh
 
 ## Development
 
-Unit tests can be run with
+Unit tests require pytest (`pip install pytest`) can be run with
 ```
 pytest
+```
+
+An html test coverage report can be generated using pytest-cov (`pip  install pytest-cov`): 
+```
+pytest --cov-config .coveragerc --cov-report html --cov=. tests/
 ```
