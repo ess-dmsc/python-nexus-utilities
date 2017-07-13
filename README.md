@@ -21,7 +21,7 @@ Examples can be found in the `example_instruments` directory. Example scripts sh
 
 - `LOKI_example.py` - example using a Mantid IDF for the LOKI instrument. It shows examples of the proposed `NXgrid_shape` group. 
 
-## Development
+## Tests
 
 Unit tests require pytest (`pip install pytest`) can be run with
 ```
