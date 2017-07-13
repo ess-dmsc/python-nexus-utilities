@@ -1,6 +1,10 @@
 from io import StringIO
 import numpy as np
 
+"""
+Helper functions for IDFParser unit tests
+"""
+
 
 def dict_compare(d1, d2):
     """
@@ -19,7 +23,7 @@ def dict_compare(d1, d2):
 
 
 def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, defaults=None, monitor_name=None,
-                         structured_detector=None):
+                         structured_detector=None, detector=None):
     """
     Create a fake IDF, in-memory, file object for use in unit tests of the IDF parser
 
@@ -29,6 +33,7 @@ def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, 
     :param defaults: Dictionary with "length_units" and "angle_units"
     :param monitor_name: A name for a monitor
     :param structured_detector: Dictionary with "name" and "type" for a structured detector
+    :param detector: Dictionary with pixel and detector component information
     :return: Python file object
     """
     fake_idf_file = StringIO()
@@ -48,10 +53,61 @@ def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, 
         __write_monitors(fake_idf_file, monitor_name)
     if structured_detector is not None:
         __write_structured_detector(fake_idf_file, structured_detector)
+    if detector is not None:
+        __write_detector(fake_idf_file, detector)
 
     fake_idf_file.write('</instrument>\n')
     fake_idf_file.seek(0)  # So that the xml parser reads from the start of the file
     return fake_idf_file
+
+
+def __write_detector(fake_idf_file, detector):
+    __write_detector_pixel(fake_idf_file, detector['pixel'])
+    __write_detector_component(fake_idf_file, detector['pixel']['name'])
+    __write_detector_panel(fake_idf_file)
+    __write_idlist(fake_idf_file)
+
+
+def __write_idlist(fake_idf_file):
+    fake_idf_file.write('<idlist idname="test-idlist">\n'
+                        '  <id start="1" end="3" />\n'
+                        '</idlist>\n')
+
+
+def __write_detector_panel(fake_idf_file):
+    fake_idf_file.write('<component type="small-detector" idlist="test-idlist" name="panel01">\n'
+                        '  <location  x="-0.42" z="1.97" name="panel01" > <facing x="0" y="0" z="0"/> </location>\n'
+                        '</component>\n')
+
+
+def __write_detector_component(fake_idf_file, pixel_name):
+    fake_idf_file.write('<type name="small-detector">\n'
+                        '  <component type="' + pixel_name + '">\n'
+                                                             '    <location y="-0.1" name="pixel0001"/>\n'
+                                                             '    <location y="0.0"  name="pixel0002"/>\n'
+                                                             '    <location y="0.1"  name="pixel0003"/>\n'
+                                                             '  </component>\n'
+                                                             '</type>\n')
+
+
+def __write_detector_pixel(fake_idf_file, pixel):
+    fake_idf_file.write('<type name="' + pixel['name'] + '" is="detector">\n'
+                        + __create_pixel_shape(pixel['shape']) +
+                        '</type>\n')
+
+
+def __create_pixel_shape(pixel_shape):
+    if pixel_shape['shape'] == 'cylinder':
+        return ('  <cylinder id="cyl-approx">\n'
+                '    <centre-of-bottom-base r="0.0" t="0.0" p="0.0" />\n'
+                '    <axis x="' + str(pixel_shape['axis'][0]) + '" y="' + str(pixel_shape['axis'][1]) +
+                '" z="' + str(pixel_shape['axis'][2]) + '" />\n'
+                                                        '    <radius val="' +
+                str(pixel_shape['radius']) + '" />\n'
+                                             '    <height val="' + str(pixel_shape['height']) + '" />\n'
+                                                                                                '  </cylinder>\n')
+    else:
+        return '<' + pixel_shape['shape'] + '></' + pixel_shape['shape'] + '>\n'
 
 
 def __write_structured_detector(fake_idf_file, structured_detector):
