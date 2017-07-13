@@ -8,7 +8,6 @@ if __name__ == '__main__':
     builder = NexusBuilder(output_filename, input_nexus_filename='SANS_test.nxs',
                            idf_file='SANS2D_Definition_Tubes.xml', compress_type='gzip', compress_opts=1)
 
-    # Adds all instrument geometry except non-monitor detectors
     sample_position = builder.add_instrument_geometry_from_idf()
 
     # Define monitor_1 to have the shape of the Utah teapot as example use of NXshape
