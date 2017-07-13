@@ -109,3 +109,13 @@ def rotation_matrix_from_axis_and_angle(axis, theta):
                                       cos_t + axis_z ** 2.0 * (1 - cos_t)])
     rotation_matrix = np.array([rotation_matrix_row_1, rotation_matrix_row_2, rotation_matrix_row_3])
     return rotation_matrix
+
+
+def get_an_orthogonal_unit_vector(input_vector):
+    if np.abs(input_vector[2]) < np.abs(input_vector[0]):
+        vector = np.array([input_vector[1], -input_vector[0], 0.])
+        unit_vector, mag = normalise(vector)
+        return unit_vector
+    vector = np.array([0., -input_vector[2], input_vector[1]])
+    unit_vector, mag = normalise(vector)
+    return unit_vector

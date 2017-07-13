@@ -367,7 +367,7 @@ class IDFParser:
         :param cylinder_xml: The xml element describing the cylinder
         :return: A dictionary containing dimensions of the cylinder
         """
-        axis = self.__get_vector(cylinder_xml.find('d:axis', self.ns))
+        axis, axis_mag = nexusutils.normalise(self.__get_vector(cylinder_xml.find('d:axis', self.ns)))
         radius = float(cylinder_xml.find('d:radius', self.ns).get('val'))
         height = float(cylinder_xml.find('d:height', self.ns).get('val'))
         return {'shape': 'cylinder', 'height': height, 'radius': radius, 'axis': axis}
