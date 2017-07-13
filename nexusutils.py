@@ -39,8 +39,11 @@ def find_rotation_matrix_between_vectors(vector_a, vector_b):
     """
     unit_a, mag_a = normalise(vector_a)
     unit_b, mag_b = normalise(vector_b)
-
     identity_matrix = np.identity(3)
+
+    if np.array_equal(unit_a, unit_b):
+        return identity_matrix
+
     axis, angle = find_rotation_axis_and_angle_between_vectors(vector_a, vector_b)
     if axis is None:
         return None
@@ -49,11 +52,8 @@ def find_rotation_matrix_between_vectors(vector_a, vector_b):
                                np.array([axis[2], 0.0, -axis[0]]),
                                np.array([-axis[1], axis[0], 0.0])])
 
-    if np.array_equal(unit_a, unit_b):
-        rotation_matrix = identity_matrix
-    else:
-        rotation_matrix = identity_matrix + np.sin(angle) * skew_symmetric + \
-                          ((1.0 - np.cos(angle)) * (skew_symmetric ** 2.0))
+    rotation_matrix = identity_matrix + np.sin(angle) * skew_symmetric + \
+                      ((1.0 - np.cos(angle)) * (skew_symmetric ** 2.0))
     return rotation_matrix
 
 
@@ -69,7 +69,8 @@ def find_rotation_axis_and_angle_between_vectors(vector_a, vector_b):
     unit_b, mag_b = normalise(vector_b)
 
     if np.allclose(unit_a, unit_b):
-        logger.debug('Vectors coincide; no rotation required in nexusutils.find_rotation_axis_and_angle_between_vectors')
+        logger.debug(
+            'Vectors coincide; no rotation required in nexusutils.find_rotation_axis_and_angle_between_vectors')
         return None, None
 
     cross_prod = np.cross(vector_a, vector_b)
