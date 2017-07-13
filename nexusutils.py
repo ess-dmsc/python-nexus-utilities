@@ -41,12 +41,10 @@ def find_rotation_matrix_between_vectors(vector_a, vector_b):
     unit_b, mag_b = normalise(vector_b)
     identity_matrix = np.identity(3)
 
-    if np.array_equal(unit_a, unit_b):
+    if np.allclose(unit_a, unit_b):
         return identity_matrix
 
     axis, angle = find_rotation_axis_and_angle_between_vectors(vector_a, vector_b)
-    if axis is None:
-        return None
 
     skew_symmetric = np.array([np.array([0.0, -axis[2], axis[1]]),
                                np.array([axis[2], 0.0, -axis[0]]),

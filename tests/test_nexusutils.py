@@ -1,6 +1,7 @@
 import env
 import pytest
 import numpy as np
+import cmath
 from nexusutils import *
 
 
@@ -78,4 +79,40 @@ def test_get_an_orthogonal_unit_vector_is_unit():
     input = np.array([0.1, 0.7, 0.5])
     result = get_an_orthogonal_unit_vector(input)
     result_unit, result_mag = normalise(result)
-    assert np.isclose(np.array([result_mag]), np.array([1.0]))
+    assert cmath.isclose(result_mag, 1.0)
+
+
+def test_find_rotation_axis_and_angle_between_vectors_check_angle():
+    vector_a = np.array([1.0, 0.0, 0.0])
+    vector_b = np.array([0.0, 1.0, 0.0])
+    axis, angle = find_rotation_axis_and_angle_between_vectors(vector_a, vector_b)
+    assert cmath.isclose(angle, np.deg2rad(-90.0))
+
+
+def test_find_rotation_axis_and_angle_between_vectors_check_axis():
+    vector_a = np.array([1.0, 0.0, 0.0])
+    vector_b = np.array([0.0, 1.0, 0.0])
+    axis, angle = find_rotation_axis_and_angle_between_vectors(vector_a, vector_b)
+    assert np.allclose(axis, np.array([0.0, 0.0, 1.0]))
+
+
+def test_find_rotation_axis_and_angle_between_vectors_coincide():
+    vector_a = np.array([1.0, 0.0, 0.0])
+    vector_b = np.array([1.0, 0.0, 0.0])
+    axis, angle = find_rotation_axis_and_angle_between_vectors(vector_a, vector_b)
+    assert axis is None
+    assert angle is None
+
+
+def test_find_rotation_axis_and_angle_between_vectors_opposite():
+    vector_a = np.array([1.0, 0.0, 0.0])
+    vector_b = np.array([-1.0, 0.0, 0.0])
+    with pytest.raises(NotImplementedError):
+        axis, angle = find_rotation_axis_and_angle_between_vectors(vector_a, vector_b)
+
+
+def test_rotation_matrix_from_axis_and_angle():
+    axis = np.array([0.0, 0.0, 1.0])
+    angle = np.deg2rad(-90.0)
+    rotation_matrix = rotation_matrix_from_axis_and_angle(axis, angle)
+    assert np.allclose(rotation_matrix, np.array([[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]))
