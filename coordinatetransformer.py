@@ -71,7 +71,7 @@ class CoordinateTransformer:
     @staticmethod
     def cartesian_to_spherical(xyz):
         """
-        Convert cartesian to spherical coordinates
+        Convert cartesian to spherical coordinates in degrees
 
         :param xyz: List or array x,y,z (single coordinate)
         :return: List r,theta,phi
