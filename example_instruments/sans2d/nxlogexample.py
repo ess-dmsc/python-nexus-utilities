@@ -66,11 +66,12 @@ def __add_nxlog(builder):
         number_of_samples = np.random.randint(10, 20)
         cue_timestamps.append(time)
         cue_indices.append(index)
-        time += 200 + np.random.rand()
+        time += 200 + (np.random.rand() * 20)
         if cue_number > 0:
             values = np.hstack([values, np.sort(np.random.rand(number_of_samples) * 0.001) + values[-1]])
             times = np.hstack(
-                (times, cue_timestamps[-1] + (np.sort(np.random.rand(number_of_samples)) * (time - cue_timestamps[-1]))))
+                (
+                times, cue_timestamps[-1] + (np.sort(np.random.rand(number_of_samples)) * (time - cue_timestamps[-1]))))
         else:
             values = np.sort(np.random.rand(number_of_samples) * 0.001) + 0.21
             times = np.sort(np.random.rand(number_of_samples)) * time
