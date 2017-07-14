@@ -16,12 +16,12 @@ if __name__ == '__main__':
         # Something particularly interesting happened between 500 and 850 seconds after the start of the experiment.
         # We therefore want to extract the plant height data for this period.
         # We could just read in all the timestamp data and then truncate them to the range of interest,
-        # but there may be more data than fit in memory and finding where to truncate them will be slow.
+        # but there may be more data than fit in memory, or at least enough that finding where to truncate them is slow.
         # Alternatively, we could read individual timestamps and do a binary search for the start and end of
         # the time period, but that is more complicated to implement than a linear search and could also
         # be inefficient if the sample rate varied over the experiment.
         # Instead we can use cues which were recorded periodically when the file was written.
-        # It is up to the file writer when cues are recorded, they could be at regular time intervals,
+        # It is up to the file writer when cues are recorded, for example they could be at regular time intervals,
         # correspond to neutron pulses, be recorded for the start of each message if the data arrives from a
         # network stream, or be recorded for the start of each HDF5 compressed chunk to optimise read performance.
 
