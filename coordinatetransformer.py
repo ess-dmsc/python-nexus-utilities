@@ -42,7 +42,7 @@ class CoordinateTransformer:
     @staticmethod
     def __is_negative(direction):
         """
-        Return true if first charactor of direction is "-"
+        Return true if first character of direction is "-"
 
         :param direction: Direction is an axis string, for example "-x"
         :return: Bool true if first charactor of direction is "-"
@@ -71,10 +71,10 @@ class CoordinateTransformer:
     @staticmethod
     def cartesian_to_spherical(xyz):
         """
-        Convert cartesian to spherical coordinates
+        Convert cartesian to spherical coordinates in degrees
 
         :param xyz: List or array x,y,z (single coordinate)
-        :return: List r,theta,phi
+        :return: List r,theta,phi in degrees
         """
         # takes list xyz (single coordinate)
         x = xyz[0]
