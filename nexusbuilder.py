@@ -286,6 +286,7 @@ class NexusBuilder:
     def add_detector_minimal(self, name, number, depends_on=None):
         """
         Add an NXdetector with minimal details
+        
         :param name: Name of the detector panel
         :param number: Detectors are typically numbered from 1
         :param depends_on: Dataset object or name (full path) of axis the detector depends on

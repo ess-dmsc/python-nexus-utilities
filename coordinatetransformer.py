@@ -42,7 +42,7 @@ class CoordinateTransformer:
     @staticmethod
     def __is_negative(direction):
         """
-        Return true if first charactor of direction is "-"
+        Return true if first character of direction is "-"
 
         :param direction: Direction is an axis string, for example "-x"
         :return: Bool true if first charactor of direction is "-"
