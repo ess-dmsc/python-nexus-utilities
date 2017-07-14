@@ -21,7 +21,7 @@ Examples can be found in the `example_instruments` directory. Example scripts sh
 
 - `LOKI_example.py` - geometry example using a Mantid IDF for the LOKI instrument. It contains an example of using an `NXsolid_geometry` group to describe the shape of entire detector panels. 
 
-- `SANS2D_NXlog_example.py` - demonstrates how one can use the new `NXevent_data` group and changes to `NXlog` to extract data for a specific time period from the file.
+- `SANS2D_NXlog_example.py` - demonstrates how one can use the `cue` datasets in the new `NXevent_data` group or in the updated `NXlog` to extract data for a specific time period from the file.
 
 ## Tools
 
