@@ -122,7 +122,7 @@ class NexusBuilder:
                     dataset.attrs.create(key, np.array(attributes[key]))
         return dataset
 
-    def add_detectors_from_idf(self, reshape=None):
+    def add_detectors_from_idf(self):
         """
         Add detector banks from a Mantid IDF file
         NB, currently only works for "RectangularDetector" panels 
@@ -136,57 +136,82 @@ class NexusBuilder:
             logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
         total_panels = 0
         detectors = self.idf_parser.get_detectors()
-
-        # with open("pprint_out.txt", "w") as fout:
-        #    self.idf_parser.pprint_things([detectors], fout)
-
+        written_types = []  # {'types': [str], 'group': hdf5group}
         if detectors is not None:
             for detector in detectors:
                 total_panels += 1
-                offsets = np.array(detector['offsets'])
-                z_offsets = offsets[:, 2]
-                if np.count_nonzero(z_offsets) == 0:
-                    z_offsets = None
+                new_detector_type = True
+                pixel_shape_group = None
+                if detector['sub_components'] in [written_type['types'] for written_type in written_types]:
+                    new_detector_type = False
+                    written_group = next((written_type['group'] for written_type in written_types if
+                                          written_type['types'] == detector['sub_components']), None)
+                    try:
+                        z_offset_dataset = written_group['z_pixel_offset']
+                    except KeyError:
+                        z_offset_dataset = None
+                    pixel_offsets = {'x_pixel_offset': written_group['x_pixel_offset'],
+                                     'y_pixel_offset': written_group['y_pixel_offset'],
+                                     'z_pixel_offset': z_offset_dataset}
+                    pixel_shape_group = written_group['pixel_shape']
+                else:
+                    offsets = np.array(detector['offsets'])
+                    pixel_offsets = {'x_pixel_offset': offsets[:, 0], 'y_pixel_offset': offsets[:, 1],
+                                     'z_pixel_offset': offsets[:, 2]}
+                    if np.count_nonzero(pixel_offsets['z_pixel_offset']) == 0:
+                        pixel_offsets['z_pixel_offset'] = None
+
                 pixel_shape = detector['pixel']['shape']
                 if pixel_shape['shape'] == 'cuboid':
-                    detector_group = self.add_detector(detector['name'], total_panels, detector['idlist'],
-                                                       offsets[:, 0], offsets[:, 1],
-                                                       z_pixel_offset=z_offsets,
-                                                       x_pixel_size=pixel_shape['x_pixel_size'],
-                                                       y_pixel_size=pixel_shape['y_pixel_size'],
-                                                       thickness=pixel_shape['thickness'])
+                    x_pixel_size = pixel_shape['x_pixel_size']
+                    y_pixel_size = pixel_shape['y_pixel_size']
+                    thickness = pixel_shape['thickness']
                 else:
-                    detector_group = self.add_detector(detector['name'], total_panels, detector['idlist'],
-                                                       offsets[:, 0], offsets[:, 1],
-                                                       z_pixel_offset=z_offsets)
-                location = detector['location']
-                translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
+                    x_pixel_size = y_pixel_size = thickness = None
 
-                orientation = detector['orientation']
-                if orientation is not None:
-                    orientation_transformation = self.add_transformation(detector_group, 'rotation',
-                                                                         orientation['angle'],
-                                                                         'degrees', orientation['axis'],
-                                                                         name='orientation')
-                    location_transformation = self.add_transformation(detector_group, 'translation',
-                                                                      translate_magnitude,
-                                                                      self.length_units, translate_unit_vector,
-                                                                      depends_on=orientation_transformation,
-                                                                      name='location')
-                else:
-                    location_transformation = self.add_transformation(detector_group, 'translation',
-                                                                      translate_magnitude,
-                                                                      self.length_units, translate_unit_vector,
-                                                                      name='location')
-                self.add_depends_on(detector_group, location_transformation)
-                if pixel_shape['shape'] == 'cylinder':
-                    self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'],
-                                        pixel_shape['axis'])
-                elif pixel_shape != 'cuboid':
-                    raise NotImplementedError('Pixel shape other than cuboid or cylinder '
-                                              'in NexusBuilder.add_detectors_from_idf')
+                detector_group = self.add_detector(detector['name'], total_panels, detector['idlist'],
+                                                   pixel_offsets, x_pixel_size=x_pixel_size, y_pixel_size=y_pixel_size,
+                                                   thickness=thickness)
+
+                self.__add_detector_transformations(detector, detector_group)
+                self.__add_detector_pixel_geometry(detector_group, new_detector_type, pixel_shape, pixel_shape_group)
+
+                if new_detector_type:
+                    written_types.append({'types': detector['sub_components'], 'group': detector_group})
 
         return total_panels
+
+    def __add_detector_pixel_geometry(self, detector_group, new_detector_type, pixel_shape, pixel_shape_group):
+        if pixel_shape['shape'] == 'cylinder':
+            if new_detector_type:
+                self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'],
+                                    pixel_shape['axis'])
+            else:
+                detector_group['pixel_shape'] = pixel_shape_group
+        elif pixel_shape != 'cuboid':
+            raise NotImplementedError('Pixel shape other than cuboid or cylinder '
+                                      'in NexusBuilder.add_detectors_from_idf')
+
+    def __add_detector_transformations(self, detector, detector_group):
+        location = detector['location']
+        translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
+        orientation = detector['orientation']
+        if orientation is not None:
+            orientation_transformation = self.add_transformation(detector_group, 'rotation',
+                                                                 orientation['angle'],
+                                                                 'degrees', orientation['axis'],
+                                                                 name='orientation')
+            location_transformation = self.add_transformation(detector_group, 'translation',
+                                                              translate_magnitude,
+                                                              self.length_units, translate_unit_vector,
+                                                              depends_on=orientation_transformation,
+                                                              name='location')
+        else:
+            location_transformation = self.add_transformation(detector_group, 'translation',
+                                                              translate_magnitude,
+                                                              self.length_units, translate_unit_vector,
+                                                              name='location')
+        self.add_depends_on(detector_group, location_transformation)
 
     def add_monitors_from_idf(self):
         """
@@ -209,8 +234,7 @@ class NexusBuilder:
 
         return len(monitors)
 
-    def add_detector(self, name, number, detector_ids, x_pixel_offset,
-                     y_pixel_offset, z_pixel_offset=None, distance=None, x_pixel_size=None, y_pixel_size=None,
+    def add_detector(self, name, number, detector_ids, offsets, distance=None, x_pixel_size=None, y_pixel_size=None,
                      diameter=None, thickness=None,
                      x_beam_centre=None, y_beam_centre=None):
         """
@@ -237,11 +261,14 @@ class NexusBuilder:
         self.error_if_not_none_or_scalar(optional_scalar_in_metres)
         detector_group = self.add_detector_minimal(name, number)
         self.__add_distance_datasets(detector_group, optional_scalar_in_metres)
-        self.add_dataset(detector_group, 'x_pixel_offset', x_pixel_offset, {'units': self.length_units})
-        self.add_dataset(detector_group, 'y_pixel_offset', y_pixel_offset, {'units': self.length_units})
-        if z_pixel_offset is not None:
-            self.add_dataset(detector_group, 'z_pixel_offset', z_pixel_offset, {'units': self.length_units})
-        self.add_dataset(detector_group, 'detector_number', detector_ids)
+        for dataset_name in offsets:
+            offset_dataset = offsets[dataset_name]
+            if offset_dataset is not None:
+                if isinstance(offset_dataset, h5py._hl.dataset.Dataset):
+                    detector_group[dataset_name] = offset_dataset
+                else:
+                    self.add_dataset(detector_group, dataset_name, offset_dataset, {'units': self.length_units})
+        self.add_dataset(detector_group, 'detector_number', np.array(detector_ids).astype(np.dtype('int32')))
         return detector_group
 
     def __add_distance_datasets(self, group, scalar_params):
@@ -259,6 +286,7 @@ class NexusBuilder:
     def add_detector_minimal(self, name, number, depends_on=None):
         """
         Add an NXdetector with minimal details
+        
         :param name: Name of the detector panel
         :param number: Detectors are typically numbered from 1
         :param depends_on: Dataset object or name (full path) of axis the detector depends on
@@ -299,7 +327,7 @@ class NexusBuilder:
             self.add_dataset(shape, 'detector_vertices', detector_faces)
         return shape
 
-    def add_tube_pixel(self, group, height, radius, axis, centre=None, number_of_vertices=100):
+    def add_tube_pixel(self, group, height, radius, axis, centre=None, number_of_vertices=50):
         """
         Construct an NXsolid_geometry description of a tube
 
