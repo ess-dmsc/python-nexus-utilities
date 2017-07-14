@@ -23,6 +23,48 @@ Examples can be found in the `example_instruments` directory. Example scripts sh
 
 - `SANS2D_NXlog_example.py` - demonstrates how one can use the new `NXevent_data` group and changes to `NXlog` to extract data for a specific time period from the file.
 
+## Tools
+
+To assist in creating the IDF to NeXus conversion scripts I made a couple of simple tools: "Detector Plotter" and "HDF5 Size Profiler". 
+
+### Detector Plotter
+
+Plots the pixel offsets in the XY and XZ planes.
+
+Usage example:
+```python
+from detectorplotter import DetectorPlotter
+plotter = DetectorPlotter('example_instruments/wish/WISH_example_gzip_compress.hdf5')
+plotter.plot_pixel_positions()
+```
+example output:
+
+<img src="https://github.com/ess-dmsc/python-nexus-utilities/tree/master/example_instruments/wish/wish_plot.png" width="200">
+
+### HDF5 Size Profiler
+
+Prints a table of datasets (ignoring links) from largest to smallest with details of data type, number of elements etc. Can also output a pie chart of dataset sizes.
+
+Usage example:
+```python
+from hdf5sizeprofiler import HDF5SizeProfiler
+profiler = HDF5SizeProfiler('example_instruments/wish/WISH_example_gzip_compress.hdf5')
+profiler.print_stats_table()
+profiler.draw_pie_chart()
+```
+example table output (truncated):
+```
+Total uncompressed size is 4.981903 megabytes, compressed file size is 1.332304 megabytes
+  Size (elements)    % of total size  Datatype      Size (bytes)  Dataset name
+-----------------  -----------------  ----------  --------------  -------------------------------------------------------
+            77824       12.4971       float64             622592  raw_data_1/instrument/detector_1/x_pixel_offset
+            77824       12.4971       float64             622592  raw_data_1/instrument/detector_1/y_pixel_offset
+            77824       12.4971       float64             622592  raw_data_1/instrument/detector_1/z_pixel_offset
+            77824        6.24854      int32               311296  raw_data_1/instrument/detector_1/detector_number
+            77824        6.24854      int32               311296  raw_data_1/instrument/detector_10/detector_number
+...
+```
+
 ## Tests
 
 Unit tests require pytest (`pip install pytest`) can be run with
