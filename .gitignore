@@ -2,3 +2,5 @@
 .idea
 *.hdf5
 .cache
+.coverage
+htmlcov

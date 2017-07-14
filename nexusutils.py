@@ -39,21 +39,19 @@ def find_rotation_matrix_between_vectors(vector_a, vector_b):
     """
     unit_a, mag_a = normalise(vector_a)
     unit_b, mag_b = normalise(vector_b)
-
     identity_matrix = np.identity(3)
+
+    if np.allclose(unit_a, unit_b):
+        return identity_matrix
+
     axis, angle = find_rotation_axis_and_angle_between_vectors(vector_a, vector_b)
-    if axis is None:
-        return None
 
     skew_symmetric = np.array([np.array([0.0, -axis[2], axis[1]]),
                                np.array([axis[2], 0.0, -axis[0]]),
                                np.array([-axis[1], axis[0], 0.0])])
 
-    if np.array_equal(unit_a, unit_b):
-        rotation_matrix = identity_matrix
-    else:
-        rotation_matrix = identity_matrix + np.sin(angle) * skew_symmetric + \
-                          ((1.0 - np.cos(angle)) * (skew_symmetric ** 2.0))
+    rotation_matrix = identity_matrix + np.sin(angle) * skew_symmetric + \
+                      ((1.0 - np.cos(angle)) * (skew_symmetric ** 2.0))
     return rotation_matrix
 
 
@@ -69,7 +67,8 @@ def find_rotation_axis_and_angle_between_vectors(vector_a, vector_b):
     unit_b, mag_b = normalise(vector_b)
 
     if np.allclose(unit_a, unit_b):
-        logger.debug('Vectors coincide; no rotation required in nexusutils.find_rotation_axis_and_angle_between_vectors')
+        logger.debug(
+            'Vectors coincide; no rotation required in nexusutils.find_rotation_axis_and_angle_between_vectors')
         return None, None
 
     cross_prod = np.cross(vector_a, vector_b)
@@ -109,3 +108,20 @@ def rotation_matrix_from_axis_and_angle(axis, theta):
                                       cos_t + axis_z ** 2.0 * (1 - cos_t)])
     rotation_matrix = np.array([rotation_matrix_row_1, rotation_matrix_row_2, rotation_matrix_row_3])
     return rotation_matrix
+
+
+def get_an_orthogonal_unit_vector(input_vector):
+    """
+    Return a unit vector which is orthogonal to the input vector
+    There are infinite valid solutions, just one is returned
+
+    :param input_vector: 3D vector as a numpy array
+    :return: 3D vector as a numpy array, orthogonal to input_vector
+    """
+    if np.abs(input_vector[2]) < np.abs(input_vector[0]):
+        vector = np.array([input_vector[1], -input_vector[0], 0.])
+        unit_vector, mag = normalise(vector)
+        return unit_vector
+    vector = np.array([0., -input_vector[2], input_vector[1]])
+    unit_vector, mag = normalise(vector)
+    return unit_vector
