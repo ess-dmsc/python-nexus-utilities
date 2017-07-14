@@ -111,6 +111,13 @@ def rotation_matrix_from_axis_and_angle(axis, theta):
 
 
 def get_an_orthogonal_unit_vector(input_vector):
+    """
+    Return a unit vector which is orthogonal to the input vector
+    There are infinite valid solutions, just one is returned
+
+    :param input_vector: 3D vector as a numpy array
+    :return: 3D vector as a numpy array, orthogonal to input_vector
+    """
     if np.abs(input_vector[2]) < np.abs(input_vector[0]):
         vector = np.array([input_vector[1], -input_vector[0], 0.])
         unit_vector, mag = normalise(vector)
