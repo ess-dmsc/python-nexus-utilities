@@ -74,7 +74,7 @@ class CoordinateTransformer:
         Convert cartesian to spherical coordinates in degrees
 
         :param xyz: List or array x,y,z (single coordinate)
-        :return: List r,theta,phi
+        :return: List r,theta,phi in degrees
         """
         # takes list xyz (single coordinate)
         x = xyz[0]
