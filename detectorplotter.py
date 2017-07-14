@@ -18,7 +18,7 @@ class DetectorPlotter:
         detector_group_paths = []
         for name, dataset_or_group in instrument_group.items():
             if 'NX_class' in dataset_or_group.attrs:
-                if str(dataset_or_group.attrs['NX_class'].astype(str)) == 'NXdetector':
+                if dataset_or_group.attrs['NX_class'].astype(str) == 'NXdetector':
                     detector_group_paths.append(dataset_or_group.name)
         fig, ax = plt.subplots(nrows=2, ncols=1)
         for detector_path in detector_group_paths:
@@ -67,10 +67,10 @@ class DetectorPlotter:
     @staticmethod
     def __get_transformation(transform, transformations):
         attributes = transform.attrs
-        if str(attributes['transformation_type'].astype(str)) == 'translation':
+        if attributes['transformation_type'].astype(str) == 'translation':
             vector = attributes['vector'] * transform[...].astype(float)
             transformations.append({'type': 'translation', 'matrix': vector})
-        if str(attributes['transformation_type'].astype(str)) == 'rotation':
+        if attributes['transformation_type'].astype(str) == 'rotation':
             axis = attributes['vector']
             angle = np.deg2rad(transform[...])
             rotation_matrix = nexusutils.rotation_matrix_from_axis_and_angle(axis, angle)
