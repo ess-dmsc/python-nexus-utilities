@@ -25,7 +25,7 @@ if __name__ == '__main__':
         # correspond to neutron pulses, be recorded for the start of each message if the data arrives from a
         # network stream, or be recorded for the start of each HDF5 compressed chunk to optimise read performance.
 
-        # cue_timestamps is a small subset of timestamps from the full timestamps dataset
+        # cue_timestamp_zero is a small subset of timestamps from the full timestamps dataset
         # Since it is small we can load the whole dataset from file with [...]
         cue_timestamps = plant_log['cue_timestamp_zero'][...]
         # cue_index maps between indices in the cue timestamps and the full timestamps dataset
