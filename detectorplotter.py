@@ -13,12 +13,12 @@ class DetectorPlotter:
     def __init__(self, nexus_filename):
         self.source_file = h5py.File(nexus_filename, 'r')
 
-    def plot_detectors(self):
+    def plot_pixel_positions(self):
         instrument_group = self.source_file['/raw_data_1/instrument']
         detector_group_paths = []
         for name, dataset_or_group in instrument_group.items():
             if 'NX_class' in dataset_or_group.attrs:
-                if str(dataset_or_group.attrs['NX_class'].astype(str)) == 'NXdetector':
+                if dataset_or_group.attrs['NX_class'].astype(str) == 'NXdetector':
                     detector_group_paths.append(dataset_or_group.name)
         fig, ax = plt.subplots(nrows=2, ncols=1)
         for detector_path in detector_group_paths:
@@ -67,19 +67,22 @@ class DetectorPlotter:
     @staticmethod
     def __get_transformation(transform, transformations):
         attributes = transform.attrs
-        if str(attributes['transformation_type'].astype(str)) == 'translation':
+        if attributes['transformation_type'].astype(str) == 'translation':
             vector = attributes['vector'] * transform[...].astype(float)
-            vector = vector[0]
             transformations.append({'type': 'translation', 'matrix': vector})
-        if str(attributes['transformation_type'].astype(str)) == 'rotation':
+        if attributes['transformation_type'].astype(str) == 'rotation':
             axis = attributes['vector']
-            angle = np.deg2rad(transform[...].astype(float))[0][0]
+            angle = np.deg2rad(transform[...])
             rotation_matrix = nexusutils.rotation_matrix_from_axis_and_angle(axis, angle)
             transformations.append({'type': 'rotation', 'matrix': rotation_matrix})
         return attributes['depends_on']
 
     @staticmethod
     def __do_transformations(transformations, x_offsets, y_offsets, z_offsets):
+        if len(x_offsets.shape) > 1:
+            x_offsets = np.reshape(x_offsets, (1, np.prod(x_offsets.shape)))
+            y_offsets = np.reshape(y_offsets, (1, np.prod(x_offsets.shape)))
+            z_offsets = np.reshape(z_offsets, (1, np.prod(x_offsets.shape)))
         offsets = np.vstack((x_offsets, y_offsets, z_offsets))
         # Transformations must be carried out in reverse order
         for transformation in reversed(transformations):

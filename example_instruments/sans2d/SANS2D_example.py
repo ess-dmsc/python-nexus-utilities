@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from nexusbuilder import NexusBuilder
-from detector_plotter import DetectorPlotter
+from detectorplotter import DetectorPlotter
 
 if __name__ == '__main__':
     output_filename = 'SANS_example_gzip_compress.hdf5'
@@ -58,4 +58,4 @@ if __name__ == '__main__':
     del builder
 
     plotter = DetectorPlotter(output_filename)
-    plotter.plot_detectors()
+    plotter.plot_pixel_positions()

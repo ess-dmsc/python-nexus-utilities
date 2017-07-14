@@ -1,49 +1,8 @@
 import env
 import pytest
 import numpy as np
-from io import StringIO
 from idfparser import IDFParser
-
-
-def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, defaults=None, monitors=None):
-    fake_idf_file = StringIO()
-
-    # instrument
-    fake_idf_file.write('<?xml version="1.0" encoding="UTF-8"?>\n'
-                        '<instrument xmlns="http://www.mantidproject.org/IDF/1.0" '
-                        'name="' + instrument_name + '">\n')
-
-    # source
-    if source_name is not None:
-        fake_idf_file.write('<type name="' + source_name + '" is="Source"></type>\n')
-        fake_idf_file.write('<component type="' + source_name + '"><location z="-40.0"/></component>\n')
-
-    # sample
-    if sample is not None:
-        fake_idf_file.write(
-            '<component type="' + sample['name'] + '"><location x="' + str(sample['position'][0]) + '" y="' + str(
-                sample['position'][1]) + '" z="' + str(sample['position'][2]) + '"/></component>')
-        fake_idf_file.write('<type name="' + sample['name'] + '" is="SamplePos"/>\n')
-
-    # defaults
-    if defaults is not None:
-        fake_idf_file.write('<defaults><length unit="' + defaults['length_units'] + '"/><angle unit="' + defaults[
-            'angle_units'] + '"/><reference-frame><along-beam axis="z"/>'
-                             '<pointing-up axis="y"/><handedness val="right"/></reference-frame></defaults>\n')
-
-    # monitors
-    if monitors is not None:
-        fake_idf_file.write('<component type="monitors" idlist="monitors"><location/></component>\n')
-        fake_idf_file.write('<type name="monitors"><component type="monitor-tbd">'
-                            '<location z="7.217" name="' + monitors['name'] + '"/></component></type>\n')
-        fake_idf_file.write('<type name="monitor-tbd" is="monitor"><cylinder id="some-shape"><centre-of-bottom-base '
-                            'r="0.0" t="0.0" p="0.0" /><axis x="0.0" y="0.0" z="1.0" /> <radius val="0.01" />'
-                            '<height val="0.03" /></cylinder></type>\n')
-        fake_idf_file.write('<idlist idname="monitors"><id start="1" end="1" /></idlist>\n')
-
-    fake_idf_file.write('</instrument>\n')
-    fake_idf_file.seek(0)  # So that the xml parser reads from the start of the file
-    return fake_idf_file
+from idfhelper import create_fake_idf_file, dict_compare
 
 
 def test_get_instrument_name():
@@ -99,9 +58,40 @@ def test_angle_unit_other_than_rad_or_deg_fails():
 
 
 def test_get_monitors():
-    monitors = {'name': 'TEST_MONITOR'}
-    fake_idf_file = create_fake_idf_file(monitors=monitors)
+    monitor_name = 'TEST_MONITOR'
+    fake_idf_file = create_fake_idf_file(monitor_name=monitor_name)
     parser = IDFParser(fake_idf_file)
     monitors_out, monitor_types = parser.get_monitors()
-    assert monitors_out[0]['name'] == monitors['name']
+    assert monitors_out[0]['name'] == monitor_name
+    fake_idf_file.close()
+
+
+def test_get_structured_detectors():
+    x_pos = np.hstack((np.linspace(-3., 3., 4), np.linspace(-1.5, 1.5, 4), np.linspace(-0.3, 0.3, 4)))
+    y_pos = np.hstack(np.array([[1.] * 4, [0.] * 4, [-1.] * 4]))
+    z_pos = np.array([0.] * 12)
+    input_vertices = np.hstack((np.expand_dims(x_pos, 1), np.expand_dims(y_pos, 1), np.expand_dims(z_pos, 1)))
+    expected_output = {'type_name': 'fan', 'orientation': None, 'Y_id_step': 2, 'location': np.array([0., 0.01, 9.23]),
+                       'id_start': 0, 'X_id_step': 1, 'name': 'TEST_STRUCT_DET'}
+    fake_idf_file = create_fake_idf_file(structured_detector={'name': expected_output['name'],
+                                                              'type': expected_output['type_name'],
+                                                              'vertices': input_vertices})
+    parser = IDFParser(fake_idf_file)
+    for detector in parser.get_structured_detectors():
+        assert dict_compare(expected_output, detector)
+    fake_idf_file.close()
+
+
+def test_get_structured_detector_vertices():
+    x_pos = np.hstack((np.linspace(-3., 3., 4), np.linspace(-1.5, 1.5, 4), np.linspace(-0.3, 0.3, 4)))
+    y_pos = np.hstack(np.array([[1.] * 4, [0.] * 4, [-1.] * 4]))
+    z_pos = np.array([0.] * 12)
+    input_vertices = np.hstack((np.expand_dims(x_pos, 1), np.expand_dims(y_pos, 1), np.expand_dims(z_pos, 1)))
+    detector = {'name': 'TEST_STRUCT_DET', 'type': 'fan', 'vertices': input_vertices}
+    fake_idf_file = create_fake_idf_file(structured_detector=detector)
+    parser = IDFParser(fake_idf_file)
+    output_vertices = parser.get_structured_detector_vertices(detector['type'])
+
+    reshaped_input = np.reshape(input_vertices, (4, 3, 3), order='F')
+    assert np.allclose(reshaped_input, output_vertices)
     fake_idf_file.close()

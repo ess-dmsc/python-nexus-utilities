@@ -108,7 +108,6 @@ class NexusBuilder:
             dataset = group.create_dataset(name, data=np.array(data).astype('|S' + str(len(data))))
         elif nexusutils.is_scalar(data):
             # Don't try to use compression with scalar datasets
-            data = [data]
             dataset = group.create_dataset(name, data=data)
         else:
             dataset = group.create_dataset(name, data=data, compression=self.compress_type,
@@ -152,7 +151,8 @@ class NexusBuilder:
                 if pixel_shape['shape'] == 'cuboid':
                     detector_group = self.add_detector(detector['name'], total_panels, detector['idlist'],
                                                        offsets[:, 0], offsets[:, 1],
-                                                       z_pixel_offset=z_offsets, x_pixel_size=pixel_shape['x_pixel_size'],
+                                                       z_pixel_offset=z_offsets,
+                                                       x_pixel_size=pixel_shape['x_pixel_size'],
                                                        y_pixel_size=pixel_shape['y_pixel_size'],
                                                        thickness=pixel_shape['thickness'])
                 else:
@@ -165,20 +165,23 @@ class NexusBuilder:
                 orientation = detector['orientation']
                 if orientation is not None:
                     orientation_transformation = self.add_transformation(detector_group, 'rotation',
-                                                                         [np.rad2deg(orientation['angle'])],
+                                                                         orientation['angle'],
                                                                          'degrees', orientation['axis'],
                                                                          name='orientation')
-                    location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
+                    location_transformation = self.add_transformation(detector_group, 'translation',
+                                                                      translate_magnitude,
                                                                       self.length_units, translate_unit_vector,
                                                                       depends_on=orientation_transformation,
                                                                       name='location')
                 else:
-                    location_transformation = self.add_transformation(detector_group, 'translation', [translate_magnitude],
+                    location_transformation = self.add_transformation(detector_group, 'translation',
+                                                                      translate_magnitude,
                                                                       self.length_units, translate_unit_vector,
                                                                       name='location')
                 self.add_depends_on(detector_group, location_transformation)
                 if pixel_shape['shape'] == 'cylinder':
-                    self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'], pixel_shape['axis'])
+                    self.add_tube_pixel(detector_group, pixel_shape['height'], pixel_shape['radius'],
+                                        pixel_shape['axis'])
                 elif pixel_shape != 'cuboid':
                     raise NotImplementedError('Pixel shape other than cuboid or cylinder '
                                               'in NexusBuilder.add_detectors_from_idf')
@@ -285,7 +288,7 @@ class NexusBuilder:
             group = self.root[group]
 
         shape = self.add_nx_group(group, name, 'NXsolid_geometry')
-        self.add_dataset(shape, 'vertices', vertices)
+        self.add_dataset(shape, 'vertices', vertices, {'units': self.length_units})
         if isinstance(faces, list):
             for face_types in faces:
                 self.add_dataset(shape, 'faces_' + str(face_types.shape[1]), face_types,
@@ -324,7 +327,8 @@ class NexusBuilder:
 
         # Rotate vertices to correct the tube axis
         rotation_matrix = nexusutils.find_rotation_matrix_between_vectors(np.array(axis), np.array([1., 0., 0.]))
-        vertices = rotation_matrix.dot(vertices.T).T
+        if rotation_matrix is not None:
+            vertices = rotation_matrix.dot(vertices.T).T
 
         #
         # points around left circle tube-end       points around right circle tube-end
@@ -435,44 +439,113 @@ class NexusBuilder:
 
         return self.add_shape(group, name, vertices, faces)
 
-    def add_grid_shapes_from_idf(self):
+    def add_structured_detectors_from_idf(self):
         """
         Find structured detectors in the IDF and add corresponding NXgrid_shapes in the NeXus file
 
         :return: Number of grid shapes added
         """
-        detector_number = 0
+        detector_number = 1
         for detector in self.idf_parser.get_structured_detectors():
             # Put each one in an NXdetector
             detector_group = self.add_detector_minimal(detector['name'], detector_number)
-            # Add the grid shape
-            self.add_grid_shape_from_idf(detector_group, 'grid_shape', detector['type_name'],
-                                         detector['id_start'], detector['X_id_step'],
-                                         detector['Y_id_step'])
-            # Add translation of detector
-            translate_vector = np.array(
-                [detector['location']['x'], detector['location']['y'], detector['location']['z']]).astype(float)
-            translate_unit_vector, translate_magnitude = nexusutils.normalise(translate_vector)
-            transform_group = self.add_transformation_group(detector_group)
-            position = self.add_transformation(transform_group, 'translation', translate_magnitude, self.length_units,
-                                               translate_unit_vector, name='panel_position')
 
-            # Add rotation of detector
-            if detector['rotation'] is not None:
-                rotate_vector = np.array(
-                    [detector['rotation']['axis_x'], detector['rotation']['axis_y'],
-                     detector['rotation']['axis_z']]).astype(float)
-                rotate_unit_vector, rotate_magnitude = nexusutils.normalise(rotate_vector)
-                rotation = self.add_transformation(transform_group, 'rotation', float(detector['rotation']['angle']),
-                                                   'degrees',
-                                                   rotate_unit_vector, name='panel_orientation',
-                                                   depends_on=str(position.name))
-                self.add_depends_on(detector_group, rotation)
-            else:
-                self.add_depends_on(detector_group, position)
+            vertices = self.idf_parser.get_structured_detector_vertices(detector['type_name'])
+
+            # There is one fewer pixel than vertex in each dimension because vertices mark the pixel corners
+            pixels_in_first_dimension = vertices.shape[0] - 1
+            pixels_in_second_dimension = vertices.shape[1] - 1
+
+            # Reshape vertices into a 1D list
+            vertices = np.reshape(vertices, (vertices.shape[0] * vertices.shape[1], 3), order='F')
+
+            detector_ids = self.__create_detector_ids_for_structured_detector(pixels_in_first_dimension,
+                                                                              pixels_in_second_dimension, detector)
+            quadrilaterals, detector_faces, pixel_offsets = self.__create_quadrilaterals_dataset(
+                pixels_in_first_dimension,
+                pixels_in_second_dimension,
+                detector_ids, vertices)
+
+            self.__add_detector_shape(detector_group, vertices, quadrilaterals, detector_faces)
+            self.add_dataset(detector_group, 'detector_number', detector_ids)
+            self.add_dataset(detector_group, 'x_pixel_offset', pixel_offsets[:, :, 0], {'units': self.length_units})
+            self.add_dataset(detector_group, 'y_pixel_offset', pixel_offsets[:, :, 1], {'units': self.length_units})
+            z_offsets = pixel_offsets[:, :, 2]
+            # Only include z offsets if they are not zero everywhere
+            if z_offsets.any():
+                self.add_dataset(detector_group, 'z_pixel_offset', z_offsets, {'units': self.length_units})
+
+            self.__add_transformations_for_structured_detector(detector, detector_group)
 
             detector_number += 1
-        return detector_number
+        total_detectors = detector_number - 1
+        return total_detectors
+
+    def __add_detector_shape(self, detector_group, vertices, quadrilaterals, detector_faces):
+        detector_shape_group = self.add_nx_group(detector_group, 'detector_shape', 'NXsolid_geometry')
+        self.add_dataset(detector_shape_group, 'vertices', vertices, {'units': self.length_units})
+        self.add_dataset(detector_shape_group, 'quadrilaterals', quadrilaterals, {'vertices_per_face': 4})
+        self.add_dataset(detector_shape_group, 'detector_faces', detector_faces)
+        return detector_shape_group
+
+    @staticmethod
+    def __create_quadrilaterals_dataset(pixels_in_first_dimension, pixels_in_second_dimension, detector_ids, vertices):
+        quadrilaterals = []
+        detector_faces = []
+        pixel_offsets = np.zeros((pixels_in_second_dimension, pixels_in_first_dimension, 3))
+        face_number = 0
+        for row_index in range(pixels_in_second_dimension):
+            for column_index in range(pixels_in_first_dimension):
+                first_pixel = column_index + (row_index * (pixels_in_first_dimension + 1))
+                pixel_corner_indices = np.array([first_pixel, first_pixel + pixels_in_first_dimension + 1,
+                                                 first_pixel + pixels_in_first_dimension + 2,
+                                                 first_pixel + 1])
+                pixel_corner_positions = vertices[pixel_corner_indices]
+
+                if row_index != pixels_in_second_dimension and column_index != pixels_in_first_dimension:
+                    quadrilaterals.append(pixel_corner_indices)
+                    detector_faces.append([face_number, detector_ids[row_index, column_index]])
+                    pixel_centre = np.mean(pixel_corner_positions, axis=0)
+                    pixel_offsets[row_index, column_index] = pixel_centre
+
+                face_number += 1
+        return quadrilaterals, detector_faces, pixel_offsets
+
+    def __add_transformations_for_structured_detector(self, detector, detector_group):
+        # Add position of detector
+        translate_unit_vector, translate_magnitude = nexusutils.normalise(detector['location'])
+        # Add orientation of detector
+        if detector['orientation'] is not None:
+            rotate_unit_vector, rotate_magnitude = nexusutils.normalise(detector['orientation']['axis'])
+            rotation = self.add_transformation(detector_group, 'rotation',
+                                               detector['orientation']['angle'],
+                                               'degrees',
+                                               rotate_unit_vector, name='orientation')
+            position = self.add_transformation(detector_group, 'translation', translate_magnitude,
+                                               self.length_units,
+                                               translate_unit_vector, name='panel_position',
+                                               depends_on=rotation)
+        else:
+            position = self.add_transformation(detector_group, 'translation', translate_magnitude,
+                                               self.length_units,
+                                               translate_unit_vector, name='panel_position')
+        self.add_depends_on(detector_group, position)
+
+    @staticmethod
+    def __create_detector_ids_for_structured_detector(pixels_in_first_dimension, pixels_in_second_dimension, detector):
+        # Create the id list (detector_number dataset)
+        detector_ids = np.arange(detector['id_start'],
+                                 pixels_in_second_dimension + detector['id_start'],
+                                 detector['X_id_step'])
+        detector_ids = np.expand_dims(detector_ids, axis=1)
+        for column_number in range(1, pixels_in_first_dimension):
+            row_increment = column_number * pixels_in_second_dimension
+            new_column = np.arange(detector['id_start'] + row_increment,
+                                   detector['id_start'] + row_increment + pixels_in_second_dimension,
+                                   detector['X_id_step'])
+            new_column = np.expand_dims(new_column, axis=1)
+            detector_ids = np.hstack([detector_ids, new_column])
+        return detector_ids
 
     def add_monitor(self, name, detector_id, location, units=None):
         """
@@ -520,33 +593,6 @@ class NexusBuilder:
         if isinstance(group, str):
             group = self.root[group]
         return self.add_nx_group(group, 'transformations', 'NXtransformation')
-
-    def add_grid_shape_from_idf(self, group, name, type_name, id_start, X_id_step, Y_id_step, Z_id_step=None):
-        """
-        Add NXgrid_shape from a StructuredDetector in a Mantid IDF file
-
-        :param group: Group object or name in which to add the NXgrid_shape
-        :param name: Name of the NXgrid_shape to be created
-        :param type_name: Name of the type in the IDF containing the vertex list for the grid
-        :param id_start: Lowest pixel id in the grid
-        :param X_id_step: Each pixel along the first dimension of the grid the pixel id increases by this number
-        :param Y_id_step: Each pixel along the second dimension of the grid the pixel id increases by this number
-        :param Z_id_step: Each pixel along the third dimension of the grid the pixel id increases by this number
-        :return: NXgrid_shape group
-        """
-        if self.idf_parser is None:
-            logger.error('No IDF file was given to the NexusBuilder, cannot call add_grid_shape_from_idf')
-        if isinstance(group, str):
-            group = self.root[group]
-        vertices = self.idf_parser.get_structured_detector_vertices(type_name)
-        grid_shape = self.add_nx_group(group, name, 'NXgrid_shape')
-        self.add_dataset(grid_shape, 'vertices', vertices, {'units': 'metres'})
-        self.add_dataset(grid_shape, 'id_start', id_start)
-        self.add_dataset(grid_shape, 'X_id_step', X_id_step)
-        self.add_dataset(grid_shape, 'Y_id_step', Y_id_step)
-        if Z_id_step:
-            self.add_dataset(grid_shape, 'Z_id_step', Z_id_step)
-        return grid_shape
 
     def add_instrument(self, name, instrument_group_name='instrument'):
         """
@@ -612,7 +658,7 @@ class NexusBuilder:
         if number_of_monitors != 0:
             logger.info(str(number_of_monitors) + ' monitors')
 
-        number_of_grid_detectors = self.add_grid_shapes_from_idf()
+        number_of_grid_detectors = self.add_structured_detectors_from_idf()
         if number_of_grid_detectors != 0:
             logger.info(str(number_of_grid_detectors) + ' topologically, grid detector panels')
         else:

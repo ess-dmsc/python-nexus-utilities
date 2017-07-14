@@ -1,8 +1,12 @@
 import numpy as np
+import cmath
+import logging
 
 """
 Free-function utilities for use by the NexusBuilder
 """
+
+logger = logging.getLogger('NeXus_Builder')
 
 
 def is_scalar(object_to_check):
@@ -38,6 +42,8 @@ def find_rotation_matrix_between_vectors(vector_a, vector_b):
 
     identity_matrix = np.identity(3)
     axis, angle = find_rotation_axis_and_angle_between_vectors(vector_a, vector_b)
+    if axis is None:
+        return None
 
     skew_symmetric = np.array([np.array([0.0, -axis[2], axis[1]]),
                                np.array([axis[2], 0.0, -axis[0]]),
@@ -62,8 +68,17 @@ def find_rotation_axis_and_angle_between_vectors(vector_a, vector_b):
     unit_a, mag_a = normalise(vector_a)
     unit_b, mag_b = normalise(vector_b)
 
+    if np.allclose(unit_a, unit_b):
+        logger.debug('Vectors coincide; no rotation required in nexusutils.find_rotation_axis_and_angle_between_vectors')
+        return None, None
+
     cross_prod = np.cross(vector_a, vector_b)
     unit_cross, mag_cross = normalise(cross_prod)
+
+    if cmath.isclose(mag_cross, 0.0):
+        raise NotImplementedError('No unique solution for rotation axis in '
+                                  'nexusutils.find_rotation_axis_and_angle_between_vectors')
+
     axis = cross_prod / mag_cross
     angle = -1.0 * np.arccos(np.dot(vector_a, vector_b) / (mag_a * mag_b))
 
