@@ -1,6 +1,9 @@
 import numpy as np
 import h5py
 from nxlogexample import create_nexus_file
+"""
+This script shows how one can use the new "cue" features of NXlog and NXevent_data to extract a subset of the data
+"""
 
 if __name__ == '__main__':
     # Make an example file with a fabricated NXlog and some real neutron event data in it
@@ -20,7 +23,7 @@ if __name__ == '__main__':
         # Alternatively, we could read individual timestamps and do a binary search for the start and end of
         # the time period, but that is more complicated to implement than a linear search and could also
         # be inefficient if the sample rate varied over the experiment.
-        # Instead we can use cues which were recorded periodically when the file was written.
+        # Instead we can use "cues" which were recorded periodically when the file was written.
         # It is up to the file writer when cues are recorded, for example they could be at regular time intervals,
         # correspond to neutron pulses, be recorded for the start of each message if the data arrives from a
         # network stream, or be recorded for the start of each HDF5 compressed chunk to optimise read performance.
@@ -31,7 +34,7 @@ if __name__ == '__main__':
         # cue_index maps between indices in the cue timestamps and the full timestamps dataset
         cue_indices = plant_log['cue_index'][...]
 
-        # We look up the positions in the full timestamp list where the cue timestamps are in our range
+        # We look up the positions in the full timestamp list where the cue timestamps are in our range of interest
         range_start, range_end = 500, 850
         range_indices = cue_indices[np.append((range_start < cue_timestamps[1:]), [True]) &
                                     np.append([True], (range_end > cue_timestamps[:-1]))][[0, -1]]
