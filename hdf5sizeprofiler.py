@@ -32,9 +32,9 @@ class HDF5SizeProfiler:
             dataset['% of total size'] = dataset['Size (bytes)'] * size_factor
 
     def print_stats_table(self):
-        print('Total uncompressed size is ' + str(self.total_bytes / 1000000.) + ' megabytes, '
-                                                                                 'compressed file size is ' + str(
-            self.file_size / 1e6) + ' megabytes')
+        print('Total uncompressed size is {0} megabytes, compressed file size is {1} megabytes'
+              .format(self.total_bytes / 1000000., self.file_size / 1e6))
+
         datasets_sorted_by_size = sorted(self.datasets, key=itemgetter('Size (bytes)'), reverse=True)
         print(tabulate(datasets_sorted_by_size, headers='keys'))
 
