@@ -22,6 +22,7 @@ node('fedora && python3') {
             export http_proxy=$http_proxy_not_overridden
             export https_proxy=$http_proxy_not_overridden
             python pip install -r ../../requirements.txt
+            python pip install pytest
             deactivate
            '''
     }
