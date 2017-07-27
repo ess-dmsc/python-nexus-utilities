@@ -338,15 +338,16 @@ class IDFParser:
 
     def __parse_facing_element(self, xml_component):
         location_type = xml_component.find('d:location', self.ns)
-        location = self.__get_vector(location_type)
-        facing_type = location_type.find('d:facing', self.ns)
         orientation = None
-        if facing_type is not None:
-            facing_point = self.__get_vector(facing_type)
-            vector_to_face_point = facing_point - location
-            axis, angle = nexusutils.find_rotation_axis_and_angle_between_vectors(vector_to_face_point,
-                                                                                  np.array([0, 0, -1.0]))
-            orientation = {'axis': axis, 'angle': np.rad2deg(angle)}
+        if location_type is not None:
+            location = self.__get_vector(location_type)
+            facing_type = location_type.find('d:facing', self.ns)
+            if facing_type is not None:
+                facing_point = self.__get_vector(facing_type)
+                vector_to_face_point = facing_point - location
+                axis, angle = nexusutils.find_rotation_axis_and_angle_between_vectors(vector_to_face_point,
+                                                                                      np.array([0, 0, -1.0]))
+                orientation = {'axis': axis, 'angle': np.rad2deg(angle)}
         return orientation
 
     def __get_pixel_shape(self, xml_root, type_name):
