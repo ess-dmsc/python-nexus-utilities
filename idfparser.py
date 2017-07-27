@@ -192,6 +192,8 @@ class IDFParser:
                     top_level_detector_names.remove(component['name'])
                     subcomponent['idlist'] = component['idlist']
                     delete_components.append(component['name'])
+                    if subcomponent['locations'][0][0] is None:
+                        subcomponent['locations'][0][0] = np.array([0., 0., 0.])
         components[:] = [component for component in components if not component['name'] in delete_components]
 
     def __collate_detector_info(self, pixels, components, top_level_detector_names):
@@ -220,9 +222,9 @@ class IDFParser:
                             component['pixels'].extend(self.__get_component_pixels(components, sub_component_name))
                             sub_component_offsets.append(self.__get_component_offsets(components, sub_component_name))
                     if not self.__all_elements_equal(component['pixels']):
-                        raise Exception(component['name'] +
-                                        ' has multiple pixel types, need to implement treating '
-                                        'its sub-components as NXdetector_modules')
+                        raise NotImplementedError(component['name'] +
+                                                  ' has multiple pixel types, need to implement treating '
+                                                  'its sub-components as NXdetector_modules')
                     if component['name'] in top_level_detector_names:
                         component['offsets'] = list(itertools.chain.from_iterable(sub_component_offsets))
                         pixel_name = component['pixels'][0]
@@ -266,7 +268,12 @@ class IDFParser:
         for xml_idlist in self.root.findall('d:idlist', self.ns):
             if xml_idlist.get('idname') == idname:
                 for xml_id in xml_idlist.findall('d:id', self.ns):
-                    idlist = idlist + list(range(int(xml_id.get('start')), int(xml_id.get('end')) + 1))
+                    if xml_id.get('start') is not None:
+                        idlist += list(range(int(xml_id.get('start')), int(xml_id.get('end')) + 1))
+                    elif xml_id.get('val') is not None:
+                        idlist.append(int(xml_id.get('val')))
+                    else:
+                        raise Exception('Could not find IDs in idlist called "' + idname + '"')
         return idlist
 
     @staticmethod
