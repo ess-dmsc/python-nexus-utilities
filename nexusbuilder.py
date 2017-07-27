@@ -188,7 +188,7 @@ class NexusBuilder:
                                     pixel_shape['axis'])
             else:
                 detector_group['pixel_shape'] = pixel_shape_group
-        elif pixel_shape != 'cuboid':
+        elif pixel_shape['shape'] != 'cuboid':
             raise NotImplementedError('Pixel shape other than cuboid or cylinder '
                                       'in NexusBuilder.add_detectors_from_idf')
 
