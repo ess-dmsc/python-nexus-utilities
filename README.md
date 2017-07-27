@@ -39,7 +39,7 @@ plotter.plot_pixel_positions()
 ```
 example output:
 
-<img src="https://github.com/ess-dmsc/python-nexus-utilities/blob/31_nxlog_example/example_instruments/wish/wish_plot.png" width="800">
+![WISH](example_instruments/wish/wish_plot.png)
 
 ### HDF5 Size Profiler
 
