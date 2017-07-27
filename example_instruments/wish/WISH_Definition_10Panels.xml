@@ -33,7 +33,37 @@
    <component type="monitors" idlist="monitors">
      <location/>
    </component> 
-  <!-- source and sample-position components -->
+ <component type="panel01" idlist="panel01">
+ <location />
+ </component>
+ <component type="panel02" idlist="panel02">
+ <location />
+ </component>
+ <component type="panel03" idlist="panel03">
+ <location />
+ </component>
+ <component type="panel04" idlist="panel04">
+ <location />
+ </component>
+ <component type="panel05" idlist="panel05"> 
+ <location />
+ </component>
+ <component type="panel10" idlist="panel10"> 
+ <location />
+ </component>
+ <component type="panel09" idlist="panel09"> 
+ <location />
+ </component>
+ <component type="panel08" idlist="panel08"> 
+ <location />
+ </component>
+ <component type="panel07" idlist="panel07"> 
+ <location />
+ </component>
+ <component type="panel06" idlist="panel06"> 
+ <location />
+ </component>
+ <!-- source and sample-position components -->
    <component type="undulator">
      <location z="-40.0"> <facing val="none"/> </location>
    </component>
@@ -90,37 +120,56 @@
      </component>
    </type>
  
-<component type="WISHpanel" idlist="panel01" name="panel01">
-  <location  x="-0.96521    " z="  1.9790    " name="WISHpanel01" > <facing x="0" y="0" z="0"/> </location>
-</component>
-<component type="WISHpanel" idlist="panel02" name="panel02">
-  <location  x=" -1.8672    " z="  1.1668    " name="WISHpanel02" > <facing x="0" y="0" z="0"/> </location>
-</component>
-<component type="WISHpanel" idlist="panel03" name="panel03">
-  <location  x=" -2.2018    " z="-0.96244E-07" name="WISHpanel03" > <facing x="0" y="0" z="0"/> </location>
-</component>
-<component type="WISHpanel" idlist="panel04" name="panel04">
-  <location  x=" -1.8672    " z=" -1.1668    " name="WISHpanel04" > <facing x="0" y="0" z="0"/> </location>
-</component>
-<component type="WISHpanel" idlist="panel05" name="panel05">
-  <location  x="-0.96521    " z=" -1.9790    " name="WISHpanel05" > <facing x="0" y="0" z="0"/> </location>
-</component>
-<component type="WISHpanel" idlist="panel10" name="panel10">
-  <location  x="0.96521    " z=" -1.9790    " name="WISHpanel10" > <facing x="0" y="0" z="0"/> </location>
-</component>
-<component type="WISHpanel" idlist="panel09" name="panel09">
-  <location  x=" 1.8672    " z=" -1.1668    " name="WISHpanel09" > <facing x="0" y="0" z="0"/> </location>
-</component>
-<component type="WISHpanel" idlist="panel08" name="panel08">
-  <location  x=" 2.2018    " z="-0.96244E-07" name="WISHpanel08" > <facing x="0" y="0" z="0"/> </location>
-</component>
-<component type="WISHpanel" idlist="panel07" name="panel07">
-  <location  x=" 1.8672    " z="  1.1668    " name="WISHpanel07" > <facing x="0" y="0" z="0"/> </location>
-</component>
-<component type="WISHpanel" idlist="panel06" name="panel06">
-  <location  x=" 0.96521    " z="  1.9790    " name="WISHpanel01" > <facing x="0" y="0" z="0"/> </location>
-</component>
-
+<type name="panel01">
+ <component type="WISHpanel">
+<location  x="-0.96521    " z="  1.9790    " name="WISHpanel01" > <facing x="0" y="0" z="0"/> </location>
+ </component>
+ </type>
+<type name="panel02">
+ <component type="WISHpanel">
+<location  x=" -1.8672    " z="  1.1668    " name="WISHpanel02" > <facing x="0" y="0" z="0"/> </location>
+ </component>
+ </type>
+<type name="panel03">
+ <component type="WISHpanel">
+<location  x=" -2.2018    " z="-0.96244E-07" name="WISHpanel03" > <facing x="0" y="0" z="0"/> </location>
+ </component>
+ </type>
+<type name="panel04">
+ <component type="WISHpanel">
+<location  x=" -1.8672    " z=" -1.1668    " name="WISHpanel04" > <facing x="0" y="0" z="0"/> </location>
+ </component>
+ </type>
+<type name="panel05">
+ <component type="WISHpanel">
+<location  x="-0.96521    " z=" -1.9790    " name="WISHpanel05" > <facing x="0" y="0" z="0"/> </location>
+ </component>
+ </type>
+<type name="panel10">
+ <component type="WISHpanel">
+<location  x="0.96521    " z=" -1.9790    " name="WISHpanel10" > <facing x="0" y="0" z="0"/> </location>
+ </component>
+ </type>
+<type name="panel09">
+ <component type="WISHpanel">
+<location  x=" 1.8672    " z=" -1.1668    " name="WISHpanel09" > <facing x="0" y="0" z="0"/> </location>
+ </component>
+ </type>
+<type name="panel08">
+ <component type="WISHpanel">
+<location  x=" 2.2018    " z="-0.96244E-07" name="WISHpanel08" > <facing x="0" y="0" z="0"/> </location>
+ </component>
+ </type>
+<type name="panel07">
+ <component type="WISHpanel">
+<location  x=" 1.8672    " z="  1.1668    " name="WISHpanel07" > <facing x="0" y="0" z="0"/> </location>
+ </component>
+ </type>
+<type name="panel06">
+ <component type="WISHpanel">
+<location  x=" 0.96521    " z="  1.9790    " name="WISHpanel01" > <facing x="0" y="0" z="0"/> </location>
+ </component>
+ </type>
  <type name="WISHpanel">
  <properties />
  <component type="tubeup">

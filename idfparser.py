@@ -4,6 +4,7 @@ from coordinatetransformer import CoordinateTransformer
 import logging
 import nexusutils
 import itertools
+import uuid
 
 logger = logging.getLogger('NeXus_Builder')
 
@@ -104,7 +105,7 @@ class IDFParser:
             t = xml_point.get('t')
             p = xml_point.get('p')
             if [r, t, p] == [None, None, None]:
-                logger.warning('No x,y,z or r,t,p values found in IDFParser.__get_vector')
+                logger.debug('No x,y,z or r,t,p values found in IDFParser.__get_vector')
                 return None
             vector = np.array([self.__none_to_zero(r),
                                self.__none_to_zero(t),
@@ -162,12 +163,38 @@ class IDFParser:
             searched_already = list()
             self.__collect_detector_components(components, pixel['name'], searched_already)
 
-        detectors = self.__collate_detector_info(pixels, components)
+        top_level_detector_names = self.__find_top_level_detector_names(components)
+        self.__fix_top_level_components(components, top_level_detector_names)
+        detectors = self.__collate_detector_info(pixels, components, top_level_detector_names)
 
         return detectors
 
-    def __collate_detector_info(self, pixels, components):
-        top_level_detector_names = self.__find_top_level_detector_names(components)
+    @staticmethod
+    def __fix_top_level_components(components, top_level_detector_names):
+        """
+        For some reason IDFs often have a superfluous top level component which only links the detector to an idlist
+        and does not contain a location element. Here we combine the top level component with its subcomponent to
+        create a new top level component with all the necessary metadata.
+        """
+        delete_components = []
+        for component in components:
+            if component['name'] in top_level_detector_names:
+                if component['locations'][0][0] is None:
+                    # We'll have to combine this with its subcomponent
+                    if len(component['sub_components']) != 1:
+                        raise Exception('Top level detector component has no location defined and does not have one '
+                                        'sub component to use the location of.')
+                    subcomponent_name = component['sub_components'][0]
+                    subcomponent = next(
+                        (component for component in components if component["name"] == subcomponent_name),
+                        None)
+                    top_level_detector_names.add(subcomponent_name)
+                    top_level_detector_names.remove(component['name'])
+                    subcomponent['idlist'] = component['idlist']
+                    delete_components.append(component['name'])
+        components[:] = [component for component in components if not component['name'] in delete_components]
+
+    def __collate_detector_info(self, pixels, components, top_level_detector_names):
         detectors = list()
         # Components where we don't need to calculate offsets or we have already calculated the offsets
         pixel_names = {pixel['name'] for pixel in pixels}
@@ -275,6 +302,8 @@ class IDFParser:
         for xml_top_component in self.root.findall('d:component', self.ns):
             if xml_top_component.get('type') == search_type:
                 name = xml_top_component.get('name')
+                if name is None:
+                    name = uuid.uuid4()
                 self.__append_component(name, xml_top_component, components, search_type, searched_already)
 
     def __append_component(self, name, xml_component, components, search_type, searched_already):
@@ -294,8 +323,10 @@ class IDFParser:
                     {'name': name, 'sub_components': [search_type], 'locations': [offsets],
                      'idlist': self.__get_id_list(idlist), 'orientation': orientation, 'pixels': []})
             else:
+                orientation = self.__parse_facing_element(xml_component)
                 components.append(
-                    {'name': name, 'sub_components': [search_type], 'locations': [offsets], 'pixels': []})
+                    {'name': name, 'sub_components': [search_type], 'locations': [offsets], 'orientation': orientation,
+                     'pixels': []})
         self.__collect_detector_components(components, name, searched_already)
 
     def __parse_facing_element(self, xml_component):
@@ -395,7 +426,7 @@ class IDFParser:
                     if angle is not None:
                         rotation = {'angle': float(location_type.get('rot')),
                                     'axis': np.array([location_type.get('axis-x'), location_type.get('axis-y'),
-                                                     location_type.get('axis-z')]).astype(float)}
+                                                      location_type.get('axis-z')]).astype(float)}
                     else:
                         rotation = None
                 yield {'id_start': int(xml_type.get('idstart')), 'X_id_step': int(xml_type.get('idstepbyrow')),
