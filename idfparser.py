@@ -351,7 +351,8 @@ class IDFParser:
 
     def __get_pixel_shape(self, xml_root, type_name):
         for xml_type in xml_root.findall('d:type', self.ns):
-            if xml_type.get('name') == type_name and xml_type.get('is') == 'detector':
+            if xml_type.get('name') == type_name and \
+                    (xml_type.get('is') == 'detector' or xml_type.get('is') == 'Detector'):
                 return self.__get_shape(xml_type)
         return None
 
