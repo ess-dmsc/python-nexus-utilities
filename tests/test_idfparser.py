@@ -82,7 +82,7 @@ def test_get_monitors():
     fake_idf_file.close()
 
 
-def test_get_structured_detectors():
+def test_get_structured_detectors_returns_detector_details():
     x_pos = np.hstack((np.linspace(-3., 3., 4), np.linspace(-1.5, 1.5, 4), np.linspace(-0.3, 0.3, 4)))
     y_pos = np.hstack(np.array([[1.] * 4, [0.] * 4, [-1.] * 4]))
     z_pos = np.array([0.] * 12)
@@ -113,7 +113,7 @@ def test_get_structured_detector_vertices():
     fake_idf_file.close()
 
 
-def test_get_detectors_unknown_pixel_shape():
+def test_get_detectors_throws_when_pixel_shape_is_unknown():
     pixel = {'shape': {'shape': 'lumpy'}, 'name': 'potato'}
     detector = {'pixel': pixel}
     fake_idf_file = create_fake_idf_file(detector=detector)
@@ -123,20 +123,20 @@ def test_get_detectors_unknown_pixel_shape():
     fake_idf_file.close()
 
 
-def test_get_detectors():
+def test_get_detectors_returns_detector_details_for_tube_detectors():
     pixel = {'name': 'pixel',
              'shape': {'shape': 'cylinder', 'axis': np.array([0.0, 1.0, 0.0]), 'height': 0.2, 'radius': 0.1}}
     detector = {'pixel': pixel}
     fake_idf_file = create_fake_idf_file(detector=detector)
     parser = IDFParser(fake_idf_file)
     output_detectors = parser.get_detectors()
-    assert output_detectors
+    assert dict_compare(output_detectors[0]['pixel']['shape'], pixel['shape'])
     fake_idf_file.close()
 
 
-def test_get_detectors_tubes():
+def test_get_detectors_returns_detector_details_for_cuboid_detectors():
     pixel = {'name': 'pixel',
-             'shape': {'shape': 'cylinder', 'axis': np.array([0.0, 1.0, 0.0]), 'height': 0.2, 'radius': 0.1}}
+             'shape': {'shape': 'cuboid', 'x_pixel_size': 0.01, 'y_pixel_size': 0.01, 'thickness': 0.005}}
     detector = {'pixel': pixel}
     fake_idf_file = create_fake_idf_file(detector=detector)
     parser = IDFParser(fake_idf_file)
