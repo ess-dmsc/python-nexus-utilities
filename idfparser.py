@@ -72,7 +72,8 @@ class IDFParser:
         detector_number = 0
         for xml_type in self.root.findall('d:type', self.ns):
             if xml_type.get('is') == 'rectangular_detector':
-                x_pixel_size, y_pixel_size, thickness = self.__get_pixel_shape(self.root, xml_type.get('type'))
+                pixel_name = xml_type.get('type')
+                pixel_shape = self.__get_pixel_shape(self.root, pixel_name)
                 bank_type_name = xml_type.get('name')
                 x_pixel_offset_1d = self.__get_1d_pixel_offsets('x', xml_type)
                 y_pixel_offset_1d = self.__get_1d_pixel_offsets('y', xml_type)
@@ -82,17 +83,12 @@ class IDFParser:
                         detector_number += 1
                         det_bank_info = {'name': component.find('d:location', self.ns).get('name'),
                                          'number': detector_number,
-                                         'x_pixel_size': x_pixel_size,
-                                         'y_pixel_size': y_pixel_size,
-                                         'thickness': thickness,
+                                         'pixel': {'name': pixel_name, 'shape': pixel_shape},
                                          'x_pixel_offset': x_pixel_offset,
                                          'y_pixel_offset': y_pixel_offset}
                         # TODO also get the pixel id information (detector_number)
                         location = component.find('d:location', self.ns)
-                        distance_list = np.array([location.get('x'), location.get('y'), location.get('z')])
-                        # If any of these are omitted it means position 0 on that axis
-                        det_bank_info['distance'] = np.array(
-                            map(lambda x: 0 if x is None else x, distance_list)).astype(float)
+                        det_bank_info['distance'] = self.__get_vector(location)
                         yield det_bank_info
 
     def __get_vector(self, xml_point):

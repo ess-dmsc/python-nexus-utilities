@@ -149,7 +149,7 @@ def test_get_rectangular_detectors_returns_detector_details():
     pixel = {'name': 'pixel',
              'shape': {'shape': 'cuboid', 'x_pixel_size': 0.01, 'y_pixel_size': 0.01, 'thickness': 0.005}}
     detector = {'pixel': pixel, }
-    fake_idf_file = create_fake_idf_file(detector=detector)
+    fake_idf_file = create_fake_idf_file(rectangular_detector=detector)
     parser = IDFParser(fake_idf_file)
     output_detectors = list(parser.get_rectangular_detectors())
     assert dict_compare(output_detectors[0]['pixel']['shape'], pixel['shape'])
