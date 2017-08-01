@@ -1,6 +1,7 @@
 import env
 import pytest
 import numpy as np
+import cmath
 from idfparser import IDFParser
 from idfhelper import create_fake_idf_file, dict_compare
 
@@ -148,9 +149,26 @@ def test_get_detectors_returns_detector_details_for_cuboid_pixels():
 def test_get_rectangular_detectors_returns_detector_details():
     pixel = {'name': 'pixel',
              'shape': {'shape': 'cuboid', 'x_pixel_size': 0.01, 'y_pixel_size': 0.01, 'thickness': 0.005}}
-    detector = {'pixel': pixel, }
+    detector = {'pixel': pixel, 'xstart': -0.4, 'xstep': 0.4, 'xpixels': 3, 'ystart': -0.4, 'ystep': 0.4, 'ypixels': 3}
     fake_idf_file = create_fake_idf_file(rectangular_detector=detector)
     parser = IDFParser(fake_idf_file)
     output_detectors = list(parser.get_rectangular_detectors())
     assert dict_compare(output_detectors[0]['pixel']['shape'], pixel['shape'])
     fake_idf_file.close()
+
+
+def test_get_rectangular_detectors_returns_expected_pixel_offsets():
+    pixel = {'name': 'pixel',
+             'shape': {'shape': 'cuboid', 'x_pixel_size': 0.01, 'y_pixel_size': 0.01, 'thickness': 0.005}}
+    detector = {'pixel': pixel, 'xstart': -0.4, 'xstep': 0.4, 'xpixels': 3, 'ystart': -0.4, 'ystep': 0.4, 'ypixels': 3}
+    fake_idf_file = create_fake_idf_file(rectangular_detector=detector)
+    parser = IDFParser(fake_idf_file)
+    output_detectors = list(parser.get_rectangular_detectors())
+    expected_x_offsets = np.linspace(detector['xstart'],
+                                     detector['xstart'] + (detector['xstep'] * (detector['xpixels'] - 1)),
+                                     detector['xpixels'])
+    expected_y_offsets = np.linspace(detector['ystart'],
+                                     detector['ystart'] + (detector['ystep'] * (detector['ypixels'] - 1)),
+                                     detector['ypixels'])
+    assert np.allclose(expected_x_offsets, output_detectors[0]['x_pixel_offset'][0, :])
+    assert np.allclose(expected_y_offsets, output_detectors[0]['y_pixel_offset'][:, 0])

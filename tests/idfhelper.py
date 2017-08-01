@@ -65,22 +65,25 @@ def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, 
 
 def __write_rectangular_detector(fake_idf_file, detector):
     __write_detector_pixel(fake_idf_file, detector['pixel'])
-    __write_rectangular_detector_type(fake_idf_file)
+    __write_rectangular_detector_type(fake_idf_file, detector)
     __write_rectangular_detector_component(fake_idf_file)
 
 
-def __write_rectangular_detector_type(fake_idf_file):
-    fake_idf_file.write('  <type name="detector-bank" is="rectangular_detector" type="pixel"'
-                        '    xpixels="3" xstart="-0.4" xstep="+0.4"'
-                        '    ypixels="3" ystart="-0.4" ystep="+0.4" >'
-                        '  </type>')
+def __write_rectangular_detector_type(fake_idf_file, detector):
+    fake_idf_file.write('  <type name="detector-bank" is="rectangular_detector" type="pixel"\n'
+                        '    xpixels="' + str(detector['xpixels']) + '" xstart="' + str(detector['xstart']) +
+                        '" xstep="' + str(detector['xstep']) + '"\n'
+                                                               '    ypixels="' +
+                        str(detector['ypixels']) + '" ystart="' + str(detector['ystart']) +
+                        '" ystep="' + str(detector['ystep']) + '" >\n'
+                                                               '  </type>\n')
 
 
 def __write_rectangular_detector_component(fake_idf_file):
     fake_idf_file.write(
-        '  <component type="detector-bank" idstart="2000000" idfillbyfirst="y" idstep="1000" idstepbyrow="1">'
-        '    <location x="1.1" z="23.281" name="front-detector"/>'
-        '  </component>')
+        '  <component type="detector-bank" idstart="2000000" idfillbyfirst="y" idstep="1000" idstepbyrow="1">\n'
+        '    <location x="1.1" z="23.281" name="front-detector"/>\n'
+        '  </component>\n')
 
 
 def __write_detector(fake_idf_file, detector):

@@ -403,7 +403,7 @@ class IDFParser:
         step = float(xml_type.get(dimension_name + 'step'))
         pixels = int(xml_type.get(dimension_name + 'pixels'))
         start = float(xml_type.get(dimension_name + 'start'))
-        stop = start + (step * pixels)
+        stop = start + (step * (pixels - 1))
         return np.linspace(start, stop, pixels)
 
     def __get_structured_detector_typenames(self):
