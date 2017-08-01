@@ -184,7 +184,10 @@ def test_get_rectangular_detectors_returns_expected_ids():
     fake_idf_file = create_fake_idf_file(rectangular_detector=detector)
     parser = IDFParser(fake_idf_file)
     output_detectors = list(parser.get_rectangular_detectors())
-    expected_ids = np.array([[2000000, 2001000, 2002000],
-                             [2000001, 2001001, 2002001],
-                             [2000002, 2001002, 2002002]]).astype(int)
-    assert np.array_equal(expected_ids, output_detectors[0]['idlist'])
+    expected_ids = np.array([[detector['idstart'], detector['idstart'] + detector['idstep'],
+                              detector['idstart'] + (detector['idstep'] * 2)],
+                             [detector['idstart'] + 1, detector['idstart'] + detector['idstep'] + 1,
+                              detector['idstart'] + (detector['idstep'] * 2) + 1],
+                             [detector['idstart'] + 2, detector['idstart'] + detector['idstep'] + 2,
+                              detector['idstart'] + (detector['idstep'] * 2) + 2]]).astype(int)
+    assert np.array_equal(expected_ids, output_detectors[0]['detector_number'])

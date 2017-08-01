@@ -69,7 +69,6 @@ class IDFParser:
         :returns A generator which yields details of each detector bank found in the instrument file 
         """
         # Look for detector bank definition
-        detector_number = 0
         for xml_type in self.root.findall('d:type', self.ns):
             if xml_type.get('is') == 'rectangular_detector':
                 pixel_name = xml_type.get('type')
@@ -80,16 +79,30 @@ class IDFParser:
                 x_pixel_offset, y_pixel_offset = np.meshgrid(x_pixel_offset_1d, y_pixel_offset_1d)
                 for component in self.root.findall('d:component', self.ns):
                     if component.get('type') == bank_type_name:
-                        detector_number += 1
+                        location = component.find('d:location', self.ns)
+                        detector_numbers = self.__get_rectangular_detector_ids(component, len(x_pixel_offset),
+                                                                               len(y_pixel_offset))
                         det_bank_info = {'name': component.find('d:location', self.ns).get('name'),
-                                         'number': detector_number,
                                          'pixel': {'name': pixel_name, 'shape': pixel_shape},
                                          'x_pixel_offset': x_pixel_offset,
-                                         'y_pixel_offset': y_pixel_offset}
-                        # TODO also get the pixel id information (detector_number)
-                        location = component.find('d:location', self.ns)
-                        det_bank_info['distance'] = self.__get_vector(location)
+                                         'y_pixel_offset': y_pixel_offset,
+                                         'detector_number': detector_numbers,
+                                         'distance': self.__get_vector(location)}
                         yield det_bank_info
+
+    @staticmethod
+    def __get_rectangular_detector_ids(component, x_pixels, y_pixels):
+        idstart = int(component.get('idstart'))
+        idstep = int(component.get('idstep'))
+        idfillbyfirst = component.get('idfillbyfirst')
+        idstepbyrow = int(component.get('idstepbyrow'))
+        if idfillbyfirst == 'x':
+            x_2d, y_2d = np.mgrid[0:x_pixels * idstep:idstep,
+                                  0:y_pixels * idstepbyrow:idstepbyrow]
+        else:
+            x_2d, y_2d = np.mgrid[0:x_pixels * idstepbyrow:idstepbyrow,
+                                  0:y_pixels * idstep:idstep]
+        return (x_2d + y_2d) + idstart
 
     def __get_vector(self, xml_point):
         x = xml_point.get('x')
