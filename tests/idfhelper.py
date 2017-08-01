@@ -66,7 +66,7 @@ def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, 
 def __write_rectangular_detector(fake_idf_file, detector):
     __write_detector_pixel(fake_idf_file, detector['pixel'])
     __write_rectangular_detector_type(fake_idf_file, detector)
-    __write_rectangular_detector_component(fake_idf_file)
+    __write_rectangular_detector_component(fake_idf_file, detector)
 
 
 def __write_rectangular_detector_type(fake_idf_file, detector):
@@ -79,9 +79,11 @@ def __write_rectangular_detector_type(fake_idf_file, detector):
                                                                '  </type>\n')
 
 
-def __write_rectangular_detector_component(fake_idf_file):
+def __write_rectangular_detector_component(fake_idf_file, detector):
     fake_idf_file.write(
-        '  <component type="detector-bank" idstart="2000000" idfillbyfirst="y" idstep="1000" idstepbyrow="1">\n'
+        '  <component type="detector-bank" idstart="' + str(
+            detector['idstart']) + '" idfillbyfirst="y" idstep="' + str(detector['idstep']) +
+        '" idstepbyrow="1">\n'
         '    <location x="1.1" z="23.281" name="front-detector"/>\n'
         '  </component>\n')
 

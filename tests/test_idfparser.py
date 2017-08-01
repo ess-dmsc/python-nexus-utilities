@@ -149,7 +149,8 @@ def test_get_detectors_returns_detector_details_for_cuboid_pixels():
 def test_get_rectangular_detectors_returns_detector_details():
     pixel = {'name': 'pixel',
              'shape': {'shape': 'cuboid', 'x_pixel_size': 0.01, 'y_pixel_size': 0.01, 'thickness': 0.005}}
-    detector = {'pixel': pixel, 'xstart': -0.4, 'xstep': 0.4, 'xpixels': 3, 'ystart': -0.4, 'ystep': 0.4, 'ypixels': 3}
+    detector = {'pixel': pixel, 'xstart': -0.4, 'xstep': 0.4, 'xpixels': 3, 'ystart': -0.4, 'ystep': 0.4, 'ypixels': 3,
+                'idstart': 2000000, 'idstep': 1000}
     fake_idf_file = create_fake_idf_file(rectangular_detector=detector)
     parser = IDFParser(fake_idf_file)
     output_detectors = list(parser.get_rectangular_detectors())
@@ -160,7 +161,8 @@ def test_get_rectangular_detectors_returns_detector_details():
 def test_get_rectangular_detectors_returns_expected_pixel_offsets():
     pixel = {'name': 'pixel',
              'shape': {'shape': 'cuboid', 'x_pixel_size': 0.01, 'y_pixel_size': 0.01, 'thickness': 0.005}}
-    detector = {'pixel': pixel, 'xstart': -0.4, 'xstep': 0.4, 'xpixels': 3, 'ystart': -0.4, 'ystep': 0.4, 'ypixels': 3}
+    detector = {'pixel': pixel, 'xstart': -0.4, 'xstep': 0.4, 'xpixels': 3, 'ystart': -0.4, 'ystep': 0.4, 'ypixels': 3,
+                'idstart': 2000000, 'idstep': 1000}
     fake_idf_file = create_fake_idf_file(rectangular_detector=detector)
     parser = IDFParser(fake_idf_file)
     output_detectors = list(parser.get_rectangular_detectors())
@@ -172,3 +174,17 @@ def test_get_rectangular_detectors_returns_expected_pixel_offsets():
                                      detector['ypixels'])
     assert np.allclose(expected_x_offsets, output_detectors[0]['x_pixel_offset'][0, :])
     assert np.allclose(expected_y_offsets, output_detectors[0]['y_pixel_offset'][:, 0])
+
+
+def test_get_rectangular_detectors_returns_expected_ids():
+    pixel = {'name': 'pixel',
+             'shape': {'shape': 'cuboid', 'x_pixel_size': 0.01, 'y_pixel_size': 0.01, 'thickness': 0.005}}
+    detector = {'pixel': pixel, 'xstart': -0.4, 'xstep': 0.4, 'xpixels': 3, 'ystart': -0.4, 'ystep': 0.4, 'ypixels': 3,
+                'idstart': 2000000, 'idstep': 1000}
+    fake_idf_file = create_fake_idf_file(rectangular_detector=detector)
+    parser = IDFParser(fake_idf_file)
+    output_detectors = list(parser.get_rectangular_detectors())
+    expected_ids = np.array([[2000000, 2001000, 2002000],
+                             [2000001, 2001001, 2002001],
+                             [2000002, 2001002, 2002002]]).astype(int)
+    assert np.array_equal(expected_ids, output_detectors[0]['idlist'])
