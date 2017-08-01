@@ -123,7 +123,7 @@ def test_get_detectors_throws_when_pixel_shape_is_unknown():
     fake_idf_file.close()
 
 
-def test_get_detectors_returns_detector_details_for_tube_detectors():
+def test_get_detectors_returns_detector_details_for_tube_pixels():
     pixel = {'name': 'pixel',
              'shape': {'shape': 'cylinder', 'axis': np.array([0.0, 1.0, 0.0]), 'height': 0.2, 'radius': 0.1}}
     detector = {'pixel': pixel}
@@ -134,12 +134,23 @@ def test_get_detectors_returns_detector_details_for_tube_detectors():
     fake_idf_file.close()
 
 
-def test_get_detectors_returns_detector_details_for_cuboid_detectors():
+def test_get_detectors_returns_detector_details_for_cuboid_pixels():
     pixel = {'name': 'pixel',
              'shape': {'shape': 'cuboid', 'x_pixel_size': 0.01, 'y_pixel_size': 0.01, 'thickness': 0.005}}
     detector = {'pixel': pixel}
     fake_idf_file = create_fake_idf_file(detector=detector)
     parser = IDFParser(fake_idf_file)
     output_detectors = parser.get_detectors()
+    assert dict_compare(output_detectors[0]['pixel']['shape'], pixel['shape'])
+    fake_idf_file.close()
+
+
+def test_get_rectangular_detectors_returns_detector_details():
+    pixel = {'name': 'pixel',
+             'shape': {'shape': 'cuboid', 'x_pixel_size': 0.01, 'y_pixel_size': 0.01, 'thickness': 0.005}}
+    detector = {'pixel': pixel, }
+    fake_idf_file = create_fake_idf_file(detector=detector)
+    parser = IDFParser(fake_idf_file)
+    output_detectors = list(parser.get_rectangular_detectors())
     assert dict_compare(output_detectors[0]['pixel']['shape'], pixel['shape'])
     fake_idf_file.close()

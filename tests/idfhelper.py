@@ -55,12 +55,32 @@ def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, 
         __write_structured_detector(fake_idf_file, structured_detector)
     if detector is not None:
         __write_detector(fake_idf_file, detector)
-    # if rectangular_detector is not None:
-    #    __write_rectangular_detector(fake_idf_file, rectangular_detector)
+    if rectangular_detector is not None:
+        __write_rectangular_detector(fake_idf_file, rectangular_detector)
 
     fake_idf_file.write('</instrument>\n')
     fake_idf_file.seek(0)  # So that the xml parser reads from the start of the file
     return fake_idf_file
+
+
+def __write_rectangular_detector(fake_idf_file, detector):
+    __write_detector_pixel(fake_idf_file, detector['pixel'])
+    __write_rectangular_detector_type(fake_idf_file)
+    __write_rectangular_detector_component(fake_idf_file)
+
+
+def __write_rectangular_detector_type(fake_idf_file):
+    fake_idf_file.write('  <type name="detector-bank" is="rectangular_detector" type="pixel"'
+                        '    xpixels="3" xstart="-0.4" xstep="+0.4"'
+                        '    ypixels="3" ystart="-0.4" ystep="+0.4" >'
+                        '  </type>')
+
+
+def __write_rectangular_detector_component(fake_idf_file):
+    fake_idf_file.write(
+        '  <component type="detector-bank" idstart="2000000" idfillbyfirst="y" idstep="1000" idstepbyrow="1">'
+        '    <location x="1.1" z="23.281" name="front-detector"/>'
+        '  </component>')
 
 
 def __write_detector(fake_idf_file, detector):
