@@ -710,7 +710,7 @@ class NexusBuilder:
         logger.info('a source called ' + source_name)
 
         sample_position_list = self.idf_parser.get_sample_position()
-        sample_group, sample_position = self.add_sample(sample_position_list)
+        sample_group = self.add_sample(sample_position_list)
         logger.info('a sample at x=' + str(sample_position_list[0]) + ', y=' + str(sample_position_list[1]) + ', z=' +
                     str(sample_position_list[2]) + ' offset from source')
 
@@ -719,6 +719,7 @@ class NexusBuilder:
             logger.info(str(number_of_monitors) + ' monitors')
 
         number_of_grid_detectors = self.add_structured_detectors_from_idf()
+        number_of_detectors = 0
         if number_of_grid_detectors != 0:
             logger.info(str(number_of_grid_detectors) + ' topologically, grid detector panels')
         else:
@@ -726,7 +727,8 @@ class NexusBuilder:
             if number_of_detectors != 0:
                 logger.info(str(number_of_detectors) + ' detector panels')
 
-        return sample_position
+        detectors_added = (number_of_detectors + number_of_grid_detectors) > 0
+        return detectors_added
 
     def add_sample(self, position, name='sample'):
         """
@@ -747,7 +749,7 @@ class NexusBuilder:
                                                   self.length_units,
                                                   position_unit_vector, name='location')
         self.add_depends_on(sample_group, sample_position)
-        return sample_group, sample_position
+        return sample_group
 
     def add_source(self, name, group_name='source'):
         """
