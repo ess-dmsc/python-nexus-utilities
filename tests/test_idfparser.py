@@ -172,8 +172,8 @@ def test_get_rectangular_detectors_returns_expected_pixel_offsets():
     expected_y_offsets = np.linspace(detector['ystart'],
                                      detector['ystart'] + (detector['ystep'] * (detector['ypixels'] - 1)),
                                      detector['ypixels'])
-    assert np.allclose(expected_x_offsets, output_detectors[0]['x_pixel_offset'][0, :])
-    assert np.allclose(expected_y_offsets, output_detectors[0]['y_pixel_offset'][:, 0])
+    assert np.allclose(expected_x_offsets, output_detectors[0]['offsets'][0, :, 0])
+    assert np.allclose(expected_y_offsets, output_detectors[0]['offsets'][:, 0, 1])
 
 
 def test_get_rectangular_detectors_returns_expected_ids():
@@ -190,4 +190,4 @@ def test_get_rectangular_detectors_returns_expected_ids():
                               detector['idstart'] + (detector['idstep'] * 2) + 1],
                              [detector['idstart'] + 2, detector['idstart'] + detector['idstep'] + 2,
                               detector['idstart'] + (detector['idstep'] * 2) + 2]]).astype(int)
-    assert np.array_equal(expected_ids, output_detectors[0]['detector_number'])
+    assert np.array_equal(expected_ids, output_detectors[0]['idlist'])

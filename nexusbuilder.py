@@ -132,6 +132,7 @@ class NexusBuilder:
             logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
         total_panels = 0
         detectors = self.idf_parser.get_detectors()
+        detectors += list(self.idf_parser.get_rectangular_detectors())
         written_types = []  # {'types': [str], 'group': hdf5group}
         if detectors is not None:
             for detector in detectors:
@@ -149,11 +150,12 @@ class NexusBuilder:
                     pixel_offsets = {'x_pixel_offset': written_group['x_pixel_offset'],
                                      'y_pixel_offset': written_group['y_pixel_offset'],
                                      'z_pixel_offset': z_offset_dataset}
-                    pixel_shape_group = written_group['pixel_shape']
+                    if 'pixel_shape' in list(written_group.keys()):
+                        pixel_shape_group = written_group['pixel_shape']
                 else:
                     offsets = np.array(detector['offsets'])
-                    pixel_offsets = {'x_pixel_offset': offsets[:, 0], 'y_pixel_offset': offsets[:, 1],
-                                     'z_pixel_offset': offsets[:, 2]}
+                    pixel_offsets = {'x_pixel_offset': offsets[..., 0], 'y_pixel_offset': offsets[..., 1],
+                                     'z_pixel_offset': offsets[..., 2]}
                     if np.count_nonzero(pixel_offsets['z_pixel_offset']) == 0:
                         pixel_offsets['z_pixel_offset'] = None
 
@@ -717,29 +719,14 @@ class NexusBuilder:
             logger.info(str(number_of_monitors) + ' monitors')
 
         number_of_grid_detectors = self.add_structured_detectors_from_idf()
-        number_of_rectangular_detectors = self.add_rectangular_detectors_from_idf()
         if number_of_grid_detectors != 0:
             logger.info(str(number_of_grid_detectors) + ' topologically, grid detector panels')
-        elif number_of_rectangular_detectors != 0:
-            logger.info(str(number_of_rectangular_detectors) + ' rectangular detector panels')
         else:
             number_of_detectors = self.add_detectors_from_idf()
             if number_of_detectors != 0:
                 logger.info(str(number_of_detectors) + ' detector panels')
 
         return sample_position
-
-    def add_rectangular_detectors_from_idf(self):
-        total_detectors = 0
-        for detector in self.idf_parser.get_rectangular_detectors():
-            total_detectors += 1
-            offsets = {'x_pixel_offset': detector['x_pixel_offset'], 'y_pixel_offset': detector['y_pixel_offset']}
-            detector_group = self.add_detector(detector['name'], total_detectors, detector['detector_number'], offsets,
-                                               x_pixel_size=detector['pixel']['shape']['x_pixel_size'],
-                                               y_pixel_size=detector['pixel']['shape']['y_pixel_size'],
-                                               thickness=detector['pixel']['shape']['thickness'])
-            self.__add_detector_transformations(detector, detector_group)
-        return total_detectors
 
     def add_sample(self, position, name='sample'):
         """

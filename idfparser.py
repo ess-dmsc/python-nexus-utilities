@@ -77,16 +77,21 @@ class IDFParser:
                 x_pixel_offset_1d = self.__get_1d_pixel_offsets('x', xml_type)
                 y_pixel_offset_1d = self.__get_1d_pixel_offsets('y', xml_type)
                 x_pixel_offset, y_pixel_offset = np.meshgrid(x_pixel_offset_1d, y_pixel_offset_1d)
+                z_pixel_offset = np.zeros_like(x_pixel_offset)
+                offsets = np.stack((x_pixel_offset, y_pixel_offset, z_pixel_offset), axis=-1)
                 for component in self.root.findall('d:component', self.ns):
                     if component.get('type') == bank_type_name:
                         location = component.find('d:location', self.ns)
                         detector_numbers = self.__get_rectangular_detector_ids(component, len(x_pixel_offset),
                                                                                len(y_pixel_offset))
-                        det_bank_info = {'name': component.find('d:location', self.ns).get('name'),
+                        detector_name = component.find('d:location', self.ns).get('name')
+                        if detector_name is None:
+                            detector_name = bank_type_name
+                        det_bank_info = {'name': detector_name,
                                          'pixel': {'name': pixel_name, 'shape': pixel_shape},
-                                         'x_pixel_offset': x_pixel_offset,
-                                         'y_pixel_offset': y_pixel_offset,
-                                         'detector_number': detector_numbers,
+                                         'offsets': offsets,
+                                         'idlist': detector_numbers,
+                                         'sub_components': [bank_type_name],  # allows use of links in builder
                                          'location': self.__get_vector(location),
                                          'orientation': self.__parse_facing_element(component)}
                         yield det_bank_info
