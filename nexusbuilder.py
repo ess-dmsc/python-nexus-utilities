@@ -125,11 +125,7 @@ class NexusBuilder:
     def add_detectors_from_idf(self):
         """
         Add detector banks from a Mantid IDF file
-        NB, currently only works for "RectangularDetector" panels 
-            currently assumes the coordinate system in the IDF is the same as the NeXus one
-            (z is beam direction, x is the other horizontal, y is vertical)
 
-        :param reshape:
         :return: Number of detector panels added
         """
         if self.idf_parser is None:
@@ -721,14 +717,29 @@ class NexusBuilder:
             logger.info(str(number_of_monitors) + ' monitors')
 
         number_of_grid_detectors = self.add_structured_detectors_from_idf()
+        number_of_rectangular_detectors = self.add_rectangular_detectors_from_idf()
         if number_of_grid_detectors != 0:
             logger.info(str(number_of_grid_detectors) + ' topologically, grid detector panels')
+        elif number_of_rectangular_detectors != 0:
+            logger.info(str(number_of_rectangular_detectors) + ' rectangular detector panels')
         else:
             number_of_detectors = self.add_detectors_from_idf()
             if number_of_detectors != 0:
                 logger.info(str(number_of_detectors) + ' detector panels')
 
         return sample_position
+
+    def add_rectangular_detectors_from_idf(self):
+        total_detectors = 0
+        for detector in self.idf_parser.get_rectangular_detectors():
+            total_detectors += 1
+            offsets = {'x_pixel_offset': detector['x_pixel_offset'], 'y_pixel_offset': detector['y_pixel_offset']}
+            detector_group = self.add_detector(detector['name'], total_detectors, detector['detector_number'], offsets,
+                                               x_pixel_size=detector['pixel']['shape']['x_pixel_size'],
+                                               y_pixel_size=detector['pixel']['shape']['y_pixel_size'],
+                                               thickness=detector['pixel']['shape']['thickness'])
+            self.__add_detector_transformations(detector, detector_group)
+        return total_detectors
 
     def add_sample(self, position, name='sample'):
         """

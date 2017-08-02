@@ -87,7 +87,8 @@ class IDFParser:
                                          'x_pixel_offset': x_pixel_offset,
                                          'y_pixel_offset': y_pixel_offset,
                                          'detector_number': detector_numbers,
-                                         'distance': self.__get_vector(location)}
+                                         'location': self.__get_vector(location),
+                                         'orientation': self.__parse_facing_element(component)}
                         yield det_bank_info
 
     @staticmethod
@@ -164,10 +165,8 @@ class IDFParser:
 
         :return: List of detector dictionaries
         """
-        pixels = self.__get_pixel_names_and_shapes()  # {'name': str, 'shape': shape_info_dict}
-        components = []  # {'name': str, 'sub_components': [str], 'offsets':[[int]]}
-        # if the component is top-level then it has an 'idlist'=[int] and a 'location':[float] and
-        # 'orientation':{} instead of 'offsets'
+        pixels = self.__get_pixel_names_and_shapes()
+        components = []
         for pixel in pixels:
             searched_already = list()
             self.__collect_detector_components(components, pixel['name'], searched_already)
