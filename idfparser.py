@@ -81,10 +81,10 @@ class IDFParser:
                 offsets = np.stack((x_pixel_offset, y_pixel_offset, z_pixel_offset), axis=-1)
                 yield from self.find_rectangular_detector_components(bank_type_name, offsets, pixel_name, pixel_shape,
                                                                      x_pixel_offset, y_pixel_offset, self.root)
-                for xml_type in self.root.findall('d:type', self.ns):
+                for xml_top_level_type in self.root.findall('d:type', self.ns):
                     yield from self.find_rectangular_detector_components(bank_type_name, offsets, pixel_name,
                                                                          pixel_shape, x_pixel_offset, y_pixel_offset,
-                                                                         xml_type)
+                                                                         xml_top_level_type)
 
     def find_rectangular_detector_components(self, bank_type_name, offsets, pixel_name, pixel_shape, x_pixel_offset,
                                              y_pixel_offset, root_type):
