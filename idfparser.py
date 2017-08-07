@@ -107,14 +107,14 @@ class IDFParser:
 
     @staticmethod
     def __get_rectangular_detector_ids(component, x_pixels, y_pixels):
-        idstart = int(component.get('idstart'))
+        idstart = component.get('idstart')
+        idstart = int(idstart) if idstart is not None else 1
         idstep = component.get('idstep')
-        if idstep is not None:
-            idstep = int(idstep)
-        else:
-            idstep = 1  # default to 1 if not given explicitly
+        idstep = int(idstep) if idstep is not None else 1
         idfillbyfirst = component.get('idfillbyfirst')
-        idstepbyrow = int(component.get('idstepbyrow'))
+        idfillbyfirst = idfillbyfirst if idfillbyfirst is not None else 'y'
+        idstepbyrow = component.get('idstepbyrow')
+        idstepbyrow = int(idstepbyrow) if idstepbyrow is not None else 1
         if idfillbyfirst == 'x':
             x_2d, y_2d = np.mgrid[0:x_pixels * idstep:idstep,
                          0:y_pixels * idstepbyrow:idstepbyrow]
