@@ -192,8 +192,10 @@ class NexusBuilder:
 
     def __add_detector_transformations(self, detector, detector_group):
         location = detector['location']
-        translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
         orientation = detector['orientation']
+        if location is None and orientation is None:
+            return
+        translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
         if orientation is not None:
             orientation_transformation = self.add_transformation(detector_group, 'rotation',
                                                                  orientation['angle'],
