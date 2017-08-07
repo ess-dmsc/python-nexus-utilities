@@ -80,12 +80,18 @@ def __write_rectangular_detector_type(fake_idf_file, detector):
 
 
 def __write_rectangular_detector_component(fake_idf_file, detector):
-    fake_idf_file.write(
-        '  <component type="detector-bank" idstart="' + str(
-            detector['idstart']) + '" idfillbyfirst="y" idstep="' + str(detector['idstep']) +
-        '" idstepbyrow="1">\n'
-        '    <location x="1.1" z="23.281" name="front-detector"/>\n'
-        '  </component>\n')
+    if 'idstart' in detector.keys() and 'idstep' in detector.keys():
+        fake_idf_file.write(
+            '  <component type="detector-bank" idstart="' + str(
+                detector['idstart']) + '" idfillbyfirst="y" idstep="' + str(detector['idstep']) +
+            '" idstepbyrow="1">\n'
+            '    <location x="1.1" z="23.281" name="front-detector"/>\n'
+            '  </component>\n')
+    else:
+        fake_idf_file.write(
+            '  <component type="detector-bank">\n'
+            '    <location x="1.1" z="23.281" name="front-detector"/>\n'
+            '  </component>\n')
 
 
 def __write_detector(fake_idf_file, detector):

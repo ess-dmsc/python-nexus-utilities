@@ -191,3 +191,21 @@ def test_get_rectangular_detectors_returns_expected_ids():
                              [detector['idstart'] + 2, detector['idstart'] + detector['idstep'] + 2,
                               detector['idstart'] + (detector['idstep'] * 2) + 2]]).astype(int)
     assert np.array_equal(expected_ids, output_detectors[0]['idlist'])
+
+
+def test_rectangular_detectors_have_default_id_parameters():
+    pixel = {'name': 'pixel',
+             'shape': {'shape': 'cuboid', 'x_pixel_size': 0.01, 'y_pixel_size': 0.01, 'thickness': 0.005}}
+    detector = {'pixel': pixel, 'xstart': -0.4, 'xstep': 0.4, 'xpixels': 3, 'ystart': -0.4, 'ystep': 0.4, 'ypixels': 3}
+    fake_idf_file = create_fake_idf_file(rectangular_detector=detector)
+    parser = IDFParser(fake_idf_file)
+    output_detectors = list(parser.get_rectangular_detectors())
+    default_idstart = 1
+    default_idstep = 1
+    expected_ids = np.array([[default_idstart, default_idstart + default_idstep,
+                              default_idstart + (default_idstep * 2)],
+                             [default_idstart + 1, default_idstart + default_idstep + 1,
+                              default_idstart + (default_idstep * 2) + 1],
+                             [default_idstart + 2, default_idstart + default_idstep + 2,
+                              default_idstart + (default_idstep * 2) + 2]]).astype(int)
+    assert np.array_equal(expected_ids, output_detectors[0]['idlist'])
