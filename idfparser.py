@@ -336,7 +336,7 @@ class IDFParser:
             if xml_top_component.get('type') == search_type:
                 name = xml_top_component.get('name')
                 if name is None:
-                    name = uuid.uuid4()
+                    name = str(uuid.uuid4())
                 self.__append_component(name, xml_top_component, components, search_type, searched_already)
 
     def __append_component(self, name, xml_component, components, search_type, searched_already):
