@@ -79,22 +79,31 @@ class IDFParser:
                 x_pixel_offset, y_pixel_offset = np.meshgrid(x_pixel_offset_1d, y_pixel_offset_1d)
                 z_pixel_offset = np.zeros_like(x_pixel_offset)
                 offsets = np.stack((x_pixel_offset, y_pixel_offset, z_pixel_offset), axis=-1)
-                for component in self.root.findall('d:component', self.ns):
-                    if component.get('type') == bank_type_name:
-                        location = component.find('d:location', self.ns)
-                        detector_numbers = self.__get_rectangular_detector_ids(component, len(x_pixel_offset),
-                                                                               len(y_pixel_offset))
-                        detector_name = component.find('d:location', self.ns).get('name')
-                        if detector_name is None:
-                            detector_name = bank_type_name
-                        det_bank_info = {'name': detector_name,
-                                         'pixel': {'name': pixel_name, 'shape': pixel_shape},
-                                         'offsets': offsets,
-                                         'idlist': detector_numbers,
-                                         'sub_components': [bank_type_name],  # allows use of links in builder
-                                         'location': self.__get_vector(location),
-                                         'orientation': self.__parse_facing_element(component)}
-                        yield det_bank_info
+                yield from self.find_rectangular_detector_components(bank_type_name, offsets, pixel_name, pixel_shape,
+                                                                     x_pixel_offset, y_pixel_offset, self.root)
+                for xml_type in self.root.findall('d:type', self.ns):
+                    yield from self.find_rectangular_detector_components(bank_type_name, offsets, pixel_name,
+                                                                         pixel_shape, x_pixel_offset, y_pixel_offset,
+                                                                         xml_type)
+
+    def find_rectangular_detector_components(self, bank_type_name, offsets, pixel_name, pixel_shape, x_pixel_offset,
+                                             y_pixel_offset, root_type):
+        for component in root_type.findall('d:component', self.ns):
+            if component.get('type') == bank_type_name:
+                location = component.find('d:location', self.ns)
+                detector_numbers = self.__get_rectangular_detector_ids(component, len(x_pixel_offset),
+                                                                       len(y_pixel_offset))
+                detector_name = component.find('d:location', self.ns).get('name')
+                if detector_name is None:
+                    detector_name = bank_type_name
+                det_bank_info = {'name': detector_name,
+                                 'pixel': {'name': pixel_name, 'shape': pixel_shape},
+                                 'offsets': offsets,
+                                 'idlist': detector_numbers,
+                                 'sub_components': [bank_type_name],  # allows use of links in builder
+                                 'location': self.__get_vector(location),
+                                 'orientation': self.__parse_facing_element(component)}
+                yield det_bank_info
 
     @staticmethod
     def __get_rectangular_detector_ids(component, x_pixels, y_pixels):
@@ -108,10 +117,10 @@ class IDFParser:
         idstepbyrow = int(component.get('idstepbyrow'))
         if idfillbyfirst == 'x':
             x_2d, y_2d = np.mgrid[0:x_pixels * idstep:idstep,
-                                  0:y_pixels * idstepbyrow:idstepbyrow]
+                         0:y_pixels * idstepbyrow:idstepbyrow]
         else:
             x_2d, y_2d = np.mgrid[0:x_pixels * idstepbyrow:idstepbyrow,
-                                  0:y_pixels * idstep:idstep]
+                         0:y_pixels * idstep:idstep]
         return (x_2d + y_2d) + idstart
 
     def __get_vector(self, xml_point):
