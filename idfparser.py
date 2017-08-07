@@ -99,7 +99,11 @@ class IDFParser:
     @staticmethod
     def __get_rectangular_detector_ids(component, x_pixels, y_pixels):
         idstart = int(component.get('idstart'))
-        idstep = int(component.get('idstep'))
+        idstep = component.get('idstep')
+        if idstep is not None:
+            idstep = int(idstep)
+        else:
+            idstep = 1  # default to 1 if not given explicitly
         idfillbyfirst = component.get('idfillbyfirst')
         idstepbyrow = int(component.get('idstepbyrow'))
         if idfillbyfirst == 'x':
