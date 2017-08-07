@@ -1,10 +1,11 @@
 from nexusbuilder import NexusBuilder
 import os
+import inspect
 
 if __name__ == '__main__':
     passes = 0
     failures = 0
-    for file in os.listdir("/home/jonmd/git/python-nexus-utils/example_instruments/all"):
+    for file in os.listdir(os.path.dirname(inspect.stack()[0][1])):
         if file.endswith(".xml"):
             output_filename = file[:-4] + ".hdf5"
 
@@ -17,6 +18,9 @@ if __name__ == '__main__':
             except:
                 failures += 1
 
-    percent_pass = '%s' % float('%.3g' % ((100. / (passes + failures)) * passes))
-    print(percent_pass + "% of all (" + str(passes + failures) +
-          ") IDFs for which parsing was attempted resulted in NeXus files with at least one detector")
+    if passes + failures > 0:
+        percent_pass = '%s' % float('%.3g' % ((100. / (passes + failures)) * passes))
+        print(percent_pass + "% of all (" + str(passes + failures) +
+              ") IDFs for which parsing was attempted resulted in NeXus files with at least one detector")
+    else:
+        print("Found no IDFs to parse")
