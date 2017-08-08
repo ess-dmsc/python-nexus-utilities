@@ -6,7 +6,7 @@ if __name__ == '__main__':
     builder = NexusBuilder(output_filename, idf_file='LOKI_Definition.xml',
                            compress_type='gzip', compress_opts=1)
 
-    sample_position = builder.add_instrument_geometry_from_idf()
+    builder.add_instrument_geometry_from_idf()
 
     # A few more details to flesh out the example
     builder.add_user('LOKI Team', 'ESS')

@@ -8,7 +8,7 @@ def create_nexus_file(output_filename):
     builder = NexusBuilder(output_filename, input_nexus_filename='SANS_test.nxs',
                            idf_file='SANS2D_Definition_Tubes.xml', compress_type='gzip', compress_opts=1)
 
-    sample_position = builder.add_instrument_geometry_from_idf()
+    builder.add_instrument_geometry_from_idf()
     __add_nxlog(builder)
 
     # Copy data from the existing NeXus file to flesh out the example file

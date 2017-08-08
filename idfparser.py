@@ -69,31 +69,59 @@ class IDFParser:
         :returns A generator which yields details of each detector bank found in the instrument file 
         """
         # Look for detector bank definition
-        detector_number = 0
         for xml_type in self.root.findall('d:type', self.ns):
             if xml_type.get('is') == 'rectangular_detector':
-                x_pixel_size, y_pixel_size, thickness = self.__get_pixel_shape(self.root, xml_type.get('type'))
+                pixel_name = xml_type.get('type')
+                pixel_shape = self.__get_pixel_shape(self.root, pixel_name)
                 bank_type_name = xml_type.get('name')
                 x_pixel_offset_1d = self.__get_1d_pixel_offsets('x', xml_type)
                 y_pixel_offset_1d = self.__get_1d_pixel_offsets('y', xml_type)
                 x_pixel_offset, y_pixel_offset = np.meshgrid(x_pixel_offset_1d, y_pixel_offset_1d)
-                for component in self.root.findall('d:component', self.ns):
-                    if component.get('type') == bank_type_name:
-                        detector_number += 1
-                        det_bank_info = {'name': component.find('d:location', self.ns).get('name'),
-                                         'number': detector_number,
-                                         'x_pixel_size': x_pixel_size,
-                                         'y_pixel_size': y_pixel_size,
-                                         'thickness': thickness,
-                                         'x_pixel_offset': x_pixel_offset,
-                                         'y_pixel_offset': y_pixel_offset}
-                        # TODO also get the pixel id information (detector_number)
-                        location = component.find('d:location', self.ns)
-                        distance_list = np.array([location.get('x'), location.get('y'), location.get('z')])
-                        # If any of these are omitted it means position 0 on that axis
-                        det_bank_info['distance'] = np.array(
-                            map(lambda x: 0 if x is None else x, distance_list)).astype(float)
-                        yield det_bank_info
+                z_pixel_offset = np.zeros_like(x_pixel_offset)
+                offsets = np.stack((x_pixel_offset, y_pixel_offset, z_pixel_offset), axis=-1)
+                yield from self.find_rectangular_detector_components(bank_type_name, offsets, pixel_name, pixel_shape,
+                                                                     x_pixel_offset, y_pixel_offset, self.root)
+                for xml_top_level_type in self.root.findall('d:type', self.ns):
+                    yield from self.find_rectangular_detector_components(bank_type_name, offsets, pixel_name,
+                                                                         pixel_shape, x_pixel_offset, y_pixel_offset,
+                                                                         xml_top_level_type)
+
+    def find_rectangular_detector_components(self, bank_type_name, offsets, pixel_name, pixel_shape, x_pixel_offset,
+                                             y_pixel_offset, root_type):
+        for component in root_type.findall('d:component', self.ns):
+            if component.get('type') == bank_type_name:
+                location = component.find('d:location', self.ns)
+                detector_numbers = self.__get_rectangular_detector_ids(component, len(x_pixel_offset),
+                                                                       len(y_pixel_offset))
+                detector_name = component.find('d:location', self.ns).get('name')
+                if detector_name is None:
+                    detector_name = bank_type_name
+                det_bank_info = {'name': detector_name,
+                                 'pixel': {'name': pixel_name, 'shape': pixel_shape},
+                                 'offsets': offsets,
+                                 'idlist': detector_numbers,
+                                 'sub_components': [bank_type_name],  # allows use of links in builder
+                                 'location': self.__get_vector(location),
+                                 'orientation': self.__parse_facing_element(component)}
+                yield det_bank_info
+
+    @staticmethod
+    def __get_rectangular_detector_ids(component, x_pixels, y_pixels):
+        idstart = component.get('idstart')
+        idstart = int(idstart) if idstart is not None else 1
+        idstep = component.get('idstep')
+        idstep = int(idstep) if idstep is not None else 1
+        idfillbyfirst = component.get('idfillbyfirst')
+        idfillbyfirst = idfillbyfirst if idfillbyfirst is not None else 'y'
+        idstepbyrow = component.get('idstepbyrow')
+        idstepbyrow = int(idstepbyrow) if idstepbyrow is not None else 1
+        if idfillbyfirst == 'x':
+            x_2d, y_2d = np.mgrid[0:x_pixels * idstep:idstep,
+                         0:y_pixels * idstepbyrow:idstepbyrow]
+        else:
+            x_2d, y_2d = np.mgrid[0:x_pixels * idstepbyrow:idstepbyrow,
+                         0:y_pixels * idstep:idstep]
+        return (x_2d + y_2d) + idstart
 
     def __get_vector(self, xml_point):
         x = xml_point.get('x')
@@ -155,10 +183,8 @@ class IDFParser:
 
         :return: List of detector dictionaries
         """
-        pixels = self.__get_pixel_names_and_shapes()  # {'name': str, 'shape': shape_info_dict}
-        components = []  # {'name': str, 'sub_components': [str], 'offsets':[[int]]}
-        # if the component is top-level then it has an 'idlist'=[int] and a 'location':[float] and
-        # 'orientation':{} instead of 'offsets'
+        pixels = self.__get_pixel_names_and_shapes()
+        components = []
         for pixel in pixels:
             searched_already = list()
             self.__collect_detector_components(components, pixel['name'], searched_already)
@@ -310,7 +336,7 @@ class IDFParser:
             if xml_top_component.get('type') == search_type:
                 name = xml_top_component.get('name')
                 if name is None:
-                    name = uuid.uuid4()
+                    name = str(uuid.uuid4())
                 self.__append_component(name, xml_top_component, components, search_type, searched_already)
 
     def __append_component(self, name, xml_component, components, search_type, searched_already):
@@ -407,7 +433,7 @@ class IDFParser:
         step = float(xml_type.get(dimension_name + 'step'))
         pixels = int(xml_type.get(dimension_name + 'pixels'))
         start = float(xml_type.get(dimension_name + 'start'))
-        stop = start + (step * pixels)
+        stop = start + (step * (pixels - 1))
         return np.linspace(start, stop, pixels)
 
     def __get_structured_detector_typenames(self):

@@ -23,6 +23,8 @@ Examples can be found in the `example_instruments` directory. Example scripts sh
 
 - `SANS2D_NXlog_example.py` - demonstrates how one can use the `cue` datasets in the new `NXevent_data` group or in the updated `NXlog` to extract data for a specific time period from the file.
 
+- `all/` contains all current IDFs from Mantid. Running `parse_all.py` will attempt to convert all of these to the NeXus format. This is intended to help discover where the parser currently fails.
+
 ## Tools
 
 To assist in creating the IDF to NeXus conversion scripts I made a couple of simple tools: "Detector Plotter" and "HDF5 Size Profiler". 

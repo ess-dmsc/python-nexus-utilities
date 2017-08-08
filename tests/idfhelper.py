@@ -23,7 +23,7 @@ def dict_compare(d1, d2):
 
 
 def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, defaults=None, monitor_name=None,
-                         structured_detector=None, detector=None):
+                         structured_detector=None, detector=None, rectangular_detector=None):
     """
     Create a fake IDF, in-memory, file object for use in unit tests of the IDF parser
 
@@ -55,10 +55,43 @@ def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, 
         __write_structured_detector(fake_idf_file, structured_detector)
     if detector is not None:
         __write_detector(fake_idf_file, detector)
+    if rectangular_detector is not None:
+        __write_rectangular_detector(fake_idf_file, rectangular_detector)
 
     fake_idf_file.write('</instrument>\n')
     fake_idf_file.seek(0)  # So that the xml parser reads from the start of the file
     return fake_idf_file
+
+
+def __write_rectangular_detector(fake_idf_file, detector):
+    __write_detector_pixel(fake_idf_file, detector['pixel'])
+    __write_rectangular_detector_type(fake_idf_file, detector)
+    __write_rectangular_detector_component(fake_idf_file, detector)
+
+
+def __write_rectangular_detector_type(fake_idf_file, detector):
+    fake_idf_file.write('  <type name="detector-bank" is="rectangular_detector" type="pixel"\n'
+                        '    xpixels="' + str(detector['xpixels']) + '" xstart="' + str(detector['xstart']) +
+                        '" xstep="' + str(detector['xstep']) + '"\n'
+                                                               '    ypixels="' +
+                        str(detector['ypixels']) + '" ystart="' + str(detector['ystart']) +
+                        '" ystep="' + str(detector['ystep']) + '" >\n'
+                                                               '  </type>\n')
+
+
+def __write_rectangular_detector_component(fake_idf_file, detector):
+    if 'idstart' in detector.keys() and 'idstep' in detector.keys():
+        fake_idf_file.write(
+            '  <component type="detector-bank" idstart="' + str(
+                detector['idstart']) + '" idfillbyfirst="y" idstep="' + str(detector['idstep']) +
+            '" idstepbyrow="1">\n'
+            '    <location x="1.1" z="23.281" name="front-detector"/>\n'
+            '  </component>\n')
+    else:
+        fake_idf_file.write(
+            '  <component type="detector-bank">\n'
+            '    <location x="1.1" z="23.281" name="front-detector"/>\n'
+            '  </component>\n')
 
 
 def __write_detector(fake_idf_file, detector):
@@ -106,8 +139,26 @@ def __create_pixel_shape(pixel_shape):
                 str(pixel_shape['radius']) + '" />\n'
                                              '    <height val="' + str(pixel_shape['height']) + '" />\n'
                                                                                                 '  </cylinder>\n')
-    else:
-        return '<' + pixel_shape['shape'] + '></' + pixel_shape['shape'] + '>\n'
+    if pixel_shape['shape'] == 'cuboid':
+        return ('  <cuboid id="shape">'
+                '    <left-front-bottom-point x="' + str(pixel_shape['x_pixel_size'] / 2.) + '" y="' +
+                str(pixel_shape['y_pixel_size'] / -2.) +
+                '" z="' + str(0.0) + '"  />'
+                                     '    <left-front-top-point  x="' +
+                str(pixel_shape['x_pixel_size'] / 2.) + '" y="' +
+                str(pixel_shape['y_pixel_size'] / -2.) + '" z="' +
+                str(pixel_shape['thickness']) + '"  />'
+                                                '    <left-back-bottom-point  x="' +
+                str(pixel_shape['x_pixel_size'] / -2.) + '" y="' +
+                str(pixel_shape['y_pixel_size'] / -2.) + '" z="' +
+                str(0.0) + '"  />'
+                           '    <right-front-bottom-point  x="' +
+                str(pixel_shape['x_pixel_size'] / 2.) + '" y="' +
+                str(pixel_shape['y_pixel_size'] / 2.) + '" z="' +
+                str(0.0) + '"  />'
+                           '  </cuboid>')
+
+    return '<' + pixel_shape['shape'] + '></' + pixel_shape['shape'] + '>\n'
 
 
 def __write_structured_detector(fake_idf_file, structured_detector):

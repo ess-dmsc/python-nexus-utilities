@@ -125,17 +125,14 @@ class NexusBuilder:
     def add_detectors_from_idf(self):
         """
         Add detector banks from a Mantid IDF file
-        NB, currently only works for "RectangularDetector" panels 
-            currently assumes the coordinate system in the IDF is the same as the NeXus one
-            (z is beam direction, x is the other horizontal, y is vertical)
 
-        :param reshape:
         :return: Number of detector panels added
         """
         if self.idf_parser is None:
             logger.error('No IDF file was given to the NexusBuilder, cannot call add_detector_banks_from_idf')
         total_panels = 0
         detectors = self.idf_parser.get_detectors()
+        detectors += list(self.idf_parser.get_rectangular_detectors())
         written_types = []  # {'types': [str], 'group': hdf5group}
         if detectors is not None:
             for detector in detectors:
@@ -153,11 +150,12 @@ class NexusBuilder:
                     pixel_offsets = {'x_pixel_offset': written_group['x_pixel_offset'],
                                      'y_pixel_offset': written_group['y_pixel_offset'],
                                      'z_pixel_offset': z_offset_dataset}
-                    pixel_shape_group = written_group['pixel_shape']
+                    if 'pixel_shape' in list(written_group.keys()):
+                        pixel_shape_group = written_group['pixel_shape']
                 else:
                     offsets = np.array(detector['offsets'])
-                    pixel_offsets = {'x_pixel_offset': offsets[:, 0], 'y_pixel_offset': offsets[:, 1],
-                                     'z_pixel_offset': offsets[:, 2]}
+                    pixel_offsets = {'x_pixel_offset': offsets[..., 0], 'y_pixel_offset': offsets[..., 1],
+                                     'z_pixel_offset': offsets[..., 2]}
                     if np.count_nonzero(pixel_offsets['z_pixel_offset']) == 0:
                         pixel_offsets['z_pixel_offset'] = None
 
@@ -194,8 +192,10 @@ class NexusBuilder:
 
     def __add_detector_transformations(self, detector, detector_group):
         location = detector['location']
-        translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
         orientation = detector['orientation']
+        if location is None and orientation is None:
+            return
+        translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
         if orientation is not None:
             orientation_transformation = self.add_transformation(detector_group, 'rotation',
                                                                  orientation['angle'],
@@ -712,7 +712,7 @@ class NexusBuilder:
         logger.info('a source called ' + source_name)
 
         sample_position_list = self.idf_parser.get_sample_position()
-        sample_group, sample_position = self.add_sample(sample_position_list)
+        sample_group = self.add_sample(sample_position_list)
         logger.info('a sample at x=' + str(sample_position_list[0]) + ', y=' + str(sample_position_list[1]) + ', z=' +
                     str(sample_position_list[2]) + ' offset from source')
 
@@ -721,6 +721,7 @@ class NexusBuilder:
             logger.info(str(number_of_monitors) + ' monitors')
 
         number_of_grid_detectors = self.add_structured_detectors_from_idf()
+        number_of_detectors = 0
         if number_of_grid_detectors != 0:
             logger.info(str(number_of_grid_detectors) + ' topologically, grid detector panels')
         else:
@@ -728,7 +729,8 @@ class NexusBuilder:
             if number_of_detectors != 0:
                 logger.info(str(number_of_detectors) + ' detector panels')
 
-        return sample_position
+        detectors_added = (number_of_detectors + number_of_grid_detectors) > 0
+        return detectors_added
 
     def add_sample(self, position, name='sample'):
         """
@@ -749,7 +751,7 @@ class NexusBuilder:
                                                   self.length_units,
                                                   position_unit_vector, name='location')
         self.add_depends_on(sample_group, sample_position)
-        return sample_group, sample_position
+        return sample_group
 
     def add_source(self, name, group_name='source'):
         """
