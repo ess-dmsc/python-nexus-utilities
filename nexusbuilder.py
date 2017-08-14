@@ -300,37 +300,21 @@ class NexusBuilder:
 
     def add_shape(self, group, name, vertices, faces, detector_faces=None):
         """
-        Add an NXsolid_geometry to define geometry in OFF-like format
+        Add an NXoff_geometry to define geometry in OFF-like format
 
-        :param group: Group or group name to add the NXsolid_geometry group to
-        :param name: Name of the NXsolid_geometry group
+        :param group: Group or group name to add the NXoff_geometry group to
+        :param name: Name of the NXoff_geometry group
         :param vertices: 2D numpy array list of [x,y,z] coordinates of vertices
-        :param faces: 2D numpy array list of vertex indices in each face, right-hand rule for face normal
-                      or a list of these where with an arrays for faces with different number of vertices
+        :param faces: List with indices into the vertices dataset at the first vertex of each face
         :param detector_faces: Optional 2D numpy array list of face number-detector id pairs
-        :return: NXsolid_geometry group
+        :return: NXoff_geometry group
         """
         if isinstance(group, str):
             group = self.root[group]
 
-        def polygon_names(number_of_sides):
-            if number_of_sides < 3:
-                raise ValueError('Polygon must have more than two sides in NexusBuilder.add_shape')
-            elif number_of_sides == 3:
-                return 'triangles'
-            elif number_of_sides == 4:
-                return 'quadrilaterals'
-            else:
-                return str(number_of_sides) + '-agons'
-
-        shape = self.add_nx_group(group, name, 'NXsolid_geometry')
+        shape = self.add_nx_group(group, name, 'NXoff_geometry')
         self.add_dataset(shape, 'vertices', vertices, {'units': self.length_units})
-        if isinstance(faces, list):
-            for face_types in faces:
-                self.add_dataset(shape, polygon_names(face_types.shape[1]), face_types,
-                                 {'vertices_per_face': face_types.shape[1]})
-        else:
-            self.add_dataset(shape, polygon_names(faces.shape[1]), faces, {'vertices_per_face': faces.shape[1]})
+        self.add_dataset(shape, 'faces', faces)
         if detector_faces is not None:
             self.add_dataset(shape, 'detector_vertices', detector_faces)
         return shape
@@ -469,12 +453,12 @@ class NexusBuilder:
 
     def add_shape_from_file(self, filename, group, name):
         """
-        Add an NXsolid_geometry shape definition from an OFF file
+        Add an NXoff_geometry shape definition from an OFF file
 
         :param filename: Name of the OFF file from which to get the geometry
-        :param group: Group to add the NXsolid_geometry to
-        :param name: Name of the NXsolid_geometry group to be created
-        :return: NXsolid_geometry group
+        :param group: Group to add the NXoff_geometry to
+        :param name: Name of the NXoff_geometry group to be created
+        :return: NXoff_geometry group
         """
         with open(filename) as off_file:
             file_start = off_file.readline()
@@ -487,19 +471,27 @@ class NexusBuilder:
             # number_of_faces = int(counts[1])
             # number_of_edges = int(counts[2])
 
-            vertices = np.zeros((number_of_vertices, 3), dtype=float)  # preallocate
+            off_vertices = np.zeros((number_of_vertices, 3), dtype=float)  # preallocate
             for vertex_number in range(number_of_vertices):
-                vertices[vertex_number, :] = np.array(off_file.readline().split()).astype(float)
+                off_vertices[vertex_number, :] = np.array(off_file.readline().split()).astype(float)
 
             faces_lines = off_file.readlines()
         all_faces = [np.array(face_line.split()).astype(int) for face_line in faces_lines]
-        # Set of each possible number of vertices in a face
-        vertices_in_faces = {each_face[0] for each_face in all_faces}
-        faces = []
-        for vertices_in_face in vertices_in_faces:
-            faces.append(np.array([face[1:] for face in all_faces if face[0] == vertices_in_face], dtype='int32'))
+        vertices, faces = self.off_vertices_and_face_list_to_nexus(off_vertices, all_faces)
 
         return self.add_shape(group, name, vertices, faces)
+
+    @staticmethod
+    def off_vertices_and_face_list_to_nexus(off_vertices, off_faces):
+        faces = []
+        vertices = []
+        current_index = 0
+        for face in off_faces:
+            faces.append(current_index)
+            current_index += face[0]
+            for vertex_index in face[1:]:
+                vertices.append(off_vertices[vertex_index, :])
+        return vertices, faces
 
     def add_structured_detectors_from_idf(self):
         """
@@ -512,23 +504,25 @@ class NexusBuilder:
             # Put each one in an NXdetector
             detector_group = self.add_detector_minimal(detector['name'], detector_number)
 
-            vertices = self.idf_parser.get_structured_detector_vertices(detector['type_name'])
+            off_vertices = self.idf_parser.get_structured_detector_vertices(detector['type_name'])
 
             # There is one fewer pixel than vertex in each dimension because vertices mark the pixel corners
-            pixels_in_first_dimension = vertices.shape[0] - 1
-            pixels_in_second_dimension = vertices.shape[1] - 1
+            pixels_in_first_dimension = off_vertices.shape[0] - 1
+            pixels_in_second_dimension = off_vertices.shape[1] - 1
 
             # Reshape vertices into a 1D list
-            vertices = np.reshape(vertices, (vertices.shape[0] * vertices.shape[1], 3), order='F')
+            off_vertices = np.reshape(off_vertices, (off_vertices.shape[0] * off_vertices.shape[1], 3), order='F')
 
             detector_ids = self.__create_detector_ids_for_structured_detector(pixels_in_first_dimension,
                                                                               pixels_in_second_dimension, detector)
             quadrilaterals, detector_faces, pixel_offsets = self.__create_quadrilaterals_dataset(
                 pixels_in_first_dimension,
                 pixels_in_second_dimension,
-                detector_ids, vertices)
+                detector_ids, off_vertices)
 
-            self.__add_detector_shape(detector_group, vertices, quadrilaterals, detector_faces)
+            vertices, faces = self.off_vertices_and_face_list_to_nexus(off_vertices, quadrilaterals)
+
+            self.__add_detector_shape(detector_group, vertices, faces, detector_faces)
             self.add_dataset(detector_group, 'detector_number', detector_ids)
             self.add_dataset(detector_group, 'x_pixel_offset', pixel_offsets[:, :, 0], {'units': self.length_units})
             self.add_dataset(detector_group, 'y_pixel_offset', pixel_offsets[:, :, 1], {'units': self.length_units})
@@ -544,7 +538,7 @@ class NexusBuilder:
         return total_detectors
 
     def __add_detector_shape(self, detector_group, vertices, quadrilaterals, detector_faces):
-        detector_shape_group = self.add_nx_group(detector_group, 'detector_shape', 'NXsolid_geometry')
+        detector_shape_group = self.add_nx_group(detector_group, 'detector_shape', 'NXoff_geometry')
         self.add_dataset(detector_shape_group, 'vertices', vertices, {'units': self.length_units})
         self.add_dataset(detector_shape_group, 'quadrilaterals', quadrilaterals, {'vertices_per_face': 4})
         self.add_dataset(detector_shape_group, 'detector_faces', detector_faces)
