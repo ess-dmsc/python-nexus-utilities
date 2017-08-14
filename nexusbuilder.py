@@ -552,6 +552,7 @@ class NexusBuilder:
                 pixel_corner_positions = vertices[pixel_corner_indices]
 
                 if row_index != pixels_in_second_dimension and column_index != pixels_in_first_dimension:
+                    # Insert 4 at start of each face to indicate 4 vertices in the face (OFF format)
                     quadrilaterals.append(np.insert(pixel_corner_indices, 0, 4))
                     detector_faces.append([face_number, detector_ids[row_index, column_index]])
                     pixel_centre = np.mean(pixel_corner_positions, axis=0)
