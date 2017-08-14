@@ -316,7 +316,7 @@ class NexusBuilder:
         self.add_dataset(shape, 'vertices', vertices, {'units': self.length_units})
         self.add_dataset(shape, 'faces', faces)
         if detector_faces is not None:
-            self.add_dataset(shape, 'detector_vertices', detector_faces)
+            self.add_dataset(shape, 'detector_faces', detector_faces)
         return shape
 
     def add_tube_pixel(self, group, height, radius, axis, centre=None):
@@ -522,7 +522,7 @@ class NexusBuilder:
 
             vertices, faces = self.off_vertices_and_face_list_to_nexus(off_vertices, quadrilaterals)
 
-            self.__add_detector_shape(detector_group, vertices, faces, detector_faces)
+            self.add_shape(detector_group, 'detector_shape', vertices, faces, detector_faces)
             self.add_dataset(detector_group, 'detector_number', detector_ids)
             self.add_dataset(detector_group, 'x_pixel_offset', pixel_offsets[:, :, 0], {'units': self.length_units})
             self.add_dataset(detector_group, 'y_pixel_offset', pixel_offsets[:, :, 1], {'units': self.length_units})
@@ -536,13 +536,6 @@ class NexusBuilder:
             detector_number += 1
         total_detectors = detector_number - 1
         return total_detectors
-
-    def __add_detector_shape(self, detector_group, vertices, quadrilaterals, detector_faces):
-        detector_shape_group = self.add_nx_group(detector_group, 'detector_shape', 'NXoff_geometry')
-        self.add_dataset(detector_shape_group, 'vertices', vertices, {'units': self.length_units})
-        self.add_dataset(detector_shape_group, 'quadrilaterals', quadrilaterals, {'vertices_per_face': 4})
-        self.add_dataset(detector_shape_group, 'detector_faces', detector_faces)
-        return detector_shape_group
 
     @staticmethod
     def __create_quadrilaterals_dataset(pixels_in_first_dimension, pixels_in_second_dimension, detector_ids, vertices):
@@ -559,7 +552,7 @@ class NexusBuilder:
                 pixel_corner_positions = vertices[pixel_corner_indices]
 
                 if row_index != pixels_in_second_dimension and column_index != pixels_in_first_dimension:
-                    quadrilaterals.append(pixel_corner_indices)
+                    quadrilaterals.append(np.insert(pixel_corner_indices, 0, 4))
                     detector_faces.append([face_number, detector_ids[row_index, column_index]])
                     pixel_centre = np.mean(pixel_corner_positions, axis=0)
                     pixel_offsets[row_index, column_index] = pixel_centre
