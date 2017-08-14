@@ -306,17 +306,17 @@ class NexusBuilder:
         :param name: Name of the NXoff_geometry group
         :param vertices: 2D numpy array list of [x,y,z] coordinates of vertices
         :param faces: List with indices into the vertices dataset at the first vertex of each face
-        :param detector_faces: Optional 2D numpy array list of face number-detector id pairs
+        :param detector_faces: Optional array or list of face number-detector id pairs
         :return: NXoff_geometry group
         """
         if isinstance(group, str):
             group = self.root[group]
 
         shape = self.add_nx_group(group, name, 'NXoff_geometry')
-        self.add_dataset(shape, 'vertices', vertices, {'units': self.length_units})
-        self.add_dataset(shape, 'faces', faces)
+        self.add_dataset(shape, 'vertices', np.array(vertices).astype('float32'), {'units': self.length_units})
+        self.add_dataset(shape, 'faces', np.array(faces).astype('int32'))
         if detector_faces is not None:
-            self.add_dataset(shape, 'detector_faces', detector_faces)
+            self.add_dataset(shape, 'detector_faces', np.array(detector_faces).astype('int32'))
         return shape
 
     def add_tube_pixel(self, group, height, radius, axis, centre=None):
