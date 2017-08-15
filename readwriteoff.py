@@ -26,8 +26,12 @@ def parse_off_file(off_file):
     # number_of_edges = int(counts[2])
 
     off_vertices = np.zeros((number_of_vertices, 3), dtype=float)  # preallocate
-    for vertex_number in range(number_of_vertices):
-        off_vertices[vertex_number, :] = np.array(off_file.readline().split()).astype(float)
+    vertex_number = 0
+    while vertex_number < number_of_vertices:
+        line = off_file.readline()
+        if line[0] != '#':
+            off_vertices[vertex_number, :] = np.array(line.split()).astype(float)
+            vertex_number += 1
 
     faces_lines = off_file.readlines()
 
