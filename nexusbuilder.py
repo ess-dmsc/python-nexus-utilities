@@ -323,14 +323,14 @@ class NexusBuilder:
 
     def add_tube_pixel(self, group, height, radius, axis, centre=None):
         """
-        Construct an NXsolid_geometry description of a tube, using basic cylinder description
+        Construct an NXcylindrical_geometry description of a tube, using basic cylinder description
 
         :param group: Group to add the pixel geometry to
         :param height: Height of the tube
         :param radius: Radius of the tube
         :param axis: Axis of the tube as a unit vector
         :param centre: On-axis centre of the tube in form [x, y, z]
-        :return: NXsolid_geometry describing a single pixel
+        :return: NXcylindrical_geometry describing a single pixel
         """
         axis_unit, axis_mag = nexusutils.normalise(axis)
         if not np.isclose([axis_mag], [1.]):
@@ -343,13 +343,13 @@ class NexusBuilder:
         vector_c = centre + (axis * (height * 0.5))
         vector_b = radius * nexusutils.get_an_orthogonal_unit_vector(vector_a - vector_c)
         vertices = np.array([vector_a, vector_b, vector_c]).astype(float)
-        shape = self.add_nx_group(group, 'pixel_shape', 'NXsolid_geometry')
+        shape = self.add_nx_group(group, 'pixel_shape', 'NXcylindrical_geometry')
         self.add_dataset(shape, 'vertices', vertices, {'units': self.length_units})
         self.add_dataset(shape, 'cylinder', np.array([0, 1, 2]).astype('int32'))
 
     def add_tube_pixel_mesh(self, group, height, radius, axis, centre=None, number_of_vertices=50):
         """
-        Construct an NXsolid_geometry description of a tube, using the OFF-style description
+        Construct an NXoff_geometry description of a tube, using the OFF-style description
 
         :param group: Group to add the pixel geometry to
         :param height: Height of the tube
@@ -357,7 +357,7 @@ class NexusBuilder:
         :param axis: Axis of the tube as a unit vector
         :param centre: On-axis centre of the tube in form [x, y, z]
         :param number_of_vertices: Maximum number of vertices to use to describe pixel
-        :return: NXsolid_geometry describing a single pixel
+        :return: NXoff_geometry describing a single pixel
         """
         # Construct the geometry as if the tube axis is along x, rotate everything later
         if centre is None:
