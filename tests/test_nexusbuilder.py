@@ -4,7 +4,7 @@ import numpy as np
 from nexusbuilder import NexusBuilder
 
 
-def test_add_instrument():
+def test_add_instrument_results_in_instrument_in_file_with_specified_name():
     builder = NexusBuilder('test_output_file.hdf5', file_in_memory=True)
     instrument_name = 'TEST'
     builder.add_instrument(instrument_name)
@@ -13,7 +13,7 @@ def test_add_instrument():
     assert instrument_group['name'][...].astype(str) == instrument_name
 
 
-def test_add_source():
+def test_add_source_results_in_source_in_file_with_specified_name():
     builder = NexusBuilder('test_output_file.hdf5', file_in_memory=True)
     source_name = 'TEST_SOURCE'
     builder.add_instrument('TEST')
@@ -23,7 +23,7 @@ def test_add_source():
     assert source_group['name'][...].astype(str) == source_name
 
 
-def test_add_sample():
+def test_add_sample_results_in_sample_in_file_with_specified_location():
     builder = NexusBuilder('test_output_file.hdf5', file_in_memory=True)
     builder.add_instrument('TEST')
     sample_location = [1.0, 0.0, 0.0]

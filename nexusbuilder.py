@@ -6,6 +6,7 @@ import os
 import numpy as np
 from idfparser import IDFParser
 import nexusutils
+import readwriteoff
 
 logger = logging.getLogger('NeXus_Builder')
 logger.setLevel(logging.INFO)
@@ -298,53 +299,39 @@ class NexusBuilder:
             self.add_depends_on(detector_group, depends_on)
         return detector_group
 
-    def add_shape(self, group, name, vertices, faces, detector_faces=None):
+    def add_shape(self, group, name, vertices, off_faces, detector_faces=None):
         """
-        Add an NXsolid_geometry to define geometry in OFF-like format
+        Add an NXoff_geometry to define geometry in OFF-like format
 
-        :param group: Group or group name to add the NXsolid_geometry group to
-        :param name: Name of the NXsolid_geometry group
+        :param group: Group or group name to add the NXoff_geometry group to
+        :param name: Name of the NXoff_geometry group
         :param vertices: 2D numpy array list of [x,y,z] coordinates of vertices
-        :param faces: 2D numpy array list of vertex indices in each face, right-hand rule for face normal
-                      or a list of these where with an arrays for faces with different number of vertices
-        :param detector_faces: Optional 2D numpy array list of face number-detector id pairs
-        :return: NXsolid_geometry group
+        :param off_faces: OFF-style vertex indices for each face
+        :param detector_faces: Optional array or list of face number-detector id pairs
+        :return: NXoff_geometry group
         """
         if isinstance(group, str):
             group = self.root[group]
 
-        def polygon_names(number_of_sides):
-            if number_of_sides < 3:
-                raise ValueError('Polygon must have more than two sides in NexusBuilder.add_shape')
-            elif number_of_sides == 3:
-                return 'triangles'
-            elif number_of_sides == 4:
-                return 'quadrilaterals'
-            else:
-                return str(number_of_sides) + '-agons'
-
-        shape = self.add_nx_group(group, name, 'NXsolid_geometry')
-        self.add_dataset(shape, 'vertices', vertices, {'units': self.length_units})
-        if isinstance(faces, list):
-            for face_types in faces:
-                self.add_dataset(shape, polygon_names(face_types.shape[1]), face_types,
-                                 {'vertices_per_face': face_types.shape[1]})
-        else:
-            self.add_dataset(shape, polygon_names(faces.shape[1]), faces, {'vertices_per_face': faces.shape[1]})
+        vertex_indices, faces = self.create_off_face_vertex_map(off_faces)
+        shape = self.add_nx_group(group, name, 'NXoff_geometry')
+        self.add_dataset(shape, 'vertices', np.array(vertices).astype('float32'), {'units': self.length_units})
+        self.add_dataset(shape, 'vertex_indices', np.array(vertex_indices).astype('int32'))
+        self.add_dataset(shape, 'faces', np.array(faces).astype('int32'))
         if detector_faces is not None:
-            self.add_dataset(shape, 'detector_vertices', detector_faces)
+            self.add_dataset(shape, 'detector_faces', np.array(detector_faces).astype('int32'))
         return shape
 
     def add_tube_pixel(self, group, height, radius, axis, centre=None):
         """
-        Construct an NXsolid_geometry description of a tube, using basic cylinder description
+        Construct an NXcylindrical_geometry description of a tube, using basic cylinder description
 
         :param group: Group to add the pixel geometry to
         :param height: Height of the tube
         :param radius: Radius of the tube
         :param axis: Axis of the tube as a unit vector
         :param centre: On-axis centre of the tube in form [x, y, z]
-        :return: NXsolid_geometry describing a single pixel
+        :return: NXcylindrical_geometry describing a single pixel
         """
         axis_unit, axis_mag = nexusutils.normalise(axis)
         if not np.isclose([axis_mag], [1.]):
@@ -357,13 +344,13 @@ class NexusBuilder:
         vector_c = centre + (axis * (height * 0.5))
         vector_b = radius * nexusutils.get_an_orthogonal_unit_vector(vector_a - vector_c)
         vertices = np.array([vector_a, vector_b, vector_c]).astype(float)
-        shape = self.add_nx_group(group, 'pixel_shape', 'NXsolid_geometry')
+        shape = self.add_nx_group(group, 'pixel_shape', 'NXcylindrical_geometry')
         self.add_dataset(shape, 'vertices', vertices, {'units': self.length_units})
         self.add_dataset(shape, 'cylinder', np.array([0, 1, 2]).astype('int32'))
 
     def add_tube_pixel_mesh(self, group, height, radius, axis, centre=None, number_of_vertices=50):
         """
-        Construct an NXsolid_geometry description of a tube, using the OFF-style description
+        Construct an NXoff_geometry description of a tube, using the OFF-style description
 
         :param group: Group to add the pixel geometry to
         :param height: Height of the tube
@@ -371,7 +358,7 @@ class NexusBuilder:
         :param axis: Axis of the tube as a unit vector
         :param centre: On-axis centre of the tube in form [x, y, z]
         :param number_of_vertices: Maximum number of vertices to use to describe pixel
-        :return: NXsolid_geometry describing a single pixel
+        :return: NXoff_geometry describing a single pixel
         """
         # Construct the geometry as if the tube axis is along x, rotate everything later
         if centre is None:
@@ -403,8 +390,9 @@ class NexusBuilder:
         #                    |                     |
         #  circular boundary v                     v
         #
+        # face starts with the number of vertices in the face (4)
         faces = [
-            [nth_vertex, nth_vertex + num_points_at_each_tube_end, nth_vertex + num_points_at_each_tube_end + 1,
+            [4, nth_vertex, nth_vertex + num_points_at_each_tube_end, nth_vertex + num_points_at_each_tube_end + 1,
              nth_vertex + 1] for nth_vertex in range(num_points_at_each_tube_end - 1)]
         # Append the last rectangular face
         faces.append([num_points_at_each_tube_end - 1, (2 * num_points_at_each_tube_end) - 1,
@@ -469,37 +457,36 @@ class NexusBuilder:
 
     def add_shape_from_file(self, filename, group, name):
         """
-        Add an NXsolid_geometry shape definition from an OFF file
+        Add an NXoff_geometry shape definition from an OFF file
 
         :param filename: Name of the OFF file from which to get the geometry
-        :param group: Group to add the NXsolid_geometry to
-        :param name: Name of the NXsolid_geometry group to be created
-        :return: NXsolid_geometry group
+        :param group: Group to add the NXoff_geometry to
+        :param name: Name of the NXoff_geometry group to be created
+        :return: NXoff_geometry group
         """
         with open(filename) as off_file:
-            file_start = off_file.readline()
-            if file_start != 'OFF\n':
-                logger.error('OFF file is expected to start "OFF", actually started: ' + file_start)
-                return None
-            counts = off_file.readline().split()
-            number_of_vertices = int(counts[0])
-            # These values are also in the first line, although we don't need them:
-            # number_of_faces = int(counts[1])
-            # number_of_edges = int(counts[2])
+            off_vertices, all_faces = readwriteoff.parse_off_file(off_file)
+        return self.add_shape(group, name, off_vertices, all_faces)
 
-            vertices = np.zeros((number_of_vertices, 3), dtype=float)  # preallocate
-            for vertex_number in range(number_of_vertices):
-                vertices[vertex_number, :] = np.array(off_file.readline().split()).astype(float)
+    @staticmethod
+    def create_off_face_vertex_map(off_faces):
+        """
+        Avoid having a ragged edge faces dataset due to differing numbers of vertices in faces by recording
+        a flattened faces dataset (vertex_indices) and putting the start index for each face in that
+        into the faces dataset.
 
-            faces_lines = off_file.readlines()
-        all_faces = [np.array(face_line.split()).astype(int) for face_line in faces_lines]
-        # Set of each possible number of vertices in a face
-        vertices_in_faces = {each_face[0] for each_face in all_faces}
+        :param off_faces: OFF-style faces array, each row is number of vertices followed by vertex indices
+        :return: flattened array (vertex_indices) and the start indices in that (faces)
+        """
         faces = []
-        for vertices_in_face in vertices_in_faces:
-            faces.append(np.array([face[1:] for face in all_faces if face[0] == vertices_in_face], dtype='int32'))
-
-        return self.add_shape(group, name, vertices, faces)
+        vertex_indices = []
+        current_index = 0
+        for face in off_faces:
+            faces.append(current_index)
+            current_index += face[0]
+            for vertex_index in face[1:]:
+                vertex_indices.append(vertex_index)
+        return vertex_indices, faces
 
     def add_structured_detectors_from_idf(self):
         """
@@ -512,23 +499,23 @@ class NexusBuilder:
             # Put each one in an NXdetector
             detector_group = self.add_detector_minimal(detector['name'], detector_number)
 
-            vertices = self.idf_parser.get_structured_detector_vertices(detector['type_name'])
+            off_vertices = self.idf_parser.get_structured_detector_vertices(detector['type_name'])
 
             # There is one fewer pixel than vertex in each dimension because vertices mark the pixel corners
-            pixels_in_first_dimension = vertices.shape[0] - 1
-            pixels_in_second_dimension = vertices.shape[1] - 1
+            pixels_in_first_dimension = off_vertices.shape[0] - 1
+            pixels_in_second_dimension = off_vertices.shape[1] - 1
 
             # Reshape vertices into a 1D list
-            vertices = np.reshape(vertices, (vertices.shape[0] * vertices.shape[1], 3), order='F')
+            off_vertices = np.reshape(off_vertices, (off_vertices.shape[0] * off_vertices.shape[1], 3), order='F')
 
             detector_ids = self.__create_detector_ids_for_structured_detector(pixels_in_first_dimension,
                                                                               pixels_in_second_dimension, detector)
             quadrilaterals, detector_faces, pixel_offsets = self.__create_quadrilaterals_dataset(
                 pixels_in_first_dimension,
                 pixels_in_second_dimension,
-                detector_ids, vertices)
+                detector_ids, off_vertices)
 
-            self.__add_detector_shape(detector_group, vertices, quadrilaterals, detector_faces)
+            self.add_shape(detector_group, 'detector_shape', off_vertices, quadrilaterals, detector_faces)
             self.add_dataset(detector_group, 'detector_number', detector_ids)
             self.add_dataset(detector_group, 'x_pixel_offset', pixel_offsets[:, :, 0], {'units': self.length_units})
             self.add_dataset(detector_group, 'y_pixel_offset', pixel_offsets[:, :, 1], {'units': self.length_units})
@@ -542,13 +529,6 @@ class NexusBuilder:
             detector_number += 1
         total_detectors = detector_number - 1
         return total_detectors
-
-    def __add_detector_shape(self, detector_group, vertices, quadrilaterals, detector_faces):
-        detector_shape_group = self.add_nx_group(detector_group, 'detector_shape', 'NXsolid_geometry')
-        self.add_dataset(detector_shape_group, 'vertices', vertices, {'units': self.length_units})
-        self.add_dataset(detector_shape_group, 'quadrilaterals', quadrilaterals, {'vertices_per_face': 4})
-        self.add_dataset(detector_shape_group, 'detector_faces', detector_faces)
-        return detector_shape_group
 
     @staticmethod
     def __create_quadrilaterals_dataset(pixels_in_first_dimension, pixels_in_second_dimension, detector_ids, vertices):
@@ -565,7 +545,8 @@ class NexusBuilder:
                 pixel_corner_positions = vertices[pixel_corner_indices]
 
                 if row_index != pixels_in_second_dimension and column_index != pixels_in_first_dimension:
-                    quadrilaterals.append(pixel_corner_indices)
+                    # Insert 4 at start of each face to indicate 4 vertices in the face (OFF format)
+                    quadrilaterals.append(np.insert(pixel_corner_indices, 0, 4))
                     detector_faces.append([face_number, detector_ids[row_index, column_index]])
                     pixel_centre = np.mean(pixel_corner_positions, axis=0)
                     pixel_offsets[row_index, column_index] = pixel_centre
