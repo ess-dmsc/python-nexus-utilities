@@ -298,7 +298,7 @@ class NexusBuilder:
             self.add_depends_on(detector_group, depends_on)
         return detector_group
 
-    def add_shape(self, group, name, vertices, faces, detector_faces=None):
+    def add_shape(self, group, name, vertices, vertex_indices, faces, detector_faces=None):
         """
         Add an NXoff_geometry to define geometry in OFF-like format
 
@@ -314,6 +314,7 @@ class NexusBuilder:
 
         shape = self.add_nx_group(group, name, 'NXoff_geometry')
         self.add_dataset(shape, 'vertices', np.array(vertices).astype('float32'), {'units': self.length_units})
+        self.add_dataset(shape, 'vertex_indices', np.array(vertex_indices).astype('int32'))
         self.add_dataset(shape, 'faces', np.array(faces).astype('int32'))
         if detector_faces is not None:
             self.add_dataset(shape, 'detector_faces', np.array(detector_faces).astype('int32'))
@@ -477,21 +478,29 @@ class NexusBuilder:
 
             faces_lines = off_file.readlines()
         all_faces = [np.array(face_line.split()).astype(int) for face_line in faces_lines]
-        vertices, faces = self.off_vertices_and_face_list_to_nexus(off_vertices, all_faces)
+        vertex_indices, faces = self.create_off_face_vertex_map(all_faces)
 
-        return self.add_shape(group, name, vertices, faces)
+        return self.add_shape(group, name, off_vertices, vertex_indices, faces)
 
     @staticmethod
-    def off_vertices_and_face_list_to_nexus(off_vertices, off_faces):
+    def create_off_face_vertex_map(off_faces):
+        """
+        Avoid having a ragged edge faces dataset due to differing numbers of vertices in faces by recording
+        a flattened faces dataset (vertex_indices) and putting the start index for each face in that
+        into the faces dataset.
+
+        :param off_faces: OFF-style faces array, each row is number of vertices followed by vertex indices
+        :return: flattened array (vertex_indices) and the start indices in that (faces)
+        """
         faces = []
-        vertices = []
+        vertex_indices = []
         current_index = 0
         for face in off_faces:
             faces.append(current_index)
             current_index += face[0]
             for vertex_index in face[1:]:
-                vertices.append(off_vertices[vertex_index, :])
-        return vertices, faces
+                vertex_indices.append(vertex_index)
+        return vertex_indices, faces
 
     def add_structured_detectors_from_idf(self):
         """
@@ -520,9 +529,8 @@ class NexusBuilder:
                 pixels_in_second_dimension,
                 detector_ids, off_vertices)
 
-            vertices, faces = self.off_vertices_and_face_list_to_nexus(off_vertices, quadrilaterals)
-
-            self.add_shape(detector_group, 'detector_shape', vertices, faces, detector_faces)
+            vertex_indices, faces = self.create_off_face_vertex_map(quadrilaterals)
+            self.add_shape(detector_group, 'detector_shape', off_vertices, vertex_indices, faces, detector_faces)
             self.add_dataset(detector_group, 'detector_number', detector_ids)
             self.add_dataset(detector_group, 'x_pixel_offset', pixel_offsets[:, :, 0], {'units': self.length_units})
             self.add_dataset(detector_group, 'y_pixel_offset', pixel_offsets[:, :, 1], {'units': self.length_units})
