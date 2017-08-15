@@ -298,20 +298,21 @@ class NexusBuilder:
             self.add_depends_on(detector_group, depends_on)
         return detector_group
 
-    def add_shape(self, group, name, vertices, vertex_indices, faces, detector_faces=None):
+    def add_shape(self, group, name, vertices, off_faces, detector_faces=None):
         """
         Add an NXoff_geometry to define geometry in OFF-like format
 
         :param group: Group or group name to add the NXoff_geometry group to
         :param name: Name of the NXoff_geometry group
         :param vertices: 2D numpy array list of [x,y,z] coordinates of vertices
-        :param faces: List with indices into the vertices dataset at the first vertex of each face
+        :param off_faces: OFF-style vertex indices for each face
         :param detector_faces: Optional array or list of face number-detector id pairs
         :return: NXoff_geometry group
         """
         if isinstance(group, str):
             group = self.root[group]
 
+        vertex_indices, faces = self.create_off_face_vertex_map(off_faces)
         shape = self.add_nx_group(group, name, 'NXoff_geometry')
         self.add_dataset(shape, 'vertices', np.array(vertices).astype('float32'), {'units': self.length_units})
         self.add_dataset(shape, 'vertex_indices', np.array(vertex_indices).astype('int32'))
@@ -478,9 +479,8 @@ class NexusBuilder:
 
             faces_lines = off_file.readlines()
         all_faces = [np.array(face_line.split()).astype(int) for face_line in faces_lines]
-        vertex_indices, faces = self.create_off_face_vertex_map(all_faces)
 
-        return self.add_shape(group, name, off_vertices, vertex_indices, faces)
+        return self.add_shape(group, name, off_vertices, all_faces)
 
     @staticmethod
     def create_off_face_vertex_map(off_faces):
@@ -529,8 +529,7 @@ class NexusBuilder:
                 pixels_in_second_dimension,
                 detector_ids, off_vertices)
 
-            vertex_indices, faces = self.create_off_face_vertex_map(quadrilaterals)
-            self.add_shape(detector_group, 'detector_shape', off_vertices, vertex_indices, faces, detector_faces)
+            self.add_shape(detector_group, 'detector_shape', off_vertices, quadrilaterals, detector_faces)
             self.add_dataset(detector_group, 'detector_number', detector_ids)
             self.add_dataset(detector_group, 'x_pixel_offset', pixel_offsets[:, :, 0], {'units': self.length_units})
             self.add_dataset(detector_group, 'y_pixel_offset', pixel_offsets[:, :, 1], {'units': self.length_units})
