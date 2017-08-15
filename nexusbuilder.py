@@ -389,8 +389,9 @@ class NexusBuilder:
         #                    |                     |
         #  circular boundary v                     v
         #
+        # face starts with the number of vertices in the face (4)
         faces = [
-            [nth_vertex, nth_vertex + num_points_at_each_tube_end, nth_vertex + num_points_at_each_tube_end + 1,
+            [4, nth_vertex, nth_vertex + num_points_at_each_tube_end, nth_vertex + num_points_at_each_tube_end + 1,
              nth_vertex + 1] for nth_vertex in range(num_points_at_each_tube_end - 1)]
         # Append the last rectangular face
         faces.append([num_points_at_each_tube_end - 1, (2 * num_points_at_each_tube_end) - 1,
