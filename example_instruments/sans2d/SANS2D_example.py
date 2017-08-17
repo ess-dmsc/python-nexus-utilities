@@ -28,7 +28,6 @@ if __name__ == '__main__':
                                     ('raw_data_1/end_time', 'raw_data_1/end_time'),
                                     ('raw_data_1/run_cycle', 'raw_data_1/run_cycle'),
                                     ('raw_data_1/title', 'raw_data_1/title'),
-                                    ('raw_data_1/definition', 'raw_data_1/definition'),
                                     ('raw_data_1/detector_1_events',
                                      'raw_data_1/detector_1_events'),
                                     ('raw_data_1/detector_1_events/event_id',
