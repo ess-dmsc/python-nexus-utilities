@@ -313,10 +313,10 @@ class NexusBuilder:
         if isinstance(group, str):
             group = self.root[group]
 
-        vertex_indices, faces = self.create_off_face_vertex_map(off_faces)
+        winding_order, faces = self.create_off_face_vertex_map(off_faces)
         shape = self.add_nx_group(group, name, 'NXoff_geometry')
         self.add_dataset(shape, 'vertices', np.array(vertices).astype('float32'), {'units': self.length_units})
-        self.add_dataset(shape, 'vertex_indices', np.array(vertex_indices).astype('int32'))
+        self.add_dataset(shape, 'winding_order', np.array(winding_order).astype('int32'))
         self.add_dataset(shape, 'faces', np.array(faces).astype('int32'))
         if detector_faces is not None:
             self.add_dataset(shape, 'detector_faces', np.array(detector_faces).astype('int32'))
@@ -472,21 +472,21 @@ class NexusBuilder:
     def create_off_face_vertex_map(off_faces):
         """
         Avoid having a ragged edge faces dataset due to differing numbers of vertices in faces by recording
-        a flattened faces dataset (vertex_indices) and putting the start index for each face in that
+        a flattened faces dataset (winding_order) and putting the start index for each face in that
         into the faces dataset.
 
         :param off_faces: OFF-style faces array, each row is number of vertices followed by vertex indices
-        :return: flattened array (vertex_indices) and the start indices in that (faces)
+        :return: flattened array (winding_order) and the start indices in that (faces)
         """
         faces = []
-        vertex_indices = []
+        winding_order = []
         current_index = 0
         for face in off_faces:
             faces.append(current_index)
             current_index += face[0]
             for vertex_index in face[1:]:
-                vertex_indices.append(vertex_index)
-        return vertex_indices, faces
+                winding_order.append(vertex_index)
+        return winding_order, faces
 
     def add_structured_detectors_from_idf(self):
         """
