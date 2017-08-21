@@ -1,6 +1,7 @@
 import numpy as np
 import h5py
 from nxlogexample import create_nexus_file
+import matplotlib.pyplot as pl
 """
 This script shows how one can use the new "cue" features of NXlog and NXevent_data to extract a subset of the data
 """
@@ -14,9 +15,9 @@ if __name__ == '__main__':
     with h5py.File(filename, 'r') as nexus_file:
         # Inexplicably, my fictitious experiment involved a plant sample which rapidly grew during data collection
         # The plant's height was measured by an auxanometer and values are recorded in an NXlog in the file
-        plant_log = nexus_file.get('raw_data_1/auxanometer_1')
+        plant_log = nexus_file.get('raw_data_1/sample/auxanometer_1')
 
-        # Something particularly interesting happened between 500 and 850 seconds after the start of the experiment.
+        # Something particularly interesting happened between 832 and 846 seconds after the start of the experiment.
         # We therefore want to extract the plant height data for this period.
         # We could just read in all the timestamp data and then truncate them to the range of interest,
         # but there may be more data than fit in memory, or at least enough that finding where to truncate them is slow.
@@ -35,7 +36,7 @@ if __name__ == '__main__':
         cue_indices = plant_log['cue_index'][...]
 
         # We look up the positions in the full timestamp list where the cue timestamps are in our range of interest
-        range_start, range_end = 500, 850
+        range_start, range_end = 832, 846
         range_indices = cue_indices[np.append((range_start < cue_timestamps[1:]), [True]) &
                                     np.append([True], (range_end > cue_timestamps[:-1]))][[0, -1]]
 
@@ -47,3 +48,5 @@ if __name__ == '__main__':
         times_mask = (range_start <= times) & (times <= range_end)
         times = times[times_mask]
         values = values[times_mask]
+        pl.plot(times, values)
+        pl.show()

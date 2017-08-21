@@ -607,7 +607,7 @@ class NexusBuilder:
         monitor_group = self.add_nx_group(self.instrument, name, 'NXmonitor')
         # detector_id is not a monitor dataset in the standard...
         self.add_dataset(monitor_group, 'detector_id', int(detector_id))
-        transform_group = self.add_transformation_group(monitor_group)
+        transform_group = self.add_nx_group(monitor_group, 'transformations', 'NXtransformation')
         location_unit_vector, location_magnitude = nexusutils.normalise(location.astype(float))
         location = self.add_transformation(transform_group, 'translation', location_magnitude, units,
                                            location_unit_vector, name='location')
@@ -626,16 +626,6 @@ class NexusBuilder:
         if isinstance(dependee, h5py._hl.dataset.Dataset):
             dependee = str(dependee.name)
         return self.add_dataset(group, 'depends_on', dependee)
-
-    def add_transformation_group(self, group):
-        """
-        Add an NXtransformation group
-        :param group: Add NXtransformation to this group
-        :return: NXtransformation group
-        """
-        if isinstance(group, str):
-            group = self.root[group]
-        return self.add_nx_group(group, 'transformations', 'NXtransformation')
 
     def add_instrument(self, name, instrument_group_name='instrument'):
         """
@@ -725,7 +715,7 @@ class NexusBuilder:
         if position is None:
             position = np.array([0.0, 0.0, 0.0])
 
-        sample_transform_group = self.add_transformation_group('sample')
+        sample_transform_group = self.add_nx_group('sample', 'transformations', 'NXtransformation')
         self.add_dataset('sample', 'distance', position[2])
         position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
         sample_position = self.add_transformation(sample_transform_group, 'translation', position_magnitude,
@@ -748,8 +738,7 @@ class NexusBuilder:
         self.add_dataset(source_group, 'name', name)
         return source_group
 
-    @staticmethod
-    def add_nx_group(parent_group, group_name, nx_class_name):
+    def add_nx_group(self, parent_group, group_name, nx_class_name):
         """
         Add an NXclass group
 
@@ -758,6 +747,8 @@ class NexusBuilder:
         :param nx_class_name: Name of the NXclass
         :return:
         """
+        if isinstance(parent_group, str):
+            parent_group = self.root[parent_group]
         group_name = group_name.replace(' ', '_')
         created_group = parent_group.create_group(group_name)
         created_group.attrs.create('NX_class', np.array(nx_class_name).astype('|S' + str(len(nx_class_name))))
