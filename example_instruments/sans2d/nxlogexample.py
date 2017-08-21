@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from nexusbuilder import NexusBuilder
 import numpy as np
+from datetime import datetime
 
 
 def create_nexus_file(output_filename):
@@ -10,8 +11,10 @@ def create_nexus_file(output_filename):
 
     builder.add_instrument_geometry_from_idf()
     __add_nxlog(builder)
+    __copy_data_from_existing_file(builder)
 
-    # Copy data from the existing NeXus file to flesh out the example file
+
+def __copy_data_from_existing_file(builder):
     builder.add_user('Sans2d Team', 'ISIS, STFC')
     builder.copy_items(OrderedDict([('raw_data_1/instrument/moderator', 'raw_data_1/instrument/moderator'),
                                     ('raw_data_1/instrument/moderator/distance',
@@ -26,7 +29,6 @@ def create_nexus_file(output_filename):
                                     ('raw_data_1/end_time', 'raw_data_1/end_time'),
                                     ('raw_data_1/run_cycle', 'raw_data_1/run_cycle'),
                                     ('raw_data_1/title', 'raw_data_1/title'),
-                                    ('raw_data_1/definition', 'raw_data_1/definition'),
                                     ('raw_data_1/detector_1_events',
                                      'raw_data_1/detector_1_events'),
                                     ('raw_data_1/detector_1_events/event_id',
@@ -55,7 +57,7 @@ def create_nexus_file(output_filename):
 
 
 def __add_nxlog(builder):
-    number_of_cues = 10
+    number_of_cues = 1000
     time = 0.0
     index = 0
     cue_timestamps = []
@@ -63,7 +65,7 @@ def __add_nxlog(builder):
     times = np.array([])
     values = np.array([])
     for cue_number in range(number_of_cues):
-        number_of_samples = np.random.randint(10, 20)
+        number_of_samples = np.random.randint(10000, 20000)
         cue_timestamps.append(time)
         cue_indices.append(index)
         time += 200 + (np.random.rand() * 20)
@@ -71,15 +73,18 @@ def __add_nxlog(builder):
             values = np.hstack([values, np.sort(np.random.rand(number_of_samples) * 0.001) + values[-1]])
             times = np.hstack(
                 (
-                times, cue_timestamps[-1] + (np.sort(np.random.rand(number_of_samples)) * (time - cue_timestamps[-1]))))
+                    times,
+                    cue_timestamps[-1] + (np.sort(np.random.rand(number_of_samples)) * (time - cue_timestamps[-1]))))
         else:
             values = np.sort(np.random.rand(number_of_samples) * 0.001) + 0.21
             times = np.sort(np.random.rand(number_of_samples)) * time
         index += number_of_samples
 
-    # TODO Where should the NXlog group go?
-    data_group = builder.add_nx_group(builder.root, 'auxanometer_1', 'NXlog')
-    builder.add_dataset(data_group, 'time', times, {'units': 's'})
-    builder.add_dataset(data_group, 'value', values, {'units': 'cubits'})
-    builder.add_dataset(data_group, 'cue_timestamp_zero', cue_timestamps, {'units': 's'})
+    # Create an NXlog group in the sample group
+    iso_timestamp = datetime.now().isoformat()
+    data_group = builder.add_nx_group('/raw_data_1/sample/', 'auxanometer_1', 'NXlog')
+    builder.add_dataset(data_group, 'time', times.astype('float32'), {'units': 's', 'start': iso_timestamp})
+    builder.add_dataset(data_group, 'value', values.astype('float32'), {'units': 'cubits'})
+    builder.add_dataset(data_group, 'cue_timestamp_zero', np.array(cue_timestamps).astype('float32'),
+                        {'units': 's', 'start': iso_timestamp})
     builder.add_dataset(data_group, 'cue_index', np.array(cue_indices).astype('int32'))
