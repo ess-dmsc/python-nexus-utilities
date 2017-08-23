@@ -80,11 +80,6 @@ def __add_nxlog(builder):
             times = np.sort(np.random.rand(number_of_samples)) * time
         index += number_of_samples
 
-    # Create an NXlog group in the sample group
-    iso_timestamp = datetime.now().isoformat()
-    data_group = builder.add_nx_group('/raw_data_1/sample/', 'auxanometer_1', 'NXlog')
-    builder.add_dataset(data_group, 'time', times.astype('float32'), {'units': 's', 'start': iso_timestamp})
-    builder.add_dataset(data_group, 'value', values.astype('float32'), {'units': 'cubits'})
-    builder.add_dataset(data_group, 'cue_timestamp_zero', np.array(cue_timestamps).astype('float32'),
-                        {'units': 's', 'start': iso_timestamp})
-    builder.add_dataset(data_group, 'cue_index', np.array(cue_indices).astype('int32'))
+    start_timestamp = datetime.now()
+    builder.add_nx_log('/raw_data_1/sample/', 'auxanometer_1', start_timestamp, values, times, 'cubits', 's',
+                       cue_timestamps, cue_indices)
