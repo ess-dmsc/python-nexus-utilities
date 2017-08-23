@@ -652,7 +652,7 @@ class NexusBuilder:
                       'vector': vector,
                       'transformation_type': transformation_type,
                       'depends_on': depends_on,  # terminate chain with "." if no depends_on given
-                      'NXclass': 'NXtransformation'}
+                      'NX_class': 'NXtransformation'}
         if offset is not None:
             attributes['offset'] = offset
         if times is None:
@@ -789,3 +789,6 @@ class NexusBuilder:
                                                   np.array(attributes[key]).astype('|S' + str(len(attributes[key]))))
                 else:
                     dataset_or_group.attrs.create(key, np.array(attributes[key]))
+
+    def delete_dataset_or_group(self, dataset_or_group_name):
+        del self.root[dataset_or_group_name]
