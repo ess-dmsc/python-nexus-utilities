@@ -15,15 +15,17 @@ sudo apt install python3-tk
 
 Examples can be found in the `example_instruments` directory. Example scripts should be run from their own directory with the root directory of the repository in `PYTHONPATH` (IDEs such as PyCharm do this by default).
 
-- `SANS2D_example.py` - example using a NeXus file and Mantid instrument definition from the SANS2D instrument. This outputs a new NeXus file in the proposed new format and contains examples of using the proposed `NXsolid_geometry` group to describe pixel shape.
+- `SANS2D_example.py` example using a NeXus file and Mantid instrument definition from the SANS2D instrument. This outputs a new NeXus file in the proposed new format and contains examples of using the proposed `NXsolid_geometry` group to describe pixel shape.
 
-- `WISH_example` - geometry example using a Mantid IDF for the WISH instrument. This demonstrates conversion from a polar coordinates system and more complex geometry with many (10 panels x 152 tubes x 512 pixels) detector pixels.
+- `WISH_example` geometry example using a Mantid IDF for the WISH instrument. This demonstrates conversion from a polar coordinates system and more complex geometry with many (10 panels x 152 tubes x 512 pixels) detector pixels.
 
-- `LOKI_example.py` - geometry example using a Mantid IDF for the LOKI instrument. It contains an example of using an `NXsolid_geometry` group to describe the shape of entire detector panels. 
+- `LOKI_example.py` geometry example using a Mantid IDF for the LOKI instrument. It contains an example of using an `NXsolid_geometry` group to describe the shape of entire detector panels. 
 
-- `SANS2D_NXlog_example.py` - demonstrates how one can use the `cue` datasets in the new `NXevent_data` group or in the updated `NXlog` to extract data for a specific time period from the file.
+- `SANS2D_NXlog_example.py` demonstrates how one can use the `cue` datasets in the new `NXevent_data` group or in the updated `NXlog` to extract data for a specific time period from the file.
 
 - `all/` contains all current IDFs from Mantid. Running `parse_all.py` will attempt to convert all of these to the NeXus format. This is intended to help discover where the parser currently fails.
+
+- `SMALLFAKE_example` creates a small (~35 kB) NeXus file for a fake instrument with a few tube detectors.
 
 ## Tools
 
