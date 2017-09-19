@@ -342,7 +342,7 @@ class NexusBuilder:
             centre = np.array([0., 0., 0.])
         vector_a = centre - (axis * (height * 0.5))
         vector_c = centre + (axis * (height * 0.5))
-        vector_b = radius * nexusutils.get_an_orthogonal_unit_vector(vector_a - vector_c)
+        vector_b = (radius * nexusutils.get_an_orthogonal_unit_vector(vector_a - vector_c)) + vector_a
         vertices = np.array([vector_a, vector_b, vector_c]).astype(float)
         shape = self.add_nx_group(group, 'pixel_shape', 'NXcylindrical_geometry')
         self.add_dataset(shape, 'vertices', vertices, {'units': self.length_units})
