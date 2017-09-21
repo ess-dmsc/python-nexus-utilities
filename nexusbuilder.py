@@ -192,14 +192,15 @@ class NexusBuilder:
         if location is None and orientation is None:
             return
         translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
+        transform_group = self.add_group(detector_group, 'transformations', 'NXtransformations')
         if orientation is not None:
-            orientation_transformation = self.add_transformation(detector_group, 'rotation', orientation['angle'],
+            orientation_transformation = self.add_transformation(transform_group, 'rotation', orientation['angle'],
                                                                  'degrees', orientation['axis'], name='orientation')
-            location_transformation = self.add_transformation(detector_group, 'translation', translate_magnitude,
+            location_transformation = self.add_transformation(transform_group, 'translation', translate_magnitude,
                                                               self.length_units, translate_unit_vector, name='location',
                                                               depends_on=orientation_transformation)
         else:
-            location_transformation = self.add_transformation(detector_group, 'translation', translate_magnitude,
+            location_transformation = self.add_transformation(transform_group, 'translation', translate_magnitude,
                                                               self.length_units, translate_unit_vector, name='location')
         self.add_depends_on(detector_group, location_transformation)
 
@@ -546,15 +547,16 @@ class NexusBuilder:
     def __add_transformations_for_structured_detector(self, detector, detector_group):
         # Add position of detector
         translate_unit_vector, translate_magnitude = nexusutils.normalise(detector['location'])
+        transform_group = self.add_group(detector_group, 'transformations', 'NXtransformations')
         # Add orientation of detector
         if detector['orientation'] is not None:
             rotate_unit_vector, rotate_magnitude = nexusutils.normalise(detector['orientation']['axis'])
-            rotation = self.add_transformation(detector_group, 'rotation', detector['orientation']['angle'], 'degrees',
+            rotation = self.add_transformation(transform_group, 'rotation', detector['orientation']['angle'], 'degrees',
                                                rotate_unit_vector, name='orientation')
-            position = self.add_transformation(detector_group, 'translation', translate_magnitude, self.length_units,
+            position = self.add_transformation(transform_group, 'translation', translate_magnitude, self.length_units,
                                                translate_unit_vector, name='panel_position', depends_on=rotation)
         else:
-            position = self.add_transformation(detector_group, 'translation', translate_magnitude, self.length_units,
+            position = self.add_transformation(transform_group, 'translation', translate_magnitude, self.length_units,
                                                translate_unit_vector, name='panel_position')
         self.add_depends_on(detector_group, position)
 
@@ -591,7 +593,7 @@ class NexusBuilder:
         monitor_group = self.add_group(self.instrument, name, 'NXmonitor')
         # detector_id is not a monitor dataset in the standard...
         self.add_dataset(monitor_group, 'detector_id', int(detector_id))
-        transform_group = self.add_group(monitor_group, 'transformations', 'NXtransformation')
+        transform_group = self.add_group(monitor_group, 'transformations', 'NXtransformations')
         location_unit_vector, location_magnitude = nexusutils.normalise(location.astype(float))
         location = self.add_transformation(transform_group, 'translation', location_magnitude, units,
                                            location_unit_vector, name='location')
@@ -626,15 +628,14 @@ class NexusBuilder:
             self.add_dataset(self.instrument, 'name', name, {'short_name': name})
 
     def add_transformation(self, group, transformation_type, values, value_units, vector, offset=None,
-                           name='transformation', depends_on='.', times=None, time_units=None, cue_timestamps=None,
-                           cue_indices=None):
+                           name='transformation', depends_on='.'):
         """
         Add an NXtransformation
 
         :param time_units:
         :param cue_timestamps:
         :param cue_indices:
-        :param group: The group to add the translation to, for example an instrument component
+        :param group: The NXtransformations group to add the translation to
         :param transformation_type: "translation" or "rotation"
         :param values: Values to add to the dataset: distance to translate or angle to rotate
         :param value_units: Units for the dataset's values
@@ -651,20 +652,14 @@ class NexusBuilder:
         attributes = {'units': value_units,
                       'vector': vector,
                       'transformation_type': transformation_type,
-                      'depends_on': depends_on,  # terminate chain with "." if no depends_on given
-                      'NX_class': 'NXtransformation'}
+                      'depends_on': depends_on}  # terminate chain with "." if no depends_on given
         if offset is not None:
             attributes['offset'] = offset
-        if times is None:
-            transformation = self.add_dataset(group, name, values, attributes)
-        else:
-            transformation = self.add_group(group, name, 'NXtransformation', attributes)
-            self.add_nx_log(transformation, 'scan_log', datetime.now(), values, times, value_units, time_units,
-                            cue_timestamps, cue_indices)
+        transformation = self.add_dataset(group, name, values, attributes)
         return transformation
 
     def add_nx_log(self, parent_group, group_name, start_time, values, times, value_units, time_units,
-                   cue_timestamps=None, cue_indices=None):
+                   cue_timestamps=None, cue_indices=None, log_attributes=None):
         """
         Add an NXlog group
 
@@ -679,13 +674,14 @@ class NexusBuilder:
         :param cue_indices: Indices into the values/times datasets corresponding to the cue_timestamps
         :return:
         """
-        data_group = self.add_group(parent_group, group_name, 'NXlog')
+        data_group = self.add_group(parent_group, group_name, 'NXlog', log_attributes)
+        attributes = {'units': time_units, 'start': start_time.isoformat()}
         self.add_dataset(data_group, 'time', times.astype('float32'),
-                         {'units': time_units, 'start': start_time.isoformat()})
+                         attributes)
         self.add_dataset(data_group, 'value', values.astype('float32'), {'units': value_units})
         if cue_timestamps is not None and cue_timestamps is not None:
             self.add_dataset(data_group, 'cue_timestamp_zero', np.array(cue_timestamps).astype('float32'),
-                             {'units': 's', 'start': start_time.isoformat()})
+                             attributes)
             self.add_dataset(data_group, 'cue_index', np.array(cue_indices).astype('int32'))
 
     @staticmethod
@@ -739,7 +735,7 @@ class NexusBuilder:
         if position is None:
             position = np.array([0.0, 0.0, 0.0])
 
-        sample_transform_group = self.add_group('sample', 'transformations', 'NXtransformation')
+        sample_transform_group = self.add_group('sample', 'transformations', 'NXtransformations')
         self.add_dataset('sample', 'distance', position[2])
         position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
         sample_position = self.add_transformation(sample_transform_group, 'translation', position_magnitude,

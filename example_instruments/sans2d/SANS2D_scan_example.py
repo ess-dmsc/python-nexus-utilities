@@ -1,5 +1,6 @@
 from nexusbuilder import NexusBuilder
 import numpy as np
+from datetime import datetime
 
 if __name__ == '__main__':
     output_filename = 'SANS2D_scan_example.hdf5'
@@ -22,5 +23,10 @@ if __name__ == '__main__':
     # Our initial location will be the default location of the panel which was recorded from the IDF
     initial_location = '/raw_data_1/instrument/detector_1/location'
     vector = [1., 0., 0.]  # Move the panel along x axis: horizontal and perpendicular to beam direction
-    builder.add_transformation('/raw_data_1/instrument/detector_1', 'translation', scan_positions, scan_units, vector,
-                               None, 'position_scan', initial_location, scan_times, scan_time_units)
+    builder.add_nx_log('/raw_data_1/instrument/detector_1/transformations', 'translation_scan', datetime.now(),
+                       scan_positions, scan_times, scan_units,
+                       scan_time_units, log_attributes={'vector': vector, 'depends_on': initial_location,
+                                                        'transformation_type': 'translation'})
+    builder.delete_dataset_or_group('/raw_data_1/instrument/detector_1/depends_on')
+    builder.add_dataset('/raw_data_1/instrument/detector_1', 'depends_on',
+                        '/raw_data_1/instrument/detector_1/transformations/translation_scan')
