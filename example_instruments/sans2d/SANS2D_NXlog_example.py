@@ -1,7 +1,11 @@
 import numpy as np
 import h5py
 from nxlogexample import create_nexus_file
-import matplotlib.pyplot as pl
+try:
+    import matplotlib.pyplot as pl
+except:
+    pass
+
 """
 This script shows how one can use the new "cue" features of NXlog and NXevent_data to extract a subset of the data
 """
@@ -48,5 +52,8 @@ if __name__ == '__main__':
         times_mask = (range_start <= times) & (times <= range_end)
         times = times[times_mask]
         values = values[times_mask]
-        pl.plot(times, values)
-        pl.show()
+        try:
+            pl.plot(times, values)
+            pl.show()
+        except:
+            pass
