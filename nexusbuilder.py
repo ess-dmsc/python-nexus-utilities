@@ -682,10 +682,7 @@ class NexusBuilder:
         self.add_source(source_name)
         logger.info('a source called ' + source_name)
 
-        sample_position_list = self.idf_parser.get_sample_position()
-        sample_group = self.add_sample(sample_position_list)
-        logger.info('a sample at x=' + str(sample_position_list[0]) + ', y=' + str(sample_position_list[1]) + ', z=' +
-                    str(sample_position_list[2]) + ' offset from source')
+        self.add_sample()
 
         number_of_monitors = self.add_monitors_from_idf()
         if number_of_monitors != 0:
@@ -703,39 +700,37 @@ class NexusBuilder:
         detectors_added = (number_of_detectors + number_of_grid_detectors) > 0
         return detectors_added
 
-    def add_sample(self, position, name='sample'):
+    def add_sample(self, name='sample'):
         """
         Add an NXsample group
 
-        :param position: Distance along the beam from the source
         :param name: Name for the NXsample group
-        :return: The NXsample group and the sample position dataset
+        :return: The NXsample group
         """
         sample_group = self.add_nx_group(self.root, name, 'NXsample')
-        if position is None:
-            position = np.array([0.0, 0.0, 0.0])
-
-        sample_transform_group = self.add_nx_group('sample', 'transformations', 'NXtransformation')
-        self.add_dataset('sample', 'distance', position[2])
-        position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
-        sample_position = self.add_transformation(sample_transform_group, 'translation', position_magnitude,
-                                                  self.length_units,
-                                                  position_unit_vector, name='location')
-        self.add_depends_on(sample_group, sample_position)
         return sample_group
 
-    def add_source(self, name, group_name='source'):
+    def add_source(self, name, group_name='source', position=None):
         """
         Add an NXsource group
 
         :param name: Name of the source
         :param group_name: Name for the NXsource group
+        :param position: Position of the source relative to the sample
         :return: The NXsource group
         """
         if self.instrument is None:
             raise Exception('There needs to be an NXinstrument before you can add an NXsource')
         source_group = self.add_nx_group(self.instrument, group_name, 'NXsource')
         self.add_dataset(source_group, 'name', name)
+
+        if position is not None:
+            transform_group = self.add_nx_group(source_group, 'transformations', 'NXtransformations')
+            position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
+            source_position = self.add_transformation(transform_group, 'translation', position_magnitude,
+                                                      self.length_units, position_unit_vector, name='location')
+            self.add_depends_on(source_group, source_position)
+
         return source_group
 
     def add_nx_group(self, parent_group, group_name, nx_class_name):

@@ -5,7 +5,7 @@ class CoordinateTransformer:
     """
     Transform between IDF and NeXus, units and coordinates
     """
-    def __init__(self, angles_in_degrees=True, nexus_coords=None):
+    def __init__(self, angles_in_degrees=True, nexus_coords=None, origin=np.array([.0, .0, .0])):
         self.angles_in_degrees = angles_in_degrees
         if nexus_coords is None:
             nexus_coords = ['x', 'y', 'z']
@@ -15,6 +15,7 @@ class CoordinateTransformer:
         unsigned_nexus_coords = [coord[1:] if self.__is_negative(coord) else coord for coord in nexus_coords]
         self.nexus_coords_order = np.array([unsigned_nexus_coords.index('x'), unsigned_nexus_coords.index('y'),
                                             unsigned_nexus_coords.index('z')])
+        self.origin = np.array(origin)
 
     def get_angle_in_degrees(self, angle):
         """
@@ -25,19 +26,27 @@ class CoordinateTransformer:
         """
         return angle if self.angles_in_degrees else np.rad2deg(angle)
 
-    def get_nexus_coordinates(self, vector):
+    def __make_relative_to_origin(self, vector, top_level):
+        if top_level:
+            return vector - self.origin
+        else:
+            return vector
+
+    def get_nexus_coordinates(self, vector, top_level=False):
         """
         Convert vector in the IDF coordinate system to vector in the NeXus coordinate system
 
         :param vector: Vector in IDF coordinate system
         :return: Vector as a numpy array in the NeXus coordinate system
         """
-        vector = np.array(vector)  # Make sure vector is a numpy array
+        vector = np.array(vector)  # Ensure vector is a numpy array
         if self.default_coords:
-            return vector
+            vector = self.__make_relative_to_origin(vector, top_level)
         else:
             vector = np.multiply(vector, self.nexus_coords_signs)
-            return vector[self.nexus_coords_order]
+            vector = vector[self.nexus_coords_order]
+            vector = self.__make_relative_to_origin(vector, top_level)
+        return vector
 
     @staticmethod
     def __is_negative(direction):
