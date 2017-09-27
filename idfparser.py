@@ -414,7 +414,7 @@ class IDFParser:
             return self.__parse_cylinder(cylinder)
         else:
             if len(list(xml_type)) != 0:
-                raise UnknownPixelShapeError('pixel is not of known shape')
+                raise UnknownPixelShapeError()
 
     def __parse_cuboid(self, cuboid_xml):
         """
