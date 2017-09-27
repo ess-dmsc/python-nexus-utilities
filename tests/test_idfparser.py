@@ -30,12 +30,12 @@ def test_get_source_name_none():
     fake_idf_file.close()
 
 
-def test_get_sample_position():
+def test_sample_position_is_at_origin():
     test_sample = {'name': 'TEST_SAMPLE',
                    'position': [-0.54, 42.0, 0.48]}
     fake_idf_file = create_fake_idf_file(sample=test_sample)
     parser = IDFParser(fake_idf_file)
-    np.testing.assert_allclose(parser.get_sample_position(), test_sample['position'])
+    np.testing.assert_allclose(parser.get_sample_position(), np.array([0., 0., 0.]))
     fake_idf_file.close()
 
 

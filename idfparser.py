@@ -55,7 +55,7 @@ class IDFParser:
                 for xml_sample_component in self.root.findall('d:component', self.ns):
                     if xml_sample_component.get('type') == xml_type.get('name'):
                         location_type = xml_sample_component.find('d:location', self.ns)
-                        location = self.__get_vector(location_type)
+                        location = self.__get_vector(location_type, top_level=True)
                         if location is not None:
                             return location
                         else:
@@ -101,7 +101,7 @@ class IDFParser:
                                  'offsets': offsets,
                                  'idlist': detector_numbers,
                                  'sub_components': [bank_type_name],  # allows use of links in builder
-                                 'location': self.__get_vector(location),
+                                 'location': self.__get_vector(location, top_level=True),
                                  'orientation': self.__parse_facing_element(component)}
                 yield det_bank_info
 
@@ -123,7 +123,20 @@ class IDFParser:
                          0:y_pixels * idstep:idstep]
         return (x_2d + y_2d) + idstart
 
-    def __get_vector(self, xml_point):
+    def __get_vector(self, xml_point, top_level=False):
+        """
+        Get a numpy array vector from an IDF vector element
+
+        :param xml_point: The xml element defining the vector
+        :param top_level: If true this vector is relative to the coord system origin, not a parent component
+        :return: Numpy array of the vector
+        """
+        vector = self.__get_vector_without_transforming(xml_point)
+        if vector is not None:
+            return self.transform.get_nexus_coordinates(vector, top_level)
+        return None
+
+    def __get_vector_without_transforming(self, xml_point):
         x = xml_point.get('x')
         y = xml_point.get('y')
         z = xml_point.get('z')
@@ -143,8 +156,7 @@ class IDFParser:
             vector = np.array([self.__none_to_zero(x),
                                self.__none_to_zero(y),
                                self.__none_to_zero(z)]).astype(float)
-
-        return self.transform.get_nexus_coordinates(vector)
+        return vector
 
     def __get_pixel_names_and_shapes(self):
         pixels = []
@@ -154,7 +166,7 @@ class IDFParser:
                 pixels.append({'name': name, 'shape': self.__get_shape(xml_type)})
         return pixels
 
-    def __get_detector_offsets(self, xml_type):
+    def __get_detector_offsets(self, xml_type, top_level=False):
         """
         Gets list of locations from a detector component
 
@@ -164,7 +176,7 @@ class IDFParser:
         detector_offsets = []
         for child in xml_type:
             if child.tag == '{' + self.ns['d'] + '}location':
-                detector_offsets.append(self.__get_vector(child))
+                detector_offsets.append(self.__get_vector(child, top_level=top_level))
             elif child.tag == '{' + self.ns['d'] + '}locations':
                 for axis_number, axis in enumerate(['x', 'y', 'z']):
                     if child.get(axis):
@@ -337,10 +349,10 @@ class IDFParser:
                 name = xml_top_component.get('name')
                 if name is None:
                     name = str(uuid.uuid4())
-                self.__append_component(name, xml_top_component, components, search_type, searched_already)
+                self.__append_component(name, xml_top_component, components, search_type, searched_already, top_level=True)
 
-    def __append_component(self, name, xml_component, components, search_type, searched_already):
-        offsets = self.__get_detector_offsets(xml_component)
+    def __append_component(self, name, xml_component, components, search_type, searched_already, top_level=False):
+        offsets = self.__get_detector_offsets(xml_component, top_level=top_level)
         component = next((component for component in components if component['name'] == name), None)
         if component is not None:
             component['sub_components'].append(search_type)
@@ -456,7 +468,7 @@ class IDFParser:
         for xml_type in self.root.findall('d:component', self.ns):
             if xml_type.get('type') in structured_detector_names:
                 for location_type in xml_type:
-                    location = self.__get_vector(location_type)
+                    location = self.__get_vector(location_type, top_level=True)
                     angle = location_type.get('rot')
                     if angle is not None:
                         rotation = {'angle': float(location_type.get('rot')),
@@ -486,7 +498,7 @@ class IDFParser:
                 if type_name in all_monitor_type_names:
                     type_contains_monitors = True
                     for xml_location in xml_component.findall('d:location', self.ns):
-                        monitors.append({'name': xml_location.get('name'), 'location': self.__get_vector(xml_location),
+                        monitors.append({'name': xml_location.get('name'), 'location': self.__get_vector(xml_location, top_level=True),
                                          'type_name': type_name, 'id': None})
             if type_contains_monitors:
                 id_list = self.__get_monitor_idlist(xml_type.get('name'))
@@ -592,7 +604,27 @@ class IDFParser:
                 nexus_x = flip_axis(nexus_x)
 
         self.transform = CoordinateTransformer(angles_in_degrees=(angle_units == 'deg'),
-                                               nexus_coords=[nexus_x, nexus_y, nexus_z])
+                                               nexus_coords=[nexus_x, nexus_y, nexus_z],
+                                               origin=self.__get_idf_sample_position())
+
+    def __get_idf_sample_position(self):
+        """
+        The sample position for the NeXus file is the origin,
+        this method gets the sample position in the coordinate system of the IDF
+
+        :return: Numpy array of the sample position
+        """
+        sample_position = None
+        for xml_type in self.root.findall('d:type', self.ns):
+            if xml_type.get('is') == 'SamplePos':
+                for xml_sample_component in self.root.findall('d:component', self.ns):
+                    if xml_sample_component.get('type') == xml_type.get('name'):
+                        location_type = xml_sample_component.find('d:location', self.ns)
+                        if location_type is not None:
+                            sample_position = self.__get_vector_without_transforming(location_type)
+        if sample_position is None:
+            sample_position = np.array([.0, .0, .0])
+        return sample_position
 
     def __get_default_units(self):
         self.length_units = 'm'

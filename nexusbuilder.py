@@ -719,8 +719,7 @@ class NexusBuilder:
         self.add_dataset('sample', 'distance', position[2])
         position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
         sample_position = self.add_transformation(sample_transform_group, 'translation', position_magnitude,
-                                                  self.length_units,
-                                                  position_unit_vector, name='location')
+                                                  self.length_units, position_unit_vector, name='location')
         self.add_depends_on(sample_group, sample_position)
         return sample_group
 
