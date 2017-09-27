@@ -9,6 +9,14 @@ import uuid
 logger = logging.getLogger('NeXus_Builder')
 
 
+class NotFoundInIDFError(Exception):
+    pass
+
+
+class UnknownPixelShapeError(Exception):
+    pass
+
+
 class IDFParser:
     """
     Parses Mantid IDF files
@@ -60,7 +68,7 @@ class IDFParser:
                             return location
                         else:
                             return np.array([0.0, 0.0, 0.0])
-        raise Exception('SamplePos tag not found in IDF')
+        raise NotFoundInIDFError('SamplePos tag not found in IDF')
 
     def get_rectangular_detectors(self):
         """
@@ -220,8 +228,9 @@ class IDFParser:
                 if component['locations'][0][0] is None:
                     # We'll have to combine this with its subcomponent
                     if len(component['sub_components']) != 1:
-                        raise Exception('Top level detector component has no location defined and does not have one '
-                                        'sub component to use the location of.')
+                        raise NotFoundInIDFError(
+                            'Top level detector component has no location defined and does not have one '
+                            'sub component to use the location of.')
                     subcomponent_name = component['sub_components'][0]
                     subcomponent = next(
                         (component for component in components if component["name"] == subcomponent_name),
@@ -311,7 +320,7 @@ class IDFParser:
                     elif xml_id.get('val') is not None:
                         idlist.append(int(xml_id.get('val')))
                     else:
-                        raise Exception('Could not find IDs in idlist called "' + idname + '"')
+                        raise NotFoundInIDFError('Could not find IDs in idlist called "' + idname + '"')
         return idlist
 
     @staticmethod
@@ -349,7 +358,8 @@ class IDFParser:
                 name = xml_top_component.get('name')
                 if name is None:
                     name = str(uuid.uuid4())
-                self.__append_component(name, xml_top_component, components, search_type, searched_already, top_level=True)
+                self.__append_component(name, xml_top_component, components, search_type, searched_already,
+                                        top_level=True)
 
     def __append_component(self, name, xml_component, components, search_type, searched_already, top_level=False):
         offsets = self.__get_detector_offsets(xml_component, top_level=top_level)
@@ -404,7 +414,7 @@ class IDFParser:
             return self.__parse_cylinder(cylinder)
         else:
             if len(list(xml_type)) != 0:
-                raise Exception('pixel is not of known shape')
+                raise UnknownPixelShapeError('pixel is not of known shape')
 
     def __parse_cuboid(self, cuboid_xml):
         """
@@ -498,7 +508,8 @@ class IDFParser:
                 if type_name in all_monitor_type_names:
                     type_contains_monitors = True
                     for xml_location in xml_component.findall('d:location', self.ns):
-                        monitors.append({'name': xml_location.get('name'), 'location': self.__get_vector(xml_location, top_level=True),
+                        monitors.append({'name': xml_location.get('name'),
+                                         'location': self.__get_vector(xml_location, top_level=True),
                                          'type_name': type_name, 'id': None})
             if type_contains_monitors:
                 id_list = self.__get_monitor_idlist(xml_type.get('name'))
@@ -563,8 +574,8 @@ class IDFParser:
             xml_along_beam = xml_ref_frame.find('d:along-beam', self.ns)
             xml_up = xml_ref_frame.find('d:pointing-up', self.ns)
             if xml_along_beam is None or xml_up is None:
-                raise Exception('Expected "along-beam" and "pointing-up" to be specified '
-                                'in the default reference frame in the IDF')
+                raise NotFoundInIDFError('Expected "along-beam" and "pointing-up" to be specified '
+                                         'in the default reference frame in the IDF')
             nexus_y = xml_up.get('axis')
             nexus_z = xml_along_beam.get('axis')
             handedness = 'right'
