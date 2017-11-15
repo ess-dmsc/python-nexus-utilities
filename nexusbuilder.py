@@ -665,7 +665,7 @@ class NexusBuilder:
                       'vector': vector,
                       'transformation_type': transformation_type,
                       'depends_on': depends_on,  # terminate chain with "." if no depends_on given
-                      'NXclass': 'NXtransformation'}
+                      'NX_class': 'NXtransformation'}
         if offset is not None:
             attributes['offset'] = offset
         return self.add_dataset(group, name, values, attributes)
