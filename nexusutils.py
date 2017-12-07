@@ -1,5 +1,4 @@
 import numpy as np
-import cmath
 import logging
 
 """
@@ -7,6 +6,10 @@ Free-function utilities for use by the NexusBuilder
 """
 
 logger = logging.getLogger('NeXus_Builder')
+
+
+def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
+    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 
 def is_scalar(object_to_check):
@@ -74,7 +77,7 @@ def find_rotation_axis_and_angle_between_vectors(vector_a, vector_b):
     cross_prod = np.cross(vector_a, vector_b)
     unit_cross, mag_cross = normalise(cross_prod)
 
-    if cmath.isclose(mag_cross, 0.0):
+    if isclose(mag_cross, 0.0):
         raise NotImplementedError('No unique solution for rotation axis in '
                                   'nexusutils.find_rotation_axis_and_angle_between_vectors')
 
