@@ -640,6 +640,7 @@ class NexusBuilder:
             self.add_dataset(self.instrument, 'name', name, {'short_name': name[:3]})
         else:
             self.add_dataset(self.instrument, 'name', name, {'short_name': name})
+        return self.instrument
 
     def add_transformation(self, group, transformation_type, values, units, vector, offset=None, name='transformation',
                            depends_on='.'):
@@ -748,3 +749,16 @@ class NexusBuilder:
         created_group = parent_group.create_group(group_name)
         created_group.attrs.create('NX_class', np.array(nx_class_name).astype('|S' + str(len(nx_class_name))))
         return created_group
+
+    def add_features(self, feature_ids):
+        """
+        Add a dataset details which "features" the file contains (see https://github.com/nexusformat/features)
+
+        :param feature_ids: list of 64 bit integers or hex strings
+        :return:
+        """
+        feature_ids_int64 = [int(feature_id, 16) if isinstance(feature_id, str) else feature_id for feature_id in
+                             feature_ids]
+
+        features_dataset = self.add_dataset(self.root, "features", feature_ids_int64)
+        return features_dataset
