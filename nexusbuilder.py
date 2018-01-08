@@ -105,6 +105,9 @@ class NexusBuilder:
         if isinstance(group, str):
             group = self.root[group]
 
+        if name in group:
+            raise Exception(name + " dataset already exists, delete it before trying to create a new one")
+
         if isinstance(data, str):
             dataset = group.create_dataset(name, data=np.array(data).astype('|S' + str(len(data))))
         elif nexusutils.is_scalar(data):
