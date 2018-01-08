@@ -55,6 +55,7 @@ class NexusBuilder:
             self.idf_parser = None
             self.length_units = 'm'
         self.instrument = None
+        self.features = set()
 
     def get_root(self):
         return self.root
@@ -406,6 +407,7 @@ class NexusBuilder:
         return pixel_shape
 
     def __del__(self):
+        self.__add_features()
         # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
         try:
             self.source_file.close()
@@ -751,17 +753,40 @@ class NexusBuilder:
         group_name = group_name.replace(' ', '_')
         created_group = parent_group.create_group(group_name)
         created_group.attrs.create('NX_class', np.array(nx_class_name).astype('|S' + str(len(nx_class_name))))
+        self.add_feature_for_class(nx_class_name)
         return created_group
 
-    def add_features(self, feature_ids):
+    def add_feature_for_class(self, class_name):
         """
-        Add a dataset details which "features" the file contains (see https://github.com/nexusformat/features)
-
-        :param feature_ids: list of 64 bit integers or hex strings
-        :return:
+        If there is a feature (see https://github.com/nexusformat/features) corresponding to the added NX class
+        then append its feature id to the set of features
+        :param class_name:
         """
-        feature_ids_int64 = [int(feature_id, 16) if isinstance(feature_id, str) else feature_id for feature_id in
-                             feature_ids]
+        if class_name == "NXlog":
+            feature_id = "B051F43BC680C13B"
+        elif class_name == "NXevent_data":
+            feature_id = "ECB064453EDB096D"
+        elif class_name == "NXoff_geometry":
+            feature_id = "8CB1EBAE3B2DA51D"
+        elif class_name == "NXcite":
+            feature_id = "D1A0000000000002"
+        else:
+            return
+        self.add_feature(feature_id)
 
-        features_dataset = self.add_dataset(self.root, "features", feature_ids_int64)
-        return features_dataset
+    def __add_features(self):
+        """
+        Add a dataset which details which "features" the file contains (see https://github.com/nexusformat/features),
+        either features explicitly noted using add_feature or based on what NeXus classes have been added through
+        the builder
+        """
+        if self.features:
+            feature_ids_int64 = [int(feature_id, 16) if isinstance(feature_id, str) else feature_id for feature_id in
+                                 self.features]
+            self.add_dataset(self.root, "features", feature_ids_int64)
+
+    def add_feature(self, feature_id):
+        """
+        Add a feature id to the list of features present in the file, id is a hex string or integer
+        """
+        self.features.add(feature_id)
