@@ -12,6 +12,8 @@ def create_nexus_file(output_filename):
     builder.add_instrument_geometry_from_idf()
     __add_nxlog(builder)
     __copy_data_from_existing_file(builder)
+    nx_log_feature_id = "B051F43BC680C13B"
+    builder.add_features([nx_log_feature_id])
 
 
 def __copy_data_from_existing_file(builder):
