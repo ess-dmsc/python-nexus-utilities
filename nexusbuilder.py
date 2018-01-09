@@ -55,6 +55,10 @@ class NexusBuilder:
             self.idf_parser = None
             self.length_units = 'm'
         self.instrument = None
+        self.features = set()
+
+    def __enter__(self):
+        return self
 
     def get_root(self):
         return self.root
@@ -104,6 +108,9 @@ class NexusBuilder:
         """
         if isinstance(group, str):
             group = self.root[group]
+
+        if name in group:
+            raise Exception(name + " dataset already exists, delete it before trying to create a new one")
 
         if isinstance(data, str):
             dataset = group.create_dataset(name, data=np.array(data).astype('|S' + str(len(data))))
@@ -402,13 +409,12 @@ class NexusBuilder:
         pixel_shape = self.add_shape(group, 'pixel_shape', vertices, faces)
         return pixel_shape
 
-    def __del__(self):
-        # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
-        try:
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.__add_features()
+        if self.source_file is not None:
             self.source_file.close()
+        if self.target_file is not None:
             self.target_file.close()
-        except Exception:
-            pass
 
     def __add_nx_entry(self, nx_entry_name):
         entry_group = self.target_file.create_group(nx_entry_name)
@@ -486,6 +492,7 @@ class NexusBuilder:
             current_index += face[0]
             for vertex_index in face[1:]:
                 winding_order.append(vertex_index)
+        faces.append(current_index)
         return winding_order, faces
 
     def add_structured_detectors_from_idf(self):
@@ -640,6 +647,7 @@ class NexusBuilder:
             self.add_dataset(self.instrument, 'name', name, {'short_name': name[:3]})
         else:
             self.add_dataset(self.instrument, 'name', name, {'short_name': name})
+        return self.instrument
 
     def add_transformation(self, group, transformation_type, values, units, vector, offset=None, name='transformation',
                            depends_on='.'):
@@ -747,4 +755,40 @@ class NexusBuilder:
         group_name = group_name.replace(' ', '_')
         created_group = parent_group.create_group(group_name)
         created_group.attrs.create('NX_class', np.array(nx_class_name).astype('|S' + str(len(nx_class_name))))
+        self.add_feature_for_class(nx_class_name)
         return created_group
+
+    def add_feature_for_class(self, class_name):
+        """
+        If there is a feature (see https://github.com/nexusformat/features) corresponding to the added NX class
+        then append its feature id to the set of features
+        :param class_name:
+        """
+        if class_name == "NXlog":
+            feature_id = "B051F43BC680C13B"
+        elif class_name == "NXevent_data":
+            feature_id = "ECB064453EDB096D"
+        elif class_name == "NXoff_geometry":
+            feature_id = "8CB1EBAE3B2DA51D"
+        elif class_name == "NXcite":
+            feature_id = "D1A0000000000002"
+        else:
+            return
+        self.add_feature(feature_id)
+
+    def __add_features(self):
+        """
+        Add a dataset which details which "features" the file contains (see https://github.com/nexusformat/features),
+        either features explicitly noted using add_feature or based on what NeXus classes have been added through
+        the builder
+        """
+        if self.features:
+            feature_ids_int64 = [int(feature_id, 16) if isinstance(feature_id, str) else feature_id for feature_id in
+                                 self.features]
+            self.add_dataset(self.root, "features", feature_ids_int64)
+
+    def add_feature(self, feature_id):
+        """
+        Add a feature id to the list of features present in the file, id is a hex string or integer
+        """
+        self.features.add(feature_id)
