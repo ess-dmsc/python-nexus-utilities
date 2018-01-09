@@ -57,6 +57,9 @@ class NexusBuilder:
         self.instrument = None
         self.features = set()
 
+    def __enter__(self):
+        return self
+
     def get_root(self):
         return self.root
 
@@ -406,14 +409,12 @@ class NexusBuilder:
         pixel_shape = self.add_shape(group, 'pixel_shape', vertices, faces)
         return pixel_shape
 
-    def __del__(self):
+    def __exit__(self, exc_type, exc_value, traceback):
         self.__add_features()
-        # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
-        try:
+        if self.source_file is not None:
             self.source_file.close()
+        if self.target_file is not None:
             self.target_file.close()
-        except Exception:
-            pass
 
     def __add_nx_entry(self, nx_entry_name):
         entry_group = self.target_file.create_group(nx_entry_name)
@@ -491,6 +492,7 @@ class NexusBuilder:
             current_index += face[0]
             for vertex_index in face[1:]:
                 winding_order.append(vertex_index)
+        faces.append(current_index)
         return winding_order, faces
 
     def add_structured_detectors_from_idf(self):
