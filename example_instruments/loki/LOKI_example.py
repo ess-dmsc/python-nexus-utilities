@@ -12,5 +12,5 @@ if __name__ == '__main__':
         builder.add_dataset('/raw_data_1/', 'definition', 'TOFRAW',
                             {'url': 'http://definition.nexusformat.org/instruments/TOFRAW?version=1.0'})
 
-    plotter = DetectorPlotter(output_filename)
-    plotter.plot_pixel_positions()
+    with DetectorPlotter(output_filename) as plotter:
+        plotter.plot_pixel_positions()

@@ -53,5 +53,5 @@ if __name__ == '__main__':
                                          'raw_data_1/instrument/monitor4/time_of_flight'),
                                         ]))
 
-    plotter = DetectorPlotter(output_filename)
-    plotter.plot_pixel_positions()
+    with DetectorPlotter(output_filename) as plotter:
+        plotter.plot_pixel_positions()

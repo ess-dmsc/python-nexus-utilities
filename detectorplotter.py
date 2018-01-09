@@ -12,6 +12,13 @@ class DetectorPlotter:
     def __init__(self, nexus_filename):
         self.source_file = h5py.File(nexus_filename, 'r')
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.source_file is not None:
+            self.source_file.close()
+
     def plot_pixel_positions(self):
         instrument_group = self.source_file['/raw_data_1/instrument']
         detector_group_paths = []
@@ -92,10 +99,3 @@ class DetectorPlotter:
             else:
                 raise TypeError('Unrecognised transformation type in DetectorPlotter.__do_transformations')
         return offsets[0, :], offsets[1, :], offsets[2, :]
-
-    def __del__(self):
-        # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
-        try:
-            self.source_file.close()
-        except Exception:
-            pass

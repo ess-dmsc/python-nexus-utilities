@@ -8,5 +8,5 @@ if __name__ == '__main__':
                       compress_opts=1) as builder:
         builder.add_instrument_geometry_from_idf()
 
-    plotter = DetectorPlotter(output_filename)
-    plotter.plot_pixel_positions()
+    with DetectorPlotter(output_filename) as plotter:
+        plotter.plot_pixel_positions()
