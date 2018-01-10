@@ -73,14 +73,26 @@ class DetectorPlotter:
     @staticmethod
     def __get_transformation(transform, transformations):
         attributes = transform.attrs
+        offset = [0., 0., 0.]
+        if 'offset' in attributes:
+            offset = attributes['offset'].astype(float)
         if attributes['transformation_type'].astype(str) == 'translation':
             vector = attributes['vector'] * transform[...].astype(float)
-            transformations.append({'type': 'translation', 'matrix': vector})
-        if attributes['transformation_type'].astype(str) == 'rotation':
+            matrix = np.matrix([[1., 0., 0., vector[0] + offset[0]],
+                                [0., 1., 0., vector[1] + offset[1]],
+                                [0., 0., 1., vector[2] + offset[2]],
+                                [0., 0., 0., 1.]])
+            transformations.append(matrix)
+
+        elif attributes['transformation_type'].astype(str) == 'rotation':
             axis = attributes['vector']
             angle = np.deg2rad(transform[...])
             rotation_matrix = nexusutils.rotation_matrix_from_axis_and_angle(axis, angle)
-            transformations.append({'type': 'rotation', 'matrix': rotation_matrix})
+            matrix = np.matrix([[rotation_matrix[0, 0], rotation_matrix[0, 1], rotation_matrix[0, 2], offset[0]],
+                                [rotation_matrix[1, 0], rotation_matrix[1, 1], rotation_matrix[1, 2], offset[1]],
+                                [rotation_matrix[2, 0], rotation_matrix[2, 1], rotation_matrix[2, 2], offset[2]],
+                                [0., 0., 0., 1.]])
+            transformations.append(matrix)
         return attributes['depends_on']
 
     @staticmethod
@@ -89,13 +101,8 @@ class DetectorPlotter:
             x_offsets = np.reshape(x_offsets, (1, np.prod(x_offsets.shape)))
             y_offsets = np.reshape(y_offsets, (1, np.prod(x_offsets.shape)))
             z_offsets = np.reshape(z_offsets, (1, np.prod(x_offsets.shape)))
-        offsets = np.vstack((x_offsets, y_offsets, z_offsets))
-        # Transformations must be carried out in reverse order
+        offsets = np.matrix(np.vstack((x_offsets, y_offsets, z_offsets, np.ones(x_offsets.shape))))
         for transformation in reversed(transformations):
-            if transformation['type'] == 'translation':
-                offsets += np.expand_dims(transformation['matrix'], 1)
-            elif transformation['type'] == 'rotation':
-                offsets = np.dot(transformation['matrix'], offsets)
-            else:
-                raise TypeError('Unrecognised transformation type in DetectorPlotter.__do_transformations')
-        return offsets[0, :], offsets[1, :], offsets[2, :]
+            for column_index in range(offsets.shape[1]):
+                offsets[:, column_index] = transformation * np.matrix(offsets[:, column_index])
+        return offsets[0, :].A1, offsets[1, :].A1, offsets[2, :].A1
