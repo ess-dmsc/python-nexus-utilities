@@ -102,7 +102,7 @@ class DetectorPlotter:
             y_offsets = np.reshape(y_offsets, (1, np.prod(x_offsets.shape)))
             z_offsets = np.reshape(z_offsets, (1, np.prod(x_offsets.shape)))
         offsets = np.matrix(np.vstack((x_offsets, y_offsets, z_offsets, np.ones(x_offsets.shape))))
-        for transformation in reversed(transformations):
+        for transformation in transformations:
             for column_index in range(offsets.shape[1]):
                 offsets[:, column_index] = transformation * np.matrix(offsets[:, column_index])
         return offsets[0, :].A1, offsets[1, :].A1, offsets[2, :].A1
