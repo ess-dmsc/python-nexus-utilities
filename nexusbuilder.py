@@ -201,25 +201,21 @@ class NexusBuilder:
     def __add_detector_transformations(self, detector, detector_group):
         location = detector['location']
         orientation = detector['orientation']
-        if location is None and orientation is None:
+        if location is None:
             return
         translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
+        location_transformation = self.add_transformation(detector_group, 'translation',
+                                                          translate_magnitude,
+                                                          self.length_units, translate_unit_vector,
+                                                          name='location')
         if orientation is not None:
             orientation_transformation = self.add_transformation(detector_group, 'rotation',
                                                                  orientation['angle'],
                                                                  'degrees', orientation['axis'],
-                                                                 name='orientation')
-            location_transformation = self.add_transformation(detector_group, 'translation',
-                                                              translate_magnitude,
-                                                              self.length_units, translate_unit_vector,
-                                                              depends_on=orientation_transformation,
-                                                              name='location')
+                                                                 name='orientation', depends_on=location_transformation)
+            self.add_depends_on(detector_group, orientation_transformation)
         else:
-            location_transformation = self.add_transformation(detector_group, 'translation',
-                                                              translate_magnitude,
-                                                              self.length_units, translate_unit_vector,
-                                                              name='location')
-        self.add_depends_on(detector_group, location_transformation)
+            self.add_depends_on(detector_group, location_transformation)
 
     def add_monitors_from_idf(self):
         """
@@ -564,22 +560,20 @@ class NexusBuilder:
     def __add_transformations_for_structured_detector(self, detector, detector_group):
         # Add position of detector
         translate_unit_vector, translate_magnitude = nexusutils.normalise(detector['location'])
+        position = self.add_transformation(detector_group, 'translation', translate_magnitude,
+                                           self.length_units,
+                                           translate_unit_vector, name='panel_position')
         # Add orientation of detector
         if detector['orientation'] is not None:
             rotate_unit_vector, rotate_magnitude = nexusutils.normalise(detector['orientation']['axis'])
-            rotation = self.add_transformation(detector_group, 'rotation',
-                                               detector['orientation']['angle'],
-                                               'degrees',
-                                               rotate_unit_vector, name='orientation')
-            position = self.add_transformation(detector_group, 'translation', translate_magnitude,
-                                               self.length_units,
-                                               translate_unit_vector, name='panel_position',
-                                               depends_on=rotation)
+            orientation = self.add_transformation(detector_group, 'rotation',
+                                                  detector['orientation']['angle'],
+                                                  'degrees',
+                                                  rotate_unit_vector, name='orientation',
+                                                  depends_on=position)
+            self.add_depends_on(detector_group, orientation)
         else:
-            position = self.add_transformation(detector_group, 'translation', translate_magnitude,
-                                               self.length_units,
-                                               translate_unit_vector, name='panel_position')
-        self.add_depends_on(detector_group, position)
+            self.add_depends_on(detector_group, position)
 
     @staticmethod
     def __create_detector_ids_for_structured_detector(pixels_in_first_dimension, pixels_in_second_dimension, detector):
