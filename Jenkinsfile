@@ -46,8 +46,7 @@ node("docker") {
             try {
                 sh """docker exec ${container_name} bash -c \"
                     cd ${project}
-                    cd build_env/bin
-                    python pytest ../../ --ignore=../../build_env
+                    pytest . --ignore=build_env
                 \""""
                 }
                 catch(err) {
