@@ -1,47 +1,61 @@
-node('fedora && python3') {
-    // Use a virtualenv to prevent polluting the build server
-    def installed = fileExists 'bin/activate'
-    if (!installed) {
-        stage("Install Python Virtual Enviroment") {
-            sh 'virtualenv -p python3 --no-site-packages nexus_venv'
+project = "python_nexus_utils"
+
+centos = 'essdmscdm/centos.python-build-node:0.1.2'
+
+container_name = "${project}-${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
+
+node("docker") {
+    cleanWs()
+    dir("${project}") {
+        stage("Checkout") {
+            scm_vars = checkout scm
         }
     }
+    try {
+        image = docker.image(centos)
+            container = image.run("\
+                --name ${container_name} \
+                --tty \
+                --network=host \
+                --env http_proxy=${env.http_proxy} \
+                --env https_proxy=${env.https_proxy} \
+            ")
+        sh "docker cp ${project} ${container_name}:/home/jenkins/${project}"
+        sh """docker exec --user root ${container_name} bash -c \"
+            chown -R jenkins.jenkins /home/jenkins/${project}
+        \""""
 
-    // Get the latest version of the code
-    // The 'checkout scm' command will automatically pull down the code from the appropriate branch that triggered this build.
-    stage ("Get Latest Code") {
-        checkout scm
-    }
-
-    // Install dependencies in the virtualenv using pip
-    // cd into venv bin and use "python pip" to avoid path length problem
-    stage ("Install Application Dependencies") {
-        sh '''
-            source nexus_venv/bin/activate
-            cd nexus_venv/bin
-            export http_proxy=$http_proxy_not_overridden
-            export https_proxy=$http_proxy_not_overridden
-            python pip install -r ../../requirements.txt
-            python pip install pytest
-            deactivate
-           '''
-    }
-
-    // Run unit tests
-    // python pytest ... is again to avoid path length problems and also to ignore the venv directory
-    stage ("Run Unit/Integration Tests") {
-        def testsError = null
-        try {
-            sh '''
-                source nexus_venv/bin/activate
-                cd nexus_venv/bin
-                python pytest ../../ --ignore=../../nexus_venv
-                deactivate
-               '''
+        stage("Create virtualenv") {
+            sh """docker exec ${container_name} bash -c \"
+                cd ${project}
+                python3.6 -m venv build_env
+            \""""
         }
-        catch(err) {
-            testsError = err
-            currentBuild.result = 'FAILURE'
+
+        stage("Install requirements") {
+            sh """docker exec ${container_name} bash -c \"
+                cd ${project}
+                build_env/bin/pip --proxy ${http_proxy} install --upgrade pip
+                build_env/bin/pip --proxy ${http_proxy} install -r requirements.txt
+                build_env/bin/pip --proxy ${http_proxy} install pytest
+            \""""
         }
+
+        stage("Run tests") {
+            def testsError = null
+            try {
+                sh """docker exec ${container_name} bash -c \"
+                    cd ${project}
+                    cd build_env/bin
+                    python pytest ../../ --ignore=../../build_env
+                \""""
+                }
+                catch(err) {
+                    testsError = err
+                    currentBuild.result = 'FAILURE'
+                }
+        }
+    } finally {
+        container.stop()
     }
 }
