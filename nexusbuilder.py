@@ -8,7 +8,7 @@ from idfparser import IDFParser
 import nexusutils
 import readwriteoff
 
-logger = logging.getLogger('NeXus_Builder')
+logger = logging.getLogger('NeXus_Utils')
 logger.setLevel(logging.INFO)
 console = logging.StreamHandler()
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')

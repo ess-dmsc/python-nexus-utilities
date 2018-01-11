@@ -6,7 +6,7 @@ import nexusutils
 import itertools
 import uuid
 
-logger = logging.getLogger('NeXus_Builder')
+logger = logging.getLogger('NeXus_Utils')
 
 
 class NotFoundInIDFError(Exception):

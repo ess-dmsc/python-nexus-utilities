@@ -1,7 +1,7 @@
 import numpy as np
 import logging
 
-logger = logging.getLogger('NeXus_Builder')
+logger = logging.getLogger('NeXus_Utils')
 
 
 def parse_off_file(off_file):
@@ -37,3 +37,34 @@ def parse_off_file(off_file):
 
     all_faces = [np.array(face_line.split()).astype(int) for face_line in faces_lines if face_line[0] != '#']
     return off_vertices, all_faces
+
+
+def write_off_file(filename, vertices, faces, winding_order):
+    """
+    Create an OFF format file
+
+    :param filename: Name for the OFF file to output
+    :param vertices: 2D array contains x, y, z coords for each vertex
+    :param faces: 1D array indexing into winding_order at the start of each face
+    :param winding_order: 1D array of vertex indices in the winding order for each face
+    """
+    number_of_vertices = len(vertices)
+    number_of_faces = len(faces) - 1
+    # According to OFF standard the number of edges must be present but does not need to be correct
+    number_of_edges = 0
+    with open(filename, 'wb') as off_file:
+        off_file.write('OFF\n'.encode('utf8'))
+        off_file.write('# NVertices NFaces NEdges\n'.encode('utf8'))
+        off_file.write('{} {} {}\n'.format(number_of_vertices, number_of_faces, number_of_edges).encode('utf8'))
+
+        off_file.write('# Vertices\n'.encode('utf8'))
+        np.savetxt(off_file, vertices, fmt='%f', delimiter=" ")
+
+        off_file.write('# Faces\n'.encode('utf8'))
+        previous_index = 0
+        for face in faces[1:]:
+            verts_in_face = winding_order[previous_index:face]
+            fmt_str = '{} ' * len(verts_in_face)
+            fmt_str = fmt_str[:-1] + '\n'
+            off_file.write(fmt_str.format(*verts_in_face).encode('utf8'))
+            previous_index = face
