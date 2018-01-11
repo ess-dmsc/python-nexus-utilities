@@ -51,5 +51,5 @@ def nexus_geometry_to_off_file(nexus_filename, off_filename):
 
 if __name__ == '__main__':
     from drawoff import render_off_from_file
-    nexus_geometry_to_off_file("example_instruments/teapot/example_nx_geometry.nxs", "output_OFF_file.off")
+    nexus_geometry_to_off_file("example_instruments/off_files/example_nx_geometry.nxs", "output_OFF_file.off")
     render_off_from_file('output_OFF_file.off')
