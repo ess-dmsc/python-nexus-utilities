@@ -7,3 +7,6 @@ pyparsing
 tables
 matplotlib
 tabulate
+
+--extra-index-url https://archive.panda3d.org/
+panda3d

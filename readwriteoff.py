@@ -17,7 +17,7 @@ def parse_off_file(off_file):
         return None
     line = off_file.readline()
     # Skip any comment lines
-    while line[0] == '#':
+    while line[0] == '#' or line == '\n':
         line = off_file.readline()
     counts = line.split()
     number_of_vertices = int(counts[0])
@@ -29,7 +29,7 @@ def parse_off_file(off_file):
     vertex_number = 0
     while vertex_number < number_of_vertices:
         line = off_file.readline()
-        if line[0] != '#':
+        if line[0] != '#' and line != '\n':
             off_vertices[vertex_number, :] = np.array(line.split()).astype(float)
             vertex_number += 1
 
@@ -64,7 +64,7 @@ def write_off_file(filename, vertices, faces, winding_order):
         previous_index = 0
         for face in faces[1:]:
             verts_in_face = winding_order[previous_index:face]
-            fmt_str = '{} ' * len(verts_in_face)
+            fmt_str = '{} ' * (len(verts_in_face) + 1)
             fmt_str = fmt_str[:-1] + '\n'
-            off_file.write(fmt_str.format(*verts_in_face).encode('utf8'))
+            off_file.write(fmt_str.format(len(verts_in_face), *verts_in_face).encode('utf8'))
             previous_index = face
