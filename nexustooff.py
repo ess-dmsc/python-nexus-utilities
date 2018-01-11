@@ -32,18 +32,17 @@ def nexus_geometry_to_off_file(nexus_filename, off_filename):
     faces = None
     winding_order = None
     for group in geometry_groups:
-        if faces:
-            faces = group['faces'][...] + winding_order.size
+        if faces is not None:
+            faces = np.concatenate((faces, group['faces'][...] + winding_order.size))
         else:
             faces = group['faces'][...]
 
-        if winding_order:
-            # TODO shape[1] or shape[0]? (the answer not equal to 3)
-            winding_order = group['winding_order'][...] + vertices.shape[1]
+        if winding_order is not None:
+            winding_order = np.concatenate((winding_order, group['winding_order'][...] + vertices.shape[0]))
         else:
             winding_order = group['winding_order'][...]
 
-        if vertices:
+        if vertices is not None:
             vertices = np.vstack((vertices, group['vertices'][...]))
         else:
             vertices = group['vertices'][...]

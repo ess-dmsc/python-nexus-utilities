@@ -4,12 +4,18 @@ from panda3d.core import GeomVertexFormat, GeomVertexData
 from panda3d.core import Geom, GeomTriangles, GeomVertexWriter
 from panda3d.core import Texture, GeomNode
 from panda3d.core import TextNode
+from pandac.PandaModules import WindowProperties
 import readwriteoff
 import random
 
 base = ShowBase()
 
-# Move the start camera position away from 0,0,0 so that we see something
+#Rename window
+props = WindowProperties()
+props.setTitle('Instrument View')
+base.win.requestProperties(props)
+
+# Move the initial camera position away from 0,0,0 so that we see something
 base.trackball.node().setPos(0, 20, 0)
 
 title = OnscreenText(text="F3 - toggle wireframe\nF4 - reset view",

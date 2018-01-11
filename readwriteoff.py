@@ -34,8 +34,10 @@ def parse_off_file(off_file):
             vertex_number += 1
 
     faces_lines = off_file.readlines()
-
-    all_faces = [np.array(face_line.split()).astype(int) for face_line in faces_lines if face_line[0] != '#']
+    # Only keep the first value (number of vertex indices in face) plus the number of vertices.
+    # There may be other numbers following it to define a colour for the face, which we don't want to keep
+    all_faces = [np.array(face_line.split()[:(int(face_line.split()[0]) + 1)]).astype(int) for face_line in faces_lines
+                 if face_line[0] != '#']
     return off_vertices, all_faces
 
 
