@@ -2,6 +2,7 @@ import numpy as np
 import h5py
 import logging
 from readwriteoff import write_off_file
+from detectorplotter import get_transformations, do_transformations
 
 logger = logging.getLogger('NeXus_Utils')
 
@@ -18,6 +19,23 @@ def find_geometry_groups(nexus_file):
     return hits
 
 
+def get_vertices(group, nexus_file):
+    vertices = group['vertices'][...]
+    transformations = list()
+    try:
+        depends_on = group.parent.get('depends_on')
+    except:
+        depends_on = '.'
+    get_transformations(depends_on, transformations, nexus_file)
+
+    vertices = np.matrix(vertices.T)
+    # Add fourth element of 1 to each vertex, indicating these are positions not direction vectors
+    vertices = np.matrix(np.vstack((vertices, np.ones(vertices.shape[1]))))
+    vertices = do_transformations(transformations, vertices)
+    # Now the transformations are done we do not need the 4th element
+    return vertices[:3, :].T
+
+
 def nexus_geometry_to_off_file(nexus_filename, off_filename):
     """
 
@@ -32,6 +50,7 @@ def nexus_geometry_to_off_file(nexus_filename, off_filename):
     faces = None
     winding_order = None
     for group in geometry_groups:
+        group_vertices = get_vertices(group, nexus_file)
         if faces is not None:
             faces = np.concatenate((faces, group['faces'][...] + winding_order.size))
         else:
@@ -43,13 +62,14 @@ def nexus_geometry_to_off_file(nexus_filename, off_filename):
             winding_order = group['winding_order'][...]
 
         if vertices is not None:
-            vertices = np.vstack((vertices, group['vertices'][...]))
+            vertices = np.vstack((vertices, group_vertices))
         else:
-            vertices = group['vertices'][...]
+            vertices = group_vertices
     write_off_file(off_filename, vertices, faces, winding_order)
 
 
 if __name__ == '__main__':
     from drawoff import render_off_from_file
-    nexus_geometry_to_off_file("example_instruments/off_files/example_nx_geometry.nxs", "output_OFF_file.off")
+    #nexus_geometry_to_off_file("example_instruments/off_files/example_nx_geometry.nxs", "output_OFF_file.off")
+    nexus_geometry_to_off_file("example_instruments/loki/LOKI_example_gzip.hdf5", "output_OFF_file.off")
     render_off_from_file('output_OFF_file.off')

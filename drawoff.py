@@ -2,7 +2,7 @@ from direct.showbase.ShowBase import ShowBase
 from direct.gui.DirectGui import *
 from panda3d.core import GeomVertexFormat, GeomVertexData
 from panda3d.core import Geom, GeomTriangles, GeomVertexWriter
-from panda3d.core import Texture, GeomNode
+from panda3d.core import GeomNode
 from panda3d.core import TextNode
 from pandac.PandaModules import WindowProperties
 import readwriteoff
@@ -46,6 +46,7 @@ def render_off_vertex_and_face_arrays(vertices, faces):
     for vert in vertices:
         vertex.addData3(vert[0], vert[1], vert[2])
         # color.addData4f(random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1))
+        color.addData4f(.8, .8, .8, .8)
     tris = GeomTriangles(Geom.UHDynamic)
     for triangle in triangles:
         tris.addVertices(triangle[0], triangle[1], triangle[2])
@@ -55,6 +56,11 @@ def render_off_vertex_and_face_arrays(vertices, faces):
     snode.addGeom(off_object)
 
     offobj = render.attachNewNode(snode)
+
+    # Our OFF is defined with y as vertical axis, z as beam direction and x as the other horizontal axis
+    # Rotate it to match panda3d's expectation of z as vertical
+    offobj.setHpr(0.0, 90.0, 0.0)
+
     # offobj.hprInterval(20, (360, 360, 360)).loop()
 
     # OpenGl by default only draws "front faces" (polygons whose vertices are

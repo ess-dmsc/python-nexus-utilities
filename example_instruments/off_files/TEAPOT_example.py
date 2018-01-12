@@ -6,4 +6,5 @@ with NexusBuilder(output_filename, compress_type='gzip', compress_opts=1) as bui
     builder.add_shape_from_file("teapot.off", instrument_group, "shape")
     # Add an icosahedral sample
     sample_group = builder.add_sample("sample")
-    builder.add_shape_from_file("icosa.off", sample_group, "shape")
+    # builder.add_shape_from_file("icosa.off", sample_group, "shape")
+    builder.add_shape_from_file("death_star.off", sample_group, "shape")
