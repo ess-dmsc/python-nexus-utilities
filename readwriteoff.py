@@ -1,5 +1,6 @@
 import numpy as np
 import logging
+from nexusutils import find_rotation_matrix_between_vectors
 
 logger = logging.getLogger('NeXus_Utils')
 
@@ -70,3 +71,80 @@ def write_off_file(filename, vertices, faces, winding_order):
             fmt_str = fmt_str[:-1] + '\n'
             off_file.write(fmt_str.format(len(verts_in_face), *verts_in_face).encode('utf8'))
             previous_index = face
+
+
+def create_off_face_vertex_map(off_faces):
+    """
+    Avoid having a ragged edge faces dataset due to differing numbers of vertices in faces by recording
+    a flattened faces dataset (winding_order) and putting the start index for each face in that
+    into the faces dataset.
+
+    :param off_faces: OFF-style faces array, each row is number of vertices followed by vertex indices
+    :return: flattened array (winding_order) and the start indices in that (faces)
+    """
+    faces = []
+    winding_order = []
+    current_index = 0
+    for face in off_faces:
+        faces.append(current_index)
+        current_index += face[0]
+        for vertex_index in face[1:]:
+            winding_order.append(vertex_index)
+    faces.append(current_index)
+    return np.array(winding_order), np.array(faces)
+
+
+def construct_cylinder_mesh(height, radius, axis, centre=None, number_of_vertices=50):
+    """
+    Construct an NXoff_geometry description of a cylinder
+
+    :param height: Height of the tube
+    :param radius: Radius of the tube
+    :param axis: Axis of the tube as a unit vector
+    :param centre: On-axis centre of the tube in form [x, y, z]
+    :param number_of_vertices: Maximum number of vertices to use to describe pixel
+    :return: vertices and faces (corresponding to OFF description)
+    """
+    # Construct the geometry as if the tube axis is along x, rotate everything later
+    if centre is None:
+        centre = [0, 0, 0]
+    face_centre = [centre[0] - (height / 2.0), centre[1], centre[2]]
+    angles = np.linspace(0, 2 * np.pi, np.floor((number_of_vertices / 2) + 1))
+    # The last point is the same as the first so get rid of it
+    angles = angles[:-1]
+    y = face_centre[1] + radius * np.cos(angles)
+    z = face_centre[2] + radius * np.sin(angles)
+    num_points_at_each_tube_end = len(y)
+    vertices = np.concatenate((
+        np.array(list(zip(np.zeros(len(y)) + face_centre[0], y, z))),
+        np.array(list(zip(np.ones(len(y)) * height + face_centre[0], y, z)))))
+
+    # Rotate vertices to correct the tube axis
+    try:
+        rotation_matrix = find_rotation_matrix_between_vectors(np.array(axis), np.array([1., 0., 0.]))
+    except:
+        rotation_matrix = None
+    if rotation_matrix is not None:
+        vertices = rotation_matrix.dot(vertices.T).T
+
+    #
+    # points around left circle tube-end       points around right circle tube-end
+    #                                          (these follow the left ones in vertices list)
+    #  circular boundary ^                     ^
+    #                    |                     |
+    #     nth_vertex + 2 .                     . nth_vertex + num_points_at_each_tube_end + 2
+    #     nth_vertex + 1 .                     . nth_vertex + num_points_at_each_tube_end + 1
+    #     nth_vertex     .                     . nth_vertex + num_points_at_each_tube_end
+    #                    |                     |
+    #  circular boundary v                     v
+    #
+    # face starts with the number of vertices in the face (4)
+    faces = [
+        [4, nth_vertex, nth_vertex + num_points_at_each_tube_end, nth_vertex + num_points_at_each_tube_end + 1,
+         nth_vertex + 1] for nth_vertex in range(num_points_at_each_tube_end - 1)]
+    # Append the last rectangular face
+    faces.append([4, num_points_at_each_tube_end - 1, (2 * num_points_at_each_tube_end) - 1,
+                  num_points_at_each_tube_end, 0])
+    # NB this is a tube, not a cylinder; I'm not adding the circular faces on the ends of the tube
+    faces = np.array(faces)
+    return vertices, faces
