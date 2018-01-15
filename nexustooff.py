@@ -9,6 +9,12 @@ logger = logging.getLogger('NeXus_Utils')
 
 
 def find_geometry_groups(nexus_file):
+    """
+    Find all kinds of group containing geometry information
+
+    :param nexus_file: NeXus file input
+    :return: list of geometry groups
+    """
     hits = []
 
     def _visit_groups(name, obj):
@@ -21,6 +27,13 @@ def find_geometry_groups(nexus_file):
 
 
 def get_off_geometry_from_group(group, nexus_file):
+    """
+    Get geometry information from an NXoff_geometry group
+
+    :param group:  NXoff_geometry group
+    :param nexus_file: NeXus file containing the group
+    :return: vertices, faces and winding_order information from the group
+    """
     vertices = group['vertices'][...]
     vertices = get_and_apply_transformations(group, nexus_file, vertices)
     return vertices, group['faces'][...], group['winding_order'][...]
@@ -43,6 +56,13 @@ def get_and_apply_transformations(geometry_group, nexus_file, vertices):
 
 
 def get_cylindrical_geometry_from_group(group, nexus_file):
+    """
+    Get geometry information from an NXcylindrical_geometry group
+
+    :param group:  NXcylindrical_geometry group
+    :param nexus_file: NeXus file containing the group
+    :return: vertices, faces and winding_order information from the group
+    """
     cylinders = group['cylinder'][...]
     group_vertices = group['vertices'][...]
     vertices = None
@@ -67,6 +87,13 @@ def get_cylindrical_geometry_from_group(group, nexus_file):
 
 
 def get_geometry_from_group(group, nexus_file):
+    """
+    Get geometry information from the geometry group
+
+    :param group: HDF5 group handle
+    :param nexus_file: Handle of the NeXus file input
+    :return: vertices, faces and winding_order information from the group
+    """
     #if group.name.split('/')[-1] == "pixel_shape":
     #    raise NotImplementedError("Parsing pixel_shape groups not yet implemented.")
     if str(group.attrs["NX_class"], 'utf8') == "NXoff_geometry":
@@ -77,10 +104,10 @@ def get_geometry_from_group(group, nexus_file):
 
 def nexus_geometry_to_off_file(nexus_filename, off_filename):
     """
+    Write all of the geometry information found in a NeXus file to an OFF file
 
-    :param nexus_filename:
-    :param off_filename:
-    :return:
+    :param nexus_filename: Name of the NeXus file input
+    :param off_filename: Name of the OFF file output
     """
     nexus_file = h5py.File(nexus_filename, 'r')
     geometry_groups = find_geometry_groups(nexus_file)
@@ -90,7 +117,6 @@ def nexus_geometry_to_off_file(nexus_filename, off_filename):
     winding_order = None
     for group in geometry_groups:
         group_vertices, group_faces, group_winding_order = get_geometry_from_group(group, nexus_file)
-        group_vertices *= 100.  # scale it! TODO temp!
         vertices, faces, winding_order = accumulate_geometry(vertices, faces, winding_order, group_vertices,
                                                              group_faces, group_winding_order)
     write_off_file(off_filename, vertices, faces, winding_order)
@@ -116,8 +142,9 @@ def accumulate_geometry(vertices, faces, winding_order, new_vertices, new_faces,
 
 if __name__ == '__main__':
     from drawoff import render_off_from_file
-    # nexus_geometry_to_off_file("example_instruments/off_files/example_nx_geometry.nxs", "output_OFF_file.off")
-    # nexus_geometry_to_off_file("example_instruments/loki/LOKI_example_gzip.hdf5", "output_OFF_file.off")
-    # nexus_geometry_to_off_file("example_instruments/wish/WISH_example_gzip_compress.hdf5", "output_OFF_file.off")
-    nexus_geometry_to_off_file("example_instruments/sans2d/SANS_example_gzip_compress.hdf5", "output_OFF_file.off")
-    render_off_from_file('output_OFF_file.off')
+    output_off_file = "SANS_both.off"
+    # nexus_geometry_to_off_file("example_instruments/off_files/example_nx_geometry.nxs", output_off_file)
+    # nexus_geometry_to_off_file("example_instruments/loki/LOKI_example_gzip.hdf5", output_off_file)
+    # nexus_geometry_to_off_file("example_instruments/wish/WISH_example_gzip_compress.hdf5", output_off_file)
+    nexus_geometry_to_off_file("example_instruments/sans2d/SANS_example_gzip_compress.hdf5", output_off_file)
+    render_off_from_file(output_off_file)
