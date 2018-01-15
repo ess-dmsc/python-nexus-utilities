@@ -67,10 +67,23 @@ def write_off_file(filename, vertices, faces, winding_order):
         previous_index = 0
         for face in faces[1:]:
             verts_in_face = winding_order[previous_index:face]
-            fmt_str = '{} ' * (len(verts_in_face) + 1)
-            fmt_str = fmt_str[:-1] + '\n'
-            off_file.write(fmt_str.format(len(verts_in_face), *verts_in_face).encode('utf8'))
+            write_off_face(verts_in_face, off_file)
             previous_index = face
+        # Last face is the last face index to the end of the winding_order list
+        verts_in_face = winding_order[previous_index:]
+        write_off_face(verts_in_face, off_file)
+
+
+def write_off_face(verts_in_face, off_file):
+    """
+    Write line in the OFF file corresponding to a single face in the geometry
+
+    :param verts_in_face: Indices in the vertex list of the vertices in this face
+    :param off_file:  Handle of the file to write to
+    """
+    fmt_str = '{} ' * (len(verts_in_face) + 1)
+    fmt_str = fmt_str[:-1] + '\n'
+    off_file.write(fmt_str.format(len(verts_in_face), *verts_in_face).encode('utf8'))
 
 
 def create_off_face_vertex_map(off_faces):
@@ -90,7 +103,6 @@ def create_off_face_vertex_map(off_faces):
         current_index += face[0]
         for vertex_index in face[1:]:
             winding_order.append(vertex_index)
-    faces.append(current_index)
     return np.array(winding_order), np.array(faces)
 
 
