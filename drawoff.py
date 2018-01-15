@@ -12,7 +12,7 @@ base = ShowBase()
 
 #Rename window
 props = WindowProperties()
-props.setTitle('Instrument View')
+props.setTitle('OFF Instrument View')
 base.win.requestProperties(props)
 
 # Move the initial camera position away from 0,0,0 so that we see something
