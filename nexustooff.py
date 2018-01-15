@@ -84,7 +84,7 @@ def get_cylindrical_geometry_from_group(group, nexus_file):
         radius = nexusutils.calculate_magnitude(vector_b - vector_a)
         centre = (vector_a + vector_c) * 0.5
 
-        mesh_vertices, mesh_faces = construct_cylinder_mesh(height, radius, unit_axis, centre)
+        mesh_vertices, mesh_faces = construct_cylinder_mesh(height, radius, unit_axis, centre, 10)
         new_winding_order, new_faces = create_off_face_vertex_map(mesh_faces)
         vertices, faces, winding_order = accumulate_geometry(vertices, faces, winding_order, mesh_vertices, new_faces,
                                                              new_winding_order)
@@ -122,10 +122,53 @@ def nexus_geometry_to_off_file(nexus_filename, off_filename):
     faces = None
     winding_order = None
     for group in geometry_groups:
-        group_vertices, group_faces, group_winding_order = get_geometry_from_group(group, nexus_file)
-        vertices, faces, winding_order = accumulate_geometry(vertices, faces, winding_order, group_vertices,
-                                                             group_faces, group_winding_order)
+        new_vertices, new_faces, new_winding_order = get_geometry_from_group(group, nexus_file)
+        new_vertices, new_faces, new_winding_order = replicate_if_pixel_geometry(group, new_vertices, new_faces,
+                                                                                 new_winding_order)
+        vertices, faces, winding_order = accumulate_geometry(vertices, faces, winding_order, new_vertices,
+                                                             new_faces, new_winding_order)
     write_off_file(off_filename, vertices, faces, winding_order)
+
+
+def replicate_if_pixel_geometry(group, vertices, faces, winding_order):
+    """
+    If the geometry group describes the shape of a single pixel then replicate the shape at all pixel offsets
+    to find the shape of the whole detector panel.
+
+    :param group: Geometry group and its parent group in a dictionary
+    :param vertices:
+    :param faces:
+    :param winding_order:
+    :return:
+    """
+    if group['geometry_group'].name.split('/')[-1] == "pixel_shape":
+        x_offsets, y_offsets, z_offsets = get_pixel_offsets(group)
+        pixel_vertices = vertices
+        pixel_faces = faces
+        pixel_winding_order = winding_order
+        for pixel_number in range(len(x_offsets)):
+            new_vertices = np.hstack((pixel_vertices[:, 0] + x_offsets[pixel_number],
+                                      pixel_vertices[:, 1] + y_offsets[pixel_number],
+                                      pixel_vertices[:, 2] + z_offsets[pixel_number]))
+            vertices, faces, winding_order = accumulate_geometry(vertices, faces, winding_order, new_vertices,
+                                                                 pixel_faces, pixel_winding_order)
+    return vertices, faces, winding_order
+
+
+def get_pixel_offsets(group):
+    if 'x_pixel_offset' in group['parent_group']:
+        x_offsets = group['parent_group']['x_pixel_offset'][...]
+    else:
+        raise Exception("No x_pixel_offset found in parent group of " + group['geometry_group'].name)
+    if 'y_pixel_offset' in group['parent_group']:
+        y_offsets = group['parent_group']['y_pixel_offset'][...]
+    else:
+        raise Exception("No y_pixel_offset found in parent group of " + group['geometry_group'].name)
+    if 'z_pixel_offset' in group['parent_group']:
+        z_offsets = group['parent_group']['z_pixel_offset'][...]
+    else:
+        z_offsets = np.zeros(x_offsets.shape)
+    return x_offsets, y_offsets, z_offsets
 
 
 def accumulate_geometry(vertices, faces, winding_order, new_vertices, new_faces, new_winding_order):
@@ -148,7 +191,9 @@ def accumulate_geometry(vertices, faces, winding_order, new_vertices, new_faces,
 
 if __name__ == '__main__':
     from drawoff import render_off_from_file
-    output_off_file = "SANS2D_both.off"
+
+    output_off_file = "SANS2D.off"
+    # nexus_geometry_to_off_file("example_instruments/off_files/icosahedron_sample_example.nxs", output_off_file)
     # nexus_geometry_to_off_file("example_instruments/off_files/example_nx_geometry.nxs", output_off_file)
     # nexus_geometry_to_off_file("example_instruments/loki/LOKI_example_gzip.hdf5", output_off_file)
     # nexus_geometry_to_off_file("example_instruments/wish/WISH_example_gzip_compress.hdf5", output_off_file)
