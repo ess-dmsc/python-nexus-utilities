@@ -86,8 +86,9 @@ def get_cylindrical_geometry_from_group(group, nexus_file):
 
         mesh_vertices, mesh_faces = construct_cylinder_mesh(height, radius, unit_axis, centre, 10)
         new_winding_order, new_faces = create_off_face_vertex_map(mesh_faces)
-        vertices, faces, winding_order = accumulate_geometry(vertices, faces, winding_order, mesh_vertices, new_faces,
-                                                             new_winding_order)
+        vertices, faces, winding_order, next_vertex = accumulate_geometry(vertices, faces, winding_order, mesh_vertices,
+                                                                          new_faces,
+                                                                          new_winding_order)
     vertices = get_and_apply_transformations(group, nexus_file, vertices)
     return vertices, faces, winding_order
 
@@ -125,8 +126,8 @@ def nexus_geometry_to_off_file(nexus_filename, off_filename):
         new_vertices, new_faces, new_winding_order = get_geometry_from_group(group, nexus_file)
         new_vertices, new_faces, new_winding_order = replicate_if_pixel_geometry(group, new_vertices, new_faces,
                                                                                  new_winding_order)
-        vertices, faces, winding_order = accumulate_geometry(vertices, faces, winding_order, new_vertices,
-                                                             new_faces, new_winding_order)
+        vertices, faces, winding_order, next_vertex = accumulate_geometry(vertices, faces, winding_order, new_vertices,
+                                                                          new_faces, new_winding_order)
     write_off_file(off_filename, vertices, faces, winding_order)
 
 
@@ -146,12 +147,21 @@ def replicate_if_pixel_geometry(group, vertices, faces, winding_order):
         pixel_vertices = vertices
         pixel_faces = faces
         pixel_winding_order = winding_order
-        for pixel_number in range(len(x_offsets)):
+        next_indices = {'vertex': 0, 'face': 0, 'winding_order': 0}
+        number_of_pixels = len(x_offsets)
+        total_num_of_vertices = number_of_pixels * pixel_vertices.shape[0]
+        vertices = np.empty((total_num_of_vertices, 3))  # preallocate
+        winding_order = np.empty((len(pixel_winding_order) * number_of_pixels), dtype=int)
+        faces = np.empty((len(pixel_faces) * number_of_pixels), dtype=int)
+        for pixel_number in range(number_of_pixels):
+            print(((pixel_number + 1) / number_of_pixels) * 100)  # TODO
             new_vertices = np.hstack((pixel_vertices[:, 0] + x_offsets[pixel_number],
                                       pixel_vertices[:, 1] + y_offsets[pixel_number],
                                       pixel_vertices[:, 2] + z_offsets[pixel_number]))
-            vertices, faces, winding_order = accumulate_geometry(vertices, faces, winding_order, new_vertices,
-                                                                 pixel_faces, pixel_winding_order)
+            vertices, faces, winding_order, next_vertex = accumulate_geometry(vertices, faces, winding_order,
+                                                                              new_vertices,
+                                                                              pixel_faces, pixel_winding_order,
+                                                                              next_indices)
     return vertices, faces, winding_order
 
 
@@ -171,22 +181,48 @@ def get_pixel_offsets(group):
     return x_offsets, y_offsets, z_offsets
 
 
-def accumulate_geometry(vertices, faces, winding_order, new_vertices, new_faces, new_winding_order):
-    if faces is not None:
-        faces = np.concatenate((faces, new_faces + winding_order.size))
-    else:
-        faces = new_faces
+def accumulate_geometry(vertices, faces, winding_order, new_vertices, new_faces, new_winding_order, next_indices=None):
+    """
+    Accumulate geometry from different groups in the NeXus file, or repeated pixels.
+    If next_indices are supplied then the arrays are assumed to be preallocated and new data are inserted
+    at the given index instead of concatenating with the accumulation arrays.
 
-    if winding_order is not None:
-        winding_order = np.concatenate((winding_order, new_winding_order + vertices.shape[0]))
-    else:
-        winding_order = new_winding_order
+    :param vertices: Vertices array to accumulate in
+    :param faces: Faces array to accumulate in
+    :param winding_order: Winding order array to accumulate in
+    :param new_vertices: (2D) New vertices to append/insert
+    :param new_faces: (1D) New vertices to append
+    :param new_winding_order: (1D) New winding_order to append
+    :param next_indices: Insert new data at these indices if supplied, otherwise append the data
+    """
+    if next_indices is not None:
+        faces[next_indices['face']:(next_indices['face'] + len(new_faces))] = new_faces + next_indices['winding_order']
 
-    if vertices is not None:
-        vertices = np.vstack((vertices, new_vertices))
+        winding_order[next_indices['winding_order']:(next_indices['winding_order'] + len(new_winding_order))] = \
+            new_winding_order + next_indices['vertex']
+
+        vertices[next_indices['vertex']:(next_indices['vertex'] + new_vertices.shape[0]), :] = new_vertices
+
+        next_indices['face'] += len(new_faces)
+        next_indices['winding_order'] += len(new_winding_order)
+        next_indices['vertex'] += new_vertices.shape[0]
     else:
-        vertices = new_vertices
-    return vertices, faces, winding_order
+        if faces is not None:
+            faces = np.concatenate((faces, new_faces + winding_order.size))
+        else:
+            faces = new_faces
+
+        if winding_order is not None:
+            winding_order = np.concatenate((winding_order, new_winding_order + vertices.shape[0]))
+        else:
+            winding_order = new_winding_order
+
+        if vertices is not None:
+            vertices = np.vstack((vertices, new_vertices))
+        else:
+            vertices = new_vertices
+
+    return vertices, faces, winding_order, next_indices
 
 
 if __name__ == '__main__':
