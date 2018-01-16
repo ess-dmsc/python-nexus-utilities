@@ -41,7 +41,6 @@ def get_off_geometry_from_group(group, nexus_file):
     :return: vertices, faces and winding_order information from the group
     """
     vertices = group['geometry_group']['vertices'][...]
-    vertices = get_and_apply_transformations(group, nexus_file, vertices)
     return vertices, group['geometry_group']['faces'][...], group['geometry_group']['winding_order'][...]
 
 
@@ -89,7 +88,6 @@ def get_cylindrical_geometry_from_group(group, nexus_file):
         vertices, faces, winding_order, next_vertex = accumulate_geometry(vertices, faces, winding_order, mesh_vertices,
                                                                           new_faces,
                                                                           new_winding_order)
-    vertices = get_and_apply_transformations(group, nexus_file, vertices)
     return vertices, faces, winding_order
 
 
@@ -101,12 +99,16 @@ def get_geometry_from_group(group, nexus_file):
     :param nexus_file: Handle of the NeXus file input
     :return: vertices, faces and winding_order information from the group
     """
-    # if group.name.split('/')[-1] == "pixel_shape":
-    #    raise NotImplementedError("Parsing pixel_shape groups not yet implemented.")
     if str(group['geometry_group'].attrs["NX_class"], 'utf8') == "NXoff_geometry":
-        return get_off_geometry_from_group(group, nexus_file)
+        vertices, faces, winding_order = get_off_geometry_from_group(group, nexus_file)
     elif str(group['geometry_group'].attrs["NX_class"], 'utf8') == "NXcylindrical_geometry":
-        return get_cylindrical_geometry_from_group(group, nexus_file)
+        vertices, faces, winding_order = get_cylindrical_geometry_from_group(group, nexus_file)
+    else:
+        raise Exception('nexustooff.get_geometry_from_group was passed a group which is not a geometry type')
+    vertices = np.matrix(vertices)
+    vertices, faces, winding_order = replicate_if_pixel_geometry(group, vertices, faces, winding_order)
+    vertices = get_and_apply_transformations(group, nexus_file, vertices)
+    return vertices, faces, winding_order
 
 
 def nexus_geometry_to_off_file(nexus_filename, off_filename):
@@ -124,8 +126,6 @@ def nexus_geometry_to_off_file(nexus_filename, off_filename):
     winding_order = None
     for group in geometry_groups:
         new_vertices, new_faces, new_winding_order = get_geometry_from_group(group, nexus_file)
-        new_vertices, new_faces, new_winding_order = replicate_if_pixel_geometry(group, new_vertices, new_faces,
-                                                                                 new_winding_order)
         vertices, faces, winding_order, next_vertex = accumulate_geometry(vertices, faces, winding_order, new_vertices,
                                                                           new_faces, new_winding_order)
     write_off_file(off_filename, vertices, faces, winding_order)
@@ -150,9 +150,12 @@ def replicate_if_pixel_geometry(group, vertices, faces, winding_order):
         next_indices = {'vertex': 0, 'face': 0, 'winding_order': 0}
         number_of_pixels = len(x_offsets)
         total_num_of_vertices = number_of_pixels * pixel_vertices.shape[0]
-        vertices = np.empty((total_num_of_vertices, 3))  # preallocate
+
+        # Preallocate arrays
+        vertices = np.empty((total_num_of_vertices, 3))
         winding_order = np.empty((len(pixel_winding_order) * number_of_pixels), dtype=int)
         faces = np.empty((len(pixel_faces) * number_of_pixels), dtype=int)
+
         for pixel_number in range(number_of_pixels):
             print(((pixel_number + 1) / number_of_pixels) * 100)  # TODO
             new_vertices = np.hstack((pixel_vertices[:, 0] + x_offsets[pixel_number],
@@ -228,10 +231,11 @@ def accumulate_geometry(vertices, faces, winding_order, new_vertices, new_faces,
 if __name__ == '__main__':
     from drawoff import render_off_from_file
 
-    output_off_file = "SANS2D.off"
+    output_off_file = "WISH_teapot2.off"
     # nexus_geometry_to_off_file("example_instruments/off_files/icosahedron_sample_example.nxs", output_off_file)
     # nexus_geometry_to_off_file("example_instruments/off_files/example_nx_geometry.nxs", output_off_file)
     # nexus_geometry_to_off_file("example_instruments/loki/LOKI_example_gzip.hdf5", output_off_file)
     # nexus_geometry_to_off_file("example_instruments/wish/WISH_example_gzip_compress.hdf5", output_off_file)
-    nexus_geometry_to_off_file("example_instruments/sans2d/SANS_example_gzip_compress.hdf5", output_off_file)
+    # nexus_geometry_to_off_file("example_instruments/sans2d/SANS_example_gzip_compress.hdf5", output_off_file)
+    nexus_geometry_to_off_file("example_instruments/wish/WISH_example_teapot.hdf5", output_off_file)
     render_off_from_file(output_off_file)
