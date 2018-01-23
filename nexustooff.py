@@ -32,12 +32,11 @@ def find_geometry_groups(nexus_file):
     return hits
 
 
-def get_off_geometry_from_group(group, nexus_file):
+def get_off_geometry_from_group(group):
     """
     Get geometry information from an NXoff_geometry group
 
     :param group:  NXoff_geometry and parent group in dictionary
-    :param nexus_file: NeXus file containing the group
     :return: vertices, faces and winding_order information from the group
     """
     vertices = group['geometry_group']['vertices'][...]
@@ -60,12 +59,11 @@ def get_and_apply_transformations(group, nexus_file, vertices):
     return vertices[:3, :].T
 
 
-def get_cylindrical_geometry_from_group(group, nexus_file):
+def get_cylindrical_geometry_from_group(group):
     """
     Get geometry information from an NXcylindrical_geometry group
 
     :param group:  NXcylindrical_geometry group and its parent group in a dictionary
-    :param nexus_file: NeXus file containing the group
     :return: vertices, faces and winding_order information from the group
     """
     cylinders = group['geometry_group']['cylinders'][...]
@@ -100,9 +98,9 @@ def get_geometry_from_group(group, nexus_file):
     :return: vertices, faces and winding_order information from the group
     """
     if str(group['geometry_group'].attrs["NX_class"], 'utf8') == "NXoff_geometry":
-        vertices, faces, winding_order = get_off_geometry_from_group(group, nexus_file)
+        vertices, faces, winding_order = get_off_geometry_from_group(group)
     elif str(group['geometry_group'].attrs["NX_class"], 'utf8') == "NXcylindrical_geometry":
-        vertices, faces, winding_order = get_cylindrical_geometry_from_group(group, nexus_file)
+        vertices, faces, winding_order = get_cylindrical_geometry_from_group(group)
     else:
         raise Exception('nexustooff.get_geometry_from_group was passed a group which is not a geometry type')
     vertices = np.matrix(vertices)
@@ -137,10 +135,10 @@ def replicate_if_pixel_geometry(group, vertices, faces, winding_order):
     to find the shape of the whole detector panel.
 
     :param group: Geometry group and its parent group in a dictionary
-    :param vertices:
-    :param faces:
-    :param winding_order:
-    :return:
+    :param vertices: Vertices array for the original pixel
+    :param faces: Faces array for the original pixel
+    :param winding_order: Winding order array for the original pixel
+    :return: vertices, faces, winding_order for the geometry comprising all pixels
     """
     if group['geometry_group'].name.split('/')[-1] == "pixel_shape":
         x_offsets, y_offsets, z_offsets = get_pixel_offsets(group)
@@ -157,7 +155,6 @@ def replicate_if_pixel_geometry(group, vertices, faces, winding_order):
         faces = np.empty((len(pixel_faces) * number_of_pixels), dtype=int)
 
         for pixel_number in range(number_of_pixels):
-            print(((pixel_number + 1) / number_of_pixels) * 100)  # TODO
             new_vertices = np.hstack((pixel_vertices[:, 0] + x_offsets[pixel_number],
                                       pixel_vertices[:, 1] + y_offsets[pixel_number],
                                       pixel_vertices[:, 2] + z_offsets[pixel_number]))
