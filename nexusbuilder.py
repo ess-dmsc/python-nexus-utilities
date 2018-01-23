@@ -55,6 +55,10 @@ class NexusBuilder:
             self.idf_parser = None
             self.length_units = 'm'
         self.instrument = None
+        self.features = set()
+
+    def __enter__(self):
+        return self
 
     def get_root(self):
         return self.root
@@ -104,6 +108,9 @@ class NexusBuilder:
         """
         if isinstance(group, str):
             group = self.root[group]
+
+        if name in group:
+            raise Exception(name + " dataset already exists, delete it before trying to create a new one")
 
         if isinstance(data, str):
             dataset = group.create_dataset(name, data=np.array(data).astype('|S' + str(len(data))))
@@ -194,25 +201,21 @@ class NexusBuilder:
     def __add_detector_transformations(self, detector, detector_group):
         location = detector['location']
         orientation = detector['orientation']
-        if location is None and orientation is None:
+        if location is None:
             return
         translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
+        location_transformation = self.add_transformation(detector_group, 'translation',
+                                                          translate_magnitude,
+                                                          self.length_units, translate_unit_vector,
+                                                          name='location')
         if orientation is not None:
             orientation_transformation = self.add_transformation(detector_group, 'rotation',
                                                                  orientation['angle'],
                                                                  'degrees', orientation['axis'],
-                                                                 name='orientation')
-            location_transformation = self.add_transformation(detector_group, 'translation',
-                                                              translate_magnitude,
-                                                              self.length_units, translate_unit_vector,
-                                                              depends_on=orientation_transformation,
-                                                              name='location')
+                                                                 name='orientation', depends_on=location_transformation)
+            self.add_depends_on(detector_group, orientation_transformation)
         else:
-            location_transformation = self.add_transformation(detector_group, 'translation',
-                                                              translate_magnitude,
-                                                              self.length_units, translate_unit_vector,
-                                                              name='location')
-        self.add_depends_on(detector_group, location_transformation)
+            self.add_depends_on(detector_group, location_transformation)
 
     def add_monitors_from_idf(self):
         """
@@ -402,13 +405,12 @@ class NexusBuilder:
         pixel_shape = self.add_shape(group, 'pixel_shape', vertices, faces)
         return pixel_shape
 
-    def __del__(self):
-        # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
-        try:
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.__add_features()
+        if self.source_file is not None:
             self.source_file.close()
+        if self.target_file is not None:
             self.target_file.close()
-        except Exception:
-            pass
 
     def __add_nx_entry(self, nx_entry_name):
         entry_group = self.target_file.create_group(nx_entry_name)
@@ -486,6 +488,7 @@ class NexusBuilder:
             current_index += face[0]
             for vertex_index in face[1:]:
                 winding_order.append(vertex_index)
+        faces.append(current_index)
         return winding_order, faces
 
     def add_structured_detectors_from_idf(self):
@@ -557,22 +560,20 @@ class NexusBuilder:
     def __add_transformations_for_structured_detector(self, detector, detector_group):
         # Add position of detector
         translate_unit_vector, translate_magnitude = nexusutils.normalise(detector['location'])
+        position = self.add_transformation(detector_group, 'translation', translate_magnitude,
+                                           self.length_units,
+                                           translate_unit_vector, name='panel_position')
         # Add orientation of detector
         if detector['orientation'] is not None:
             rotate_unit_vector, rotate_magnitude = nexusutils.normalise(detector['orientation']['axis'])
-            rotation = self.add_transformation(detector_group, 'rotation',
-                                               detector['orientation']['angle'],
-                                               'degrees',
-                                               rotate_unit_vector, name='orientation')
-            position = self.add_transformation(detector_group, 'translation', translate_magnitude,
-                                               self.length_units,
-                                               translate_unit_vector, name='panel_position',
-                                               depends_on=rotation)
+            orientation = self.add_transformation(detector_group, 'rotation',
+                                                  detector['orientation']['angle'],
+                                                  'degrees',
+                                                  rotate_unit_vector, name='orientation',
+                                                  depends_on=position)
+            self.add_depends_on(detector_group, orientation)
         else:
-            position = self.add_transformation(detector_group, 'translation', translate_magnitude,
-                                               self.length_units,
-                                               translate_unit_vector, name='panel_position')
-        self.add_depends_on(detector_group, position)
+            self.add_depends_on(detector_group, position)
 
     @staticmethod
     def __create_detector_ids_for_structured_detector(pixels_in_first_dimension, pixels_in_second_dimension, detector):
@@ -640,6 +641,7 @@ class NexusBuilder:
             self.add_dataset(self.instrument, 'name', name, {'short_name': name[:3]})
         else:
             self.add_dataset(self.instrument, 'name', name, {'short_name': name})
+        return self.instrument
 
     def add_transformation(self, group, transformation_type, values, units, vector, offset=None, name='transformation',
                            depends_on='.'):
@@ -748,4 +750,40 @@ class NexusBuilder:
         group_name = group_name.replace(' ', '_')
         created_group = parent_group.create_group(group_name)
         created_group.attrs.create('NX_class', np.array(nx_class_name).astype('|S' + str(len(nx_class_name))))
+        self.add_feature_for_class(nx_class_name)
         return created_group
+
+    def add_feature_for_class(self, class_name):
+        """
+        If there is a feature (see https://github.com/nexusformat/features) corresponding to the added NX class
+        then append its feature id to the set of features
+        :param class_name:
+        """
+        if class_name == "NXlog":
+            feature_id = "B051F43BC680C13B"
+        elif class_name == "NXevent_data":
+            feature_id = "ECB064453EDB096D"
+        elif class_name == "NXoff_geometry":
+            feature_id = "8CB1EBAE3B2DA51D"
+        elif class_name == "NXcite":
+            feature_id = "D1A0000000000002"
+        else:
+            return
+        self.add_feature(feature_id)
+
+    def __add_features(self):
+        """
+        Add a dataset which details which "features" the file contains (see https://github.com/nexusformat/features),
+        either features explicitly noted using add_feature or based on what NeXus classes have been added through
+        the builder
+        """
+        if self.features:
+            feature_ids_int64 = [int(feature_id, 16) if isinstance(feature_id, str) else feature_id for feature_id in
+                                 self.features]
+            self.add_dataset(self.root, "features", feature_ids_int64)
+
+    def add_feature(self, feature_id):
+        """
+        Add a feature id to the list of features present in the file, id is a hex string or integer
+        """
+        self.features.add(feature_id)
