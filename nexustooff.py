@@ -68,7 +68,7 @@ def get_cylindrical_geometry_from_group(group, nexus_file):
     :param nexus_file: NeXus file containing the group
     :return: vertices, faces and winding_order information from the group
     """
-    cylinders = group['geometry_group']['cylinder'][...]
+    cylinders = group['geometry_group']['cylinders'][...]
     group_vertices = group['geometry_group']['vertices'][...]
     vertices = None
     faces = None

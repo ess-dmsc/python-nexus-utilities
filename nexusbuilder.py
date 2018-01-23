@@ -349,7 +349,7 @@ class NexusBuilder:
         vertices = np.array([vector_a, vector_b, vector_c]).astype(float)
         shape = self.add_nx_group(group, 'pixel_shape', 'NXcylindrical_geometry')
         self.add_dataset(shape, 'vertices', vertices, {'units': self.length_units})
-        self.add_dataset(shape, 'cylinder', np.array([[0, 1, 2]]).astype('int32'))
+        self.add_dataset(shape, 'cylinders', np.array([[0, 1, 2]]).astype('int32'))
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.__add_features()
