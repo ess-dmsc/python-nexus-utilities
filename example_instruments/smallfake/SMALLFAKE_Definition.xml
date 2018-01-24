@@ -32,7 +32,7 @@
   <!-- source and sample-position components -->
 
   <component type="source">
-    <location />
+    <location z ="-15.00"/>
   </component>
   <type name="source" is="Source" />
   
@@ -47,7 +47,7 @@
   <component type="monitors" idlist="monitors">
     <location />
   </component>
-  
+
   <type name="monitors">
     <component type="monitor-tbd">
       <!-- better positions and shapes will be defined later -->

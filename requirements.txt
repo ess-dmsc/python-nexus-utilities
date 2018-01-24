@@ -7,3 +7,4 @@ pyparsing
 tables
 matplotlib
 tabulate
+pytest

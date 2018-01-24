@@ -681,7 +681,8 @@ class NexusBuilder:
         logger.info('Got instrument geometry for ' + instrument_name + ' from IDF file, it has:')
 
         source_name = self.idf_parser.get_source_name()
-        self.add_source(source_name)
+        source_position = self.idf_parser.get_source_position()
+        self.add_source(source_name, position=source_position )
         logger.info('a source called ' + source_name)
 
         self.add_sample()
