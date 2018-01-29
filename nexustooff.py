@@ -240,11 +240,9 @@ def accumulate_geometry_in_prealloc_arrays(vertices, faces, winding_order, new_v
 if __name__ == '__main__':
     from drawoff import render_off_from_file
 
-    output_off_file = "WISH_teapot2.off"
-    # nexus_geometry_to_off_file("example_instruments/off_files/icosahedron_sample_example.nxs", output_off_file)
-    # nexus_geometry_to_off_file("example_instruments/off_files/example_nx_geometry.nxs", output_off_file)
-    # nexus_geometry_to_off_file("example_instruments/loki/LOKI_example_gzip.hdf5", output_off_file)
-    # nexus_geometry_to_off_file("example_instruments/wish/WISH_example_gzip_compress.hdf5", output_off_file)
-    # nexus_geometry_to_off_file("example_instruments/sans2d/SANS_example_gzip_compress.hdf5", output_off_file)
-    nexus_geometry_to_off_file("example_instruments/wish/WISH_example_teapot.hdf5", output_off_file)
+    # Example use
+    # SANS2D for example as it uses NXoff_geometry and NXcylindrical_geometry
+    # NB, run example_instruments/sans2d/SANS2D_example.py from its own directory first to generate NeXus file
+    output_off_file = "SANS2D.off"
+    nexus_geometry_to_off_file("example_instruments/sans2d/SANS_example_gzip_compress.hdf5", output_off_file)
     render_off_from_file(output_off_file)
