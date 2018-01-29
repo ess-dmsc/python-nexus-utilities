@@ -687,7 +687,7 @@ class NexusBuilder:
             feature_id = "B051F43BC680C13B"
         elif class_name == "NXevent_data":
             feature_id = "ECB064453EDB096D"
-        elif class_name == "NXoff_geometry":
+        elif class_name == "NXoff_geometry" or class_name == "NXcylindrical_geometry":
             feature_id = "8CB1EBAE3B2DA51D"
         elif class_name == "NXcite":
             feature_id = "D1A0000000000002"
