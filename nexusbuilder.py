@@ -8,7 +8,7 @@ from idfparser import IDFParser
 import nexusutils
 import readwriteoff
 
-logger = logging.getLogger('NeXus_Builder')
+logger = logging.getLogger('NeXus_Utils')
 logger.setLevel(logging.INFO)
 console = logging.StreamHandler()
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
@@ -316,7 +316,7 @@ class NexusBuilder:
         if isinstance(group, str):
             group = self.root[group]
 
-        winding_order, faces = self.create_off_face_vertex_map(off_faces)
+        winding_order, faces = readwriteoff.create_off_face_vertex_map(off_faces)
         shape = self.add_nx_group(group, name, 'NXoff_geometry')
         self.add_dataset(shape, 'vertices', np.array(vertices).astype('float32'), {'units': self.length_units})
         self.add_dataset(shape, 'winding_order', np.array(winding_order).astype('int32'))
@@ -349,61 +349,7 @@ class NexusBuilder:
         vertices = np.array([vector_a, vector_b, vector_c]).astype(float)
         shape = self.add_nx_group(group, 'pixel_shape', 'NXcylindrical_geometry')
         self.add_dataset(shape, 'vertices', vertices, {'units': self.length_units})
-        self.add_dataset(shape, 'cylinder', np.array([0, 1, 2]).astype('int32'))
-
-    def add_tube_pixel_mesh(self, group, height, radius, axis, centre=None, number_of_vertices=50):
-        """
-        Construct an NXoff_geometry description of a tube, using the OFF-style description
-
-        :param group: Group to add the pixel geometry to
-        :param height: Height of the tube
-        :param radius: Radius of the tube
-        :param axis: Axis of the tube as a unit vector
-        :param centre: On-axis centre of the tube in form [x, y, z]
-        :param number_of_vertices: Maximum number of vertices to use to describe pixel
-        :return: NXoff_geometry describing a single pixel
-        """
-        # Construct the geometry as if the tube axis is along x, rotate everything later
-        if centre is None:
-            centre = [0, 0, 0]
-        end_centre = [centre[0] - (height / 2.0), centre[1], centre[2]]
-        angles = np.linspace(0, 2 * np.pi, np.floor((number_of_vertices / 2) + 1))
-        # The last point is the same as the first so get rid of it
-        angles = angles[:-1]
-        y = end_centre[1] + radius * np.cos(angles)
-        z = end_centre[2] + radius * np.sin(angles)
-        num_points_at_each_tube_end = len(y)
-        vertices = np.concatenate((
-            np.array(list(zip(np.zeros(len(y)) + end_centre[0], y, z))),
-            np.array(list(zip(np.ones(len(y)) * height + end_centre[0], y, z)))))
-
-        # Rotate vertices to correct the tube axis
-        rotation_matrix = nexusutils.find_rotation_matrix_between_vectors(np.array(axis), np.array([1., 0., 0.]))
-        if rotation_matrix is not None:
-            vertices = rotation_matrix.dot(vertices.T).T
-
-        #
-        # points around left circle tube-end       points around right circle tube-end
-        #                                          (these follow the left ones in vertices list)
-        #  circular boundary ^                     ^
-        #                    |                     |
-        #     nth_vertex + 2 .                     . nth_vertex + num_points_at_each_tube_end + 2
-        #     nth_vertex + 1 .                     . nth_vertex + num_points_at_each_tube_end + 1
-        #     nth_vertex     .                     . nth_vertex + num_points_at_each_tube_end
-        #                    |                     |
-        #  circular boundary v                     v
-        #
-        # face starts with the number of vertices in the face (4)
-        faces = [
-            [4, nth_vertex, nth_vertex + num_points_at_each_tube_end, nth_vertex + num_points_at_each_tube_end + 1,
-             nth_vertex + 1] for nth_vertex in range(num_points_at_each_tube_end - 1)]
-        # Append the last rectangular face
-        faces.append([num_points_at_each_tube_end - 1, (2 * num_points_at_each_tube_end) - 1,
-                      num_points_at_each_tube_end, 0])
-        # NB this is a tube, not a cylinder; I'm not adding the circular faces on the ends of the tube
-        faces = np.array(faces)
-        pixel_shape = self.add_shape(group, 'pixel_shape', vertices, faces)
-        return pixel_shape
+        self.add_dataset(shape, 'cylinders', np.array([[0, 1, 2]]).astype('int32'))
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.__add_features()
@@ -469,27 +415,6 @@ class NexusBuilder:
         with open(filename) as off_file:
             off_vertices, all_faces = readwriteoff.parse_off_file(off_file)
         return self.add_shape(group, name, off_vertices, all_faces)
-
-    @staticmethod
-    def create_off_face_vertex_map(off_faces):
-        """
-        Avoid having a ragged edge faces dataset due to differing numbers of vertices in faces by recording
-        a flattened faces dataset (winding_order) and putting the start index for each face in that
-        into the faces dataset.
-
-        :param off_faces: OFF-style faces array, each row is number of vertices followed by vertex indices
-        :return: flattened array (winding_order) and the start indices in that (faces)
-        """
-        faces = []
-        winding_order = []
-        current_index = 0
-        for face in off_faces:
-            faces.append(current_index)
-            current_index += face[0]
-            for vertex_index in face[1:]:
-                winding_order.append(vertex_index)
-        faces.append(current_index)
-        return winding_order, faces
 
     def add_structured_detectors_from_idf(self):
         """
@@ -763,7 +688,7 @@ class NexusBuilder:
             feature_id = "B051F43BC680C13B"
         elif class_name == "NXevent_data":
             feature_id = "ECB064453EDB096D"
-        elif class_name == "NXoff_geometry":
+        elif class_name == "NXoff_geometry" or class_name == "NXcylindrical_geometry":
             feature_id = "8CB1EBAE3B2DA51D"
         elif class_name == "NXcite":
             feature_id = "D1A0000000000002"

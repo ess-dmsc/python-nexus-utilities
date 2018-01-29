@@ -10,7 +10,7 @@ if __name__ == '__main__':
         builder.add_instrument_geometry_from_idf()
 
         # Define monitor_1 to have the shape of the Utah teapot as example use of NXshape
-        builder.add_shape_from_file('teapot.off', 'instrument/monitor1', 'shape')
+        builder.add_shape_from_file('../off_files/teapot.off', 'instrument/monitor1', 'shape')
 
         # Copy data from the existing NeXus file to flesh out the example file
         builder.add_user('Sans2d Team', 'ISIS, STFC')

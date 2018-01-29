@@ -8,3 +8,6 @@ tables
 matplotlib
 tabulate
 pytest
+
+--extra-index-url https://archive.panda3d.org/
+panda3d

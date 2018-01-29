@@ -18,6 +18,10 @@ def is_scalar(object_to_check):
     return True
 
 
+def calculate_magnitude(input_vector):
+    return np.sqrt(np.sum(np.square(input_vector.astype(float))))
+
+
 def normalise(input_vector):
     """
     Normalise to unit vector
@@ -25,7 +29,7 @@ def normalise(input_vector):
     :param input_vector: Input vector (numpy array)
     :return: Unit vector, magnitude
     """
-    magnitude = np.sqrt(np.sum(np.square(input_vector.astype(float))))
+    magnitude = calculate_magnitude(input_vector)
     if magnitude == 0:
         return np.array([0.0, 0.0, 0.0]), 0.0
     unit_vector = input_vector.astype(float) / magnitude
