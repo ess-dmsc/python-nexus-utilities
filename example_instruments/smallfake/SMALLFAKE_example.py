@@ -1,5 +1,5 @@
 from nexusbuilder import NexusBuilder
-from detectorplotter import DetectorPlotter
+#from detectorplotter import DetectorPlotter
 
 if __name__ == '__main__':
     output_filename = 'SMALLFAKE_example_geometry.hdf5'
@@ -7,6 +7,6 @@ if __name__ == '__main__':
     with NexusBuilder(output_filename, idf_file='SMALLFAKE_Definition.xml', compress_type='gzip',
                       compress_opts=1) as builder:
         builder.add_instrument_geometry_from_idf()
-
-    with DetectorPlotter(output_filename) as plotter:
-        plotter.plot_pixel_positions()
+        builder.add_shape_from_file('../off_files/cube.off', 'instrument/monitor1', 'shape')
+#    with DetectorPlotter(output_filename) as plotter:
+#        plotter.plot_pixel_positions()
