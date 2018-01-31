@@ -15,9 +15,16 @@ on CentOS (with EPEL installed):
 sudo yum install python34-tkinter
 ```
 
+## To create a NeXus file
+
+Use `./build.py <input_IDF_file_path>`.
+
+To view a list of optional arguments use `./build.py --help` 
+
 ## Examples
 
-Examples can be found in the `example_instruments` directory. Example scripts should be run from their own directory with the root directory of the repository in `PYTHONPATH` (IDEs such as PyCharm do this by default).
+`NexusBuilder` has functionality beyond that which is exposed by `build.py`.
+Examples scripts can be found in the `example_instruments` directory. Example scripts should be run from their own directory with the root directory of the repository in `PYTHONPATH` (IDEs such as PyCharm do this by default).
 
 - `SANS2D_example.py` example using a NeXus file and Mantid instrument definition from the SANS2D instrument. This outputs a new NeXus file in the proposed new format and contains examples of using the proposed `NXsolid_geometry` group to describe pixel shape.
 
