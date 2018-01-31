@@ -2,6 +2,7 @@ import env
 import pytest
 import numpy as np
 import cmath
+import operator
 from idfparser import IDFParser, NotFoundInIDFError, UnknownPixelShapeError
 from idfhelper import create_fake_idf_file, dict_compare
 
@@ -30,11 +31,15 @@ def test_get_source_name_returns_none_if_no_name_specified_in_IDF():
 
 
 def test_sample_position_is_at_origin():
+    sample_pos = [-0.54, 42.0, 0.48]
+    source_pos = [0.0, 0.0, -40,0] # hardcoded in fake idf
     test_sample = {'name': 'TEST_SAMPLE',
-                   'position': [-0.54, 42.0, 0.48]}
-    fake_idf_file = create_fake_idf_file(sample=test_sample)
+                   'position': sample_pos}
+    fake_idf_file = create_fake_idf_file(sample=test_sample, source_name="the_source")
     parser = IDFParser(fake_idf_file)
     np.testing.assert_allclose(parser.get_sample_position(), np.array([0., 0., 0.]))
+    # Check that source is offset from IDF into nexus frame
+    np.testing.assert_allclose(parser.get_source_position(), np.array(list(map(operator.sub, source_pos, sample_pos))))
     fake_idf_file.close()
 
 

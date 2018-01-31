@@ -6,7 +6,7 @@ import nexusutils
 import itertools
 import uuid
 
-logger = logging.getLogger('NeXus_Builder')
+logger = logging.getLogger('NeXus_Utils')
 
 
 class NotFoundInIDFError(Exception):
@@ -51,6 +51,24 @@ class IDFParser:
             if xml_type.get('is') == 'Source':
                 return xml_type.get('name')
         return None
+
+    def get_source_position(self):
+        """
+	Returns the source position as an x,y,z coord list
+	
+	:return: The source position as a list
+	"""
+        for xml_type in self.root.findall('d:type', self.ns):
+            if xml_type.get('is') == 'Source':
+                for xml_source_component in self.root.findall('d:component', self.ns):
+                    if xml_source_component.get('type') == xml_type.get('name'):
+                        location_type = xml_source_component.find('d:location', self.ns)
+                        location = self.__get_vector(location_type, top_level=True)
+                        if location is not None:
+                            return location
+                        else:
+                            return np.array([0.0, 0.0, 0.0])
+        raise NotFoundInIDFError('Source tag not found in IDF')
 
     def get_sample_position(self):
         """
