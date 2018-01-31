@@ -23,6 +23,8 @@ if __name__ == '__main__':
                                help='Creates OFF file of full geometry with this filename')
     optional_args.add_argument('-r', '--render', action='store_true', default=False,
                                help='Render 3D view of output OFF file, must be used with -o')
+    optional_args.add_argument('-c', '--compress-type', default='gzip',
+                               help='Specify compression type for NeXus file (gzip, szip, none, ...)')
 
     arguments = parser.parse_args()
 
@@ -32,11 +34,16 @@ if __name__ == '__main__':
     output_dir = arguments.output_directory if arguments.output_directory else os.path.dirname(
         os.path.realpath(arguments.IDF))
     output_filename = arguments.output_filename if arguments.output_filename else \
-    os.path.splitext(os.path.basename(arguments.IDF))[0] + '.hdf5'
+        os.path.splitext(os.path.basename(arguments.IDF))[0] + '.hdf5'
     nexus_file_fullpath = os.path.join(output_dir, output_filename)
 
-    with NexusBuilder(nexus_file_fullpath, idf_file=arguments.IDF, compress_type='gzip',
-                      compress_opts=1) as builder:
+    compress_options = None
+    if arguments.compress_type is 'gzip':
+        compress_options = 1
+    elif arguments.compress_type is 'none':
+        arguments.compress_type = None
+    with NexusBuilder(nexus_file_fullpath, idf_file=arguments.IDF, compress_type=arguments.compress_type,
+                      compress_opts=compress_options) as builder:
         builder.add_instrument_geometry_from_idf()
 
     if arguments.plot:
@@ -50,4 +57,5 @@ if __name__ == '__main__':
         nexus_geometry_to_off_file(nexus_file_fullpath, off_file_fullpath)
         if arguments.render:
             from drawoff import render_off_from_file
+
             render_off_from_file(off_file_fullpath)
