@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- For help on the notation used to specify an Instrument Definition File
+     see http://www.mantidproject.org/IDF -->
+<instrument xmlns="http://www.mantidproject.org/IDF/1.0"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://www.mantidproject.org/IDF/1.0 http://schema.mantidproject.org/IDF/1.0/IDFSchema.xsd"
+            name="CYL" valid-from   ="2014-02-01 23:59:59"
+                       valid-to     ="2100-01-31 23:59:59"
+            last-modified="2014-02-02 00:00:00">
+
+  <defaults>
+    <length unit="meter"/>
+    <angle unit="degree"/>
+    <reference-frame>
+      <!-- The z-axis is set parallel to and in the direction of the beam. the
+           y-axis points up and the coordinate system is right handed. -->
+      <along-beam axis="z"/>
+      <pointing-up axis="y"/>
+      <handedness val="right"/>
+    </reference-frame>
+    <default-view axis-view="z-"/>
+  </defaults>
+
+  <!-- LIST OF PHYSICAL COMPONENTS (which the instrument consists of) -->
+
+  <!-- source and sample-position components -->
+
+  <component type="source">
+    <location />
+  </component>
+  <type name="source" is="Source" />
+
+  <component type="some-sample-holder">
+    <location z="1.0"/>
+  </component>
+  <type name="some-sample-holder" is="SamplePos" />
+
+  <!-- detectors -->
+
+   <component type="detector-bank" idlist="FrontDetector" name="front-detector">
+     <location x="0.28" z="2.0" />
+   </component>
+
+   <component type="detector-bank" idlist="RearDetector" name="rear-detector">
+     <location z="2.0" />
+   </component>
+
+
+  <type name="detector-bank">
+   <!-- the horizontal tubes are spaced vertically at 8.1mm
+        intervals, with left and right sets ~3mm displaced -->
+    <component type="SANSLeftTube">
+      <locations y="-0.08" y-end="0.08" n-elements="5" name="left" />
+    </component>
+
+    <component type="SANSRightTube">
+      <locations y="-0.1" y-end="0.06" n-elements="5" name="right" />
+    </component>
+  </type>
+
+  <type name="SANSLeftTube" outline="yes">
+    <component type="pixel">
+      <locations x="-0.12" x-end="0.08" n-elements="10" />
+    </component>
+  </type>
+
+  <type name="SANSRightTube" outline="yes">
+    <component type="pixel">
+      <locations x="-0.08" x-end="0.12" n-elements="10" />
+    </component>
+  </type>
+
+  <type name="pixel" is="detector">
+    <cylinder id="cyl-approx">
+      <centre-of-bottom-base r="0.0" t="0.0" p="0.0" />
+      <axis x="1.0" y="0.0" z="0.0" />
+      <radius val="0.009" />
+      <height val="0.02" />
+    </cylinder>
+    <algebra val="cyl-approx" />
+  </type>
+
+  <idlist idname="RearDetector">
+    <id start="	1100000	   "  end="	1100009	" />
+    <id start="	1102000	   "  end="	1102009	" />
+    <id start="	1104000	   "  end="	1104009	" />
+    <id start="	1106000	   "  end="	1106009	" />
+    <id start="	1108000	   "  end="	1108009	" />
+
+    <id start="	1101000	   "  end="	1101009	" />
+    <id start="	1103000	   "  end="	1103009	" />
+    <id start="	1105000	   "  end="	1105009	" />
+    <id start="	1107000	   "  end="	1107009	" />
+    <id start="	1109000	   "  end="	1109009	" />
+  </idlist>
+
+  <idlist idname="FrontDetector">
+    <id start="	2100000	   "  end="	2100009	" />
+    <id start="	2102000	   "  end="	2102009	" />
+    <id start="	2104000	   "  end="	2104009	" />
+    <id start="	2106000	   "  end="	2106009	" />
+    <id start="	2108000	   "  end="	2108009	" />
+
+    <id start="	2101000	   "  end="	2101009	" />
+    <id start="	2103000	   "  end="	2103009	" />
+    <id start="	2105000	   "  end="	2105009	" />
+    <id start="	2107000	   "  end="	2107009	" />
+    <id start="	2109000	   "  end="	2109009	" />
+  </idlist>
+
+</instrument>
