@@ -9,8 +9,6 @@ if __name__ == '__main__':
 
         # A few more details to flesh out the example
         builder.add_user('LOKI Team', 'ESS')
-        builder.add_dataset('/raw_data_1/', 'definition', 'TOFRAW',
-                            {'url': 'http://definition.nexusformat.org/instruments/TOFRAW?version=1.0'})
 
     with DetectorPlotter(output_filename) as plotter:
         plotter.plot_pixel_positions()
