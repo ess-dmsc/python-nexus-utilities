@@ -7,7 +7,6 @@ import numpy as np
 from idfparser import IDFParser
 import nexusutils
 import readwriteoff
-from datetime import datetime
 
 logger = logging.getLogger('NeXus_Utils')
 logger.setLevel(logging.INFO)
@@ -312,7 +311,7 @@ class NexusBuilder:
             group = self.root[group]
 
         winding_order, faces = readwriteoff.create_off_face_vertex_map(off_faces)
-        shape = self.add_nx_group(group, name, 'NXoff_geometry')
+        shape = self.add_group(group, name, 'NXoff_geometry')
         self.add_dataset(shape, 'vertices', np.array(vertices).astype('float32'), {'units': self.length_units})
         self.add_dataset(shape, 'winding_order', np.array(winding_order).astype('int32'))
         self.add_dataset(shape, 'faces', np.array(faces).astype('int32'))
@@ -665,7 +664,7 @@ class NexusBuilder:
         :param name: Name for the NXsample group
         :return: The NXsample group
         """
-        sample_group = self.add_nx_group(self.root, name, 'NXsample')
+        sample_group = self.add_group(self.root, name, 'NXsample')
         return sample_group
 
     def add_source(self, name, group_name='source', position=None):
@@ -683,7 +682,7 @@ class NexusBuilder:
         self.add_dataset(source_group, 'name', name)
 
         if position is not None:
-            transform_group = self.add_nx_group(source_group, 'transformations', 'NXtransformations')
+            transform_group = self.add_group(source_group, 'transformations', 'NXtransformations')
             position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
             source_position = self.add_transformation(transform_group, 'translation', position_magnitude,
                                                       self.length_units, position_unit_vector, name='location')
