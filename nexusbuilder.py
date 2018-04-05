@@ -577,7 +577,7 @@ class NexusBuilder:
         :param vector: Unit vector to translate along or rotate around
         :param offset: Offset translation to apply to the axis before applying transformation
         :param name: Name of this transformation axis, for example "rotation_angle", "phi", "panel_translate", etc
-        :param depends_on: Name (full path) of another NXtransformation which must be carried out before this one
+        :param depends_on: Name (full path) of another NXtransformations which must be carried out before this one
         :param times: Array of times if transformation changes during a scan, must be same length as values
         :return: The NXtransformation
         """
@@ -588,7 +588,7 @@ class NexusBuilder:
                       'vector': vector,
                       'transformation_type': transformation_type,
                       'depends_on': depends_on,  # terminate chain with "." if no depends_on given
-                      'NX_class': 'NXtransformation'}
+                      'NX_class': 'NXtransformations'}
         if offset is not None:
             attributes['offset'] = offset
         transformation = self.add_dataset(group, name, values, attributes)

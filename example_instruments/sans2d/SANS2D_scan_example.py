@@ -20,9 +20,16 @@ if __name__ == '__main__':
     # For example the detector moves from 0.0 to 0.2 during 300 to 330 seconds
     scan_times = np.array([0., 300., 330., 630., 660., 960., 990., 1290.])
     scan_time_units = 's'
-    # Our initial location will be the default location of the panel which was recorded from the IDF
-    initial_location = '/raw_data_1/instrument/detector_1/location'
     vector = [1., 0., 0.]  # Move the panel along x axis: horizontal and perpendicular to beam direction
+    builder.add_group('/raw_data_1/instrument/detector_1', 'transformations', 'NXtransformations')
+
+    # Our initial location will be the default location of the panel which was recorded from the IDF
+    initial_location = '/raw_data_1/instrument/detector_1/transformations/location'
+    # Move it into the transformations group
+    builder.root['/raw_data_1/instrument/detector_1/transformations/location'] = builder.root[
+        '/raw_data_1/instrument/detector_1/location']
+    del builder.root['/raw_data_1/instrument/detector_1/location']
+
     builder.add_nx_log('/raw_data_1/instrument/detector_1/transformations', 'translation_scan', datetime.now(),
                        scan_positions, scan_times, scan_units,
                        scan_time_units, log_attributes={'vector': vector, 'depends_on': initial_location,
