@@ -2,11 +2,12 @@ import env
 import pytest
 import numpy as np
 import cmath
-from idfparser import IDFParser
+import operator
+from idfparser import IDFParser, NotFoundInIDFError, UnknownPixelShapeError
 from idfhelper import create_fake_idf_file, dict_compare
 
 
-def test_get_instrument_name():
+def test_get_instrument_name_returns_name_specified_in_IDF():
     instrument_name = 'TEST_NAME'
     fake_idf_file = create_fake_idf_file(instrument_name)
     parser = IDFParser(fake_idf_file)
@@ -14,7 +15,7 @@ def test_get_instrument_name():
     fake_idf_file.close()
 
 
-def test_get_source_name():
+def test_get_source_name_returns_name_specified_in_IDF():
     name = 'TEST_SOURCE'
     fake_idf_file = create_fake_idf_file(source_name=name)
     parser = IDFParser(fake_idf_file)
@@ -22,32 +23,35 @@ def test_get_source_name():
     fake_idf_file.close()
 
 
-def test_get_source_name_none():
-    name = 'TEST_SOURCE'
+def test_get_source_name_returns_none_if_no_name_specified_in_IDF():
     fake_idf_file = create_fake_idf_file()
     parser = IDFParser(fake_idf_file)
     assert parser.get_source_name() is None
     fake_idf_file.close()
 
 
-def test_get_sample_position():
+def test_sample_position_is_at_origin():
+    sample_pos = [-0.54, 42.0, 0.48]
+    source_pos = [0.0, 0.0, -40,0] # hardcoded in fake idf
     test_sample = {'name': 'TEST_SAMPLE',
-                   'position': [-0.54, 42.0, 0.48]}
-    fake_idf_file = create_fake_idf_file(sample=test_sample)
+                   'position': sample_pos}
+    fake_idf_file = create_fake_idf_file(sample=test_sample, source_name="the_source")
     parser = IDFParser(fake_idf_file)
-    np.testing.assert_allclose(parser.get_sample_position(), test_sample['position'])
+    np.testing.assert_allclose(parser.get_sample_position(), np.array([0., 0., 0.]))
+    # Check that source is offset from IDF into nexus frame
+    np.testing.assert_allclose(parser.get_source_position(), np.array(list(map(operator.sub, source_pos, sample_pos))))
     fake_idf_file.close()
 
 
-def test_get_sample_position_none():
+def test_get_sample_position_fails_when_no_samplePos_in_IDF():
     fake_idf_file = create_fake_idf_file()
     parser = IDFParser(fake_idf_file)
-    with pytest.raises(Exception):
+    with pytest.raises(NotFoundInIDFError):
         parser.get_sample_position()
     fake_idf_file.close()
 
 
-def test_get_length_units():
+def test_get_length_units_returns_same_length_unit_string_as_specified_in_IDF():
     test_defaults = {'length_units': 'cubits',
                      'angle_units': 'deg'}
     fake_idf_file = create_fake_idf_file(defaults=test_defaults)
@@ -56,7 +60,7 @@ def test_get_length_units():
     fake_idf_file.close()
 
 
-def test_get_angle_units():
+def test_get_angle_units_returns_deg_when_specified_as_deg_in_IDF():
     test_defaults = {'length_units': 'Yojana',
                      'angle_units': 'deg'}
     fake_idf_file = create_fake_idf_file(defaults=test_defaults)
@@ -65,7 +69,7 @@ def test_get_angle_units():
     fake_idf_file.close()
 
 
-def test_angle_unit_other_than_rad_or_deg_fails():
+def test_get_angle_unit_on_other_than_rad_or_deg_fails():
     test_defaults = {'length_units': 'Ald',
                      'angle_units': 'Furman'}
     fake_idf_file = create_fake_idf_file(defaults=test_defaults)
@@ -74,7 +78,7 @@ def test_angle_unit_other_than_rad_or_deg_fails():
     fake_idf_file.close()
 
 
-def test_get_monitors():
+def test_get_monitors_retrieves_monitor_with_name_specified_in_IDF():
     monitor_name = 'TEST_MONITOR'
     fake_idf_file = create_fake_idf_file(monitor_name=monitor_name)
     parser = IDFParser(fake_idf_file)
@@ -99,7 +103,7 @@ def test_get_structured_detectors_returns_detector_details():
     fake_idf_file.close()
 
 
-def test_get_structured_detector_vertices():
+def test_get_structured_detector_vertices_returns_coords_specified_in_IDF():
     x_pos = np.hstack((np.linspace(-3., 3., 4), np.linspace(-1.5, 1.5, 4), np.linspace(-0.3, 0.3, 4)))
     y_pos = np.hstack(np.array([[1.] * 4, [0.] * 4, [-1.] * 4]))
     z_pos = np.array([0.] * 12)
@@ -119,7 +123,7 @@ def test_get_detectors_throws_when_pixel_shape_is_unknown():
     detector = {'pixel': pixel}
     fake_idf_file = create_fake_idf_file(detector=detector)
     parser = IDFParser(fake_idf_file)
-    with pytest.raises(Exception):
+    with pytest.raises(UnknownPixelShapeError):
         parser.get_detectors()
     fake_idf_file.close()
 

@@ -32,7 +32,7 @@
   <!-- source and sample-position components -->
 
   <component type="source">
-    <location />
+    <location z ="-15.00"/>
   </component>
   <type name="source" is="Source" />
   
@@ -47,7 +47,7 @@
   <component type="monitors" idlist="monitors">
     <location />
   </component>
-  
+
   <type name="monitors">
     <component type="monitor-tbd">
       <!-- better positions and shapes will be defined later -->
@@ -74,7 +74,7 @@
   </component>   
 
   <type name="detector-bank">
-    <!-- the horizontal tubes are spaced vertically at 8.1mm intervals, with left and right sets 4mm displaced -->
+    <!-- the horizontal tubes are spaced vertically at 50mm intervals, with left and right sets 4mm displaced -->
     <component type="LeftTubes">
       <locations y="-0.2" y-end="0.1" n-elements="4" name="left" />
     </component>

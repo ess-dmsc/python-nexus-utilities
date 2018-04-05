@@ -1,5 +1,4 @@
 import numpy as np
-import cmath
 import logging
 
 """
@@ -9,10 +8,18 @@ Free-function utilities for use by the NexusBuilder
 logger = logging.getLogger('NeXus_Builder')
 
 
+def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
+    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
+
 def is_scalar(object_to_check):
     if hasattr(object_to_check, '__len__'):
         return len(object_to_check) == 1
     return True
+
+
+def calculate_magnitude(input_vector):
+    return np.sqrt(np.sum(np.square(input_vector.astype(float))))
 
 
 def normalise(input_vector):
@@ -22,7 +29,7 @@ def normalise(input_vector):
     :param input_vector: Input vector (numpy array)
     :return: Unit vector, magnitude
     """
-    magnitude = np.sqrt(np.sum(np.square(input_vector.astype(float))))
+    magnitude = calculate_magnitude(input_vector)
     if magnitude == 0:
         return np.array([0.0, 0.0, 0.0]), 0.0
     unit_vector = input_vector.astype(float) / magnitude
@@ -74,7 +81,7 @@ def find_rotation_axis_and_angle_between_vectors(vector_a, vector_b):
     cross_prod = np.cross(vector_a, vector_b)
     unit_cross, mag_cross = normalise(cross_prod)
 
-    if cmath.isclose(mag_cross, 0.0):
+    if isclose(mag_cross, 0.0):
         raise NotImplementedError('No unique solution for rotation axis in '
                                   'nexusutils.find_rotation_axis_and_angle_between_vectors')
 

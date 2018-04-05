@@ -9,7 +9,7 @@ import nexusutils
 import readwriteoff
 from datetime import datetime
 
-logger = logging.getLogger('NeXus_Builder')
+logger = logging.getLogger('NeXus_Utils')
 logger.setLevel(logging.INFO)
 console = logging.StreamHandler()
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
@@ -56,6 +56,10 @@ class NexusBuilder:
             self.idf_parser = None
             self.length_units = 'm'
         self.instrument = None
+        self.features = set()
+
+    def __enter__(self):
+        return self
 
     def get_root(self):
         return self.root
@@ -105,6 +109,9 @@ class NexusBuilder:
         """
         if isinstance(group, str):
             group = self.root[group]
+
+        if name in group:
+            raise Exception(name + " dataset already exists, delete it before trying to create a new one")
 
         if isinstance(data, str):
             dataset = group.create_dataset(name, data=np.array(data).astype('|S' + str(len(data))))
@@ -189,20 +196,21 @@ class NexusBuilder:
     def __add_detector_transformations(self, detector, detector_group):
         location = detector['location']
         orientation = detector['orientation']
-        if location is None and orientation is None:
+        if location is None:
             return
         translate_unit_vector, translate_magnitude = nexusutils.normalise(location)
-        transform_group = self.add_group(detector_group, 'transformations', 'NXtransformations')
+        location_transformation = self.add_transformation(detector_group, 'translation',
+                                                          translate_magnitude,
+                                                          self.length_units, translate_unit_vector,
+                                                          name='location')
         if orientation is not None:
-            orientation_transformation = self.add_transformation(transform_group, 'rotation', orientation['angle'],
-                                                                 'degrees', orientation['axis'], name='orientation')
-            location_transformation = self.add_transformation(transform_group, 'translation', translate_magnitude,
-                                                              self.length_units, translate_unit_vector, name='location',
-                                                              depends_on=orientation_transformation)
+            orientation_transformation = self.add_transformation(detector_group, 'rotation',
+                                                                 orientation['angle'],
+                                                                 'degrees', orientation['axis'],
+                                                                 name='orientation', depends_on=location_transformation)
+            self.add_depends_on(detector_group, orientation_transformation)
         else:
-            location_transformation = self.add_transformation(transform_group, 'translation', translate_magnitude,
-                                                              self.length_units, translate_unit_vector, name='location')
-        self.add_depends_on(detector_group, location_transformation)
+            self.add_depends_on(detector_group, location_transformation)
 
     def add_monitors_from_idf(self):
         """
@@ -303,8 +311,8 @@ class NexusBuilder:
         if isinstance(group, str):
             group = self.root[group]
 
-        winding_order, faces = self.create_off_face_vertex_map(off_faces)
-        shape = self.add_group(group, name, 'NXoff_geometry')
+        winding_order, faces = readwriteoff.create_off_face_vertex_map(off_faces)
+        shape = self.add_nx_group(group, name, 'NXoff_geometry')
         self.add_dataset(shape, 'vertices', np.array(vertices).astype('float32'), {'units': self.length_units})
         self.add_dataset(shape, 'winding_order', np.array(winding_order).astype('int32'))
         self.add_dataset(shape, 'faces', np.array(faces).astype('int32'))
@@ -336,69 +344,14 @@ class NexusBuilder:
         vertices = np.array([vector_a, vector_b, vector_c]).astype(float)
         shape = self.add_group(group, 'pixel_shape', 'NXcylindrical_geometry')
         self.add_dataset(shape, 'vertices', vertices, {'units': self.length_units})
-        self.add_dataset(shape, 'cylinder', np.array([0, 1, 2]).astype('int32'))
+        self.add_dataset(shape, 'cylinders', np.array([[0, 1, 2]]).astype('int32'))
 
-    def add_tube_pixel_mesh(self, group, height, radius, axis, centre=None, number_of_vertices=50):
-        """
-        Construct an NXoff_geometry description of a tube, using the OFF-style description
-
-        :param group: Group to add the pixel geometry to
-        :param height: Height of the tube
-        :param radius: Radius of the tube
-        :param axis: Axis of the tube as a unit vector
-        :param centre: On-axis centre of the tube in form [x, y, z]
-        :param number_of_vertices: Maximum number of vertices to use to describe pixel
-        :return: NXoff_geometry describing a single pixel
-        """
-        # Construct the geometry as if the tube axis is along x, rotate everything later
-        if centre is None:
-            centre = [0, 0, 0]
-        end_centre = [centre[0] - (height / 2.0), centre[1], centre[2]]
-        angles = np.linspace(0, 2 * np.pi, np.floor((number_of_vertices / 2) + 1))
-        # The last point is the same as the first so get rid of it
-        angles = angles[:-1]
-        y = end_centre[1] + radius * np.cos(angles)
-        z = end_centre[2] + radius * np.sin(angles)
-        num_points_at_each_tube_end = len(y)
-        vertices = np.concatenate((
-            np.array(list(zip(np.zeros(len(y)) + end_centre[0], y, z))),
-            np.array(list(zip(np.ones(len(y)) * height + end_centre[0], y, z)))))
-
-        # Rotate vertices to correct the tube axis
-        rotation_matrix = nexusutils.find_rotation_matrix_between_vectors(np.array(axis), np.array([1., 0., 0.]))
-        if rotation_matrix is not None:
-            vertices = rotation_matrix.dot(vertices.T).T
-
-        #
-        # points around left circle tube-end       points around right circle tube-end
-        #                                          (these follow the left ones in vertices list)
-        #  circular boundary ^                     ^
-        #                    |                     |
-        #     nth_vertex + 2 .                     . nth_vertex + num_points_at_each_tube_end + 2
-        #     nth_vertex + 1 .                     . nth_vertex + num_points_at_each_tube_end + 1
-        #     nth_vertex     .                     . nth_vertex + num_points_at_each_tube_end
-        #                    |                     |
-        #  circular boundary v                     v
-        #
-        # face starts with the number of vertices in the face (4)
-        faces = [
-            [4, nth_vertex, nth_vertex + num_points_at_each_tube_end, nth_vertex + num_points_at_each_tube_end + 1,
-             nth_vertex + 1] for nth_vertex in range(num_points_at_each_tube_end - 1)]
-        # Append the last rectangular face
-        faces.append([num_points_at_each_tube_end - 1, (2 * num_points_at_each_tube_end) - 1,
-                      num_points_at_each_tube_end, 0])
-        # NB this is a tube, not a cylinder; I'm not adding the circular faces on the ends of the tube
-        faces = np.array(faces)
-        pixel_shape = self.add_shape(group, 'pixel_shape', vertices, faces)
-        return pixel_shape
-
-    def __del__(self):
-        # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
-        try:
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.__add_features()
+        if self.source_file is not None:
             self.source_file.close()
+        if self.target_file is not None:
             self.target_file.close()
-        except Exception:
-            pass
 
     def __add_nx_entry(self, nx_entry_name):
         entry_group = self.target_file.create_group(nx_entry_name)
@@ -457,26 +410,6 @@ class NexusBuilder:
         with open(filename) as off_file:
             off_vertices, all_faces = readwriteoff.parse_off_file(off_file)
         return self.add_shape(group, name, off_vertices, all_faces)
-
-    @staticmethod
-    def create_off_face_vertex_map(off_faces):
-        """
-        Avoid having a ragged edge faces dataset due to differing numbers of vertices in faces by recording
-        a flattened faces dataset (winding_order) and putting the start index for each face in that
-        into the faces dataset.
-
-        :param off_faces: OFF-style faces array, each row is number of vertices followed by vertex indices
-        :return: flattened array (winding_order) and the start indices in that (faces)
-        """
-        faces = []
-        winding_order = []
-        current_index = 0
-        for face in off_faces:
-            faces.append(current_index)
-            current_index += face[0]
-            for vertex_index in face[1:]:
-                winding_order.append(vertex_index)
-        return winding_order, faces
 
     def add_structured_detectors_from_idf(self):
         """
@@ -547,18 +480,20 @@ class NexusBuilder:
     def __add_transformations_for_structured_detector(self, detector, detector_group):
         # Add position of detector
         translate_unit_vector, translate_magnitude = nexusutils.normalise(detector['location'])
-        transform_group = self.add_group(detector_group, 'transformations', 'NXtransformations')
+        position = self.add_transformation(detector_group, 'translation', translate_magnitude,
+                                           self.length_units,
+                                           translate_unit_vector, name='panel_position')
         # Add orientation of detector
         if detector['orientation'] is not None:
             rotate_unit_vector, rotate_magnitude = nexusutils.normalise(detector['orientation']['axis'])
-            rotation = self.add_transformation(transform_group, 'rotation', detector['orientation']['angle'], 'degrees',
-                                               rotate_unit_vector, name='orientation')
-            position = self.add_transformation(transform_group, 'translation', translate_magnitude, self.length_units,
-                                               translate_unit_vector, name='panel_position', depends_on=rotation)
+            orientation = self.add_transformation(detector_group, 'rotation',
+                                                  detector['orientation']['angle'],
+                                                  'degrees',
+                                                  rotate_unit_vector, name='orientation',
+                                                  depends_on=position)
+            self.add_depends_on(detector_group, orientation)
         else:
-            position = self.add_transformation(transform_group, 'translation', translate_magnitude, self.length_units,
-                                               translate_unit_vector, name='panel_position')
-        self.add_depends_on(detector_group, position)
+            self.add_depends_on(detector_group, position)
 
     @staticmethod
     def __create_detector_ids_for_structured_detector(pixels_in_first_dimension, pixels_in_second_dimension, detector):
@@ -626,6 +561,7 @@ class NexusBuilder:
             self.add_dataset(self.instrument, 'name', name, {'short_name': name[:3]})
         else:
             self.add_dataset(self.instrument, 'name', name, {'short_name': name})
+        return self.instrument
 
     def add_transformation(self, group, transformation_type, values, value_units, vector, offset=None,
                            name='transformation', depends_on='.'):
@@ -652,7 +588,8 @@ class NexusBuilder:
         attributes = {'units': value_units,
                       'vector': vector,
                       'transformation_type': transformation_type,
-                      'depends_on': depends_on}  # terminate chain with "." if no depends_on given
+                      'depends_on': depends_on,  # terminate chain with "." if no depends_on given
+                      'NX_class': 'NXtransformation'}
         if offset is not None:
             attributes['offset'] = offset
         transformation = self.add_dataset(group, name, values, attributes)
@@ -699,13 +636,11 @@ class NexusBuilder:
         logger.info('Got instrument geometry for ' + instrument_name + ' from IDF file, it has:')
 
         source_name = self.idf_parser.get_source_name()
-        self.add_source(source_name)
+        source_position = self.idf_parser.get_source_position()
+        self.add_source(source_name, position=source_position )
         logger.info('a source called ' + source_name)
 
-        sample_position_list = self.idf_parser.get_sample_position()
-        sample_group = self.add_sample(sample_position_list)
-        logger.info('a sample at x=' + str(sample_position_list[0]) + ', y=' + str(sample_position_list[1]) + ', z=' +
-                    str(sample_position_list[2]) + ' offset from source')
+        self.add_sample()
 
         number_of_monitors = self.add_monitors_from_idf()
         if number_of_monitors != 0:
@@ -723,38 +658,37 @@ class NexusBuilder:
         detectors_added = (number_of_detectors + number_of_grid_detectors) > 0
         return detectors_added
 
-    def add_sample(self, position, name='sample'):
+    def add_sample(self, name='sample'):
         """
         Add an NXsample group
 
-        :param position: Distance along the beam from the source
         :param name: Name for the NXsample group
-        :return: The NXsample group and the sample position dataset
+        :return: The NXsample group
         """
-        sample_group = self.add_group(self.root, name, 'NXsample')
-        if position is None:
-            position = np.array([0.0, 0.0, 0.0])
-
-        sample_transform_group = self.add_group('sample', 'transformations', 'NXtransformations')
-        self.add_dataset('sample', 'distance', position[2])
-        position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
-        sample_position = self.add_transformation(sample_transform_group, 'translation', position_magnitude,
-                                                  self.length_units, position_unit_vector, name='location')
-        self.add_depends_on(sample_group, sample_position)
+        sample_group = self.add_nx_group(self.root, name, 'NXsample')
         return sample_group
 
-    def add_source(self, name, group_name='source'):
+    def add_source(self, name, group_name='source', position=None):
         """
         Add an NXsource group
 
         :param name: Name of the source
         :param group_name: Name for the NXsource group
+        :param position: Position of the source relative to the sample
         :return: The NXsource group
         """
         if self.instrument is None:
             raise Exception('There needs to be an NXinstrument before you can add an NXsource')
         source_group = self.add_group(self.instrument, group_name, 'NXsource')
         self.add_dataset(source_group, 'name', name)
+
+        if position is not None:
+            transform_group = self.add_nx_group(source_group, 'transformations', 'NXtransformations')
+            position_unit_vector, position_magnitude = nexusutils.normalise(np.array(position).astype(float))
+            source_position = self.add_transformation(transform_group, 'translation', position_magnitude,
+                                                      self.length_units, position_unit_vector, name='location')
+            self.add_depends_on(source_group, source_position)
+
         return source_group
 
     def add_group(self, parent_group, group_name, nx_class_name, attributes=None):
@@ -772,7 +706,9 @@ class NexusBuilder:
         group_name = group_name.replace(' ', '_')
         created_group = parent_group.create_group(group_name)
         created_group.attrs.create('NX_class', np.array(nx_class_name).astype('|S' + str(len(nx_class_name))))
+
         self._add_attributes_if_any(created_group, attributes)
+        self.add_feature_for_class(nx_class_name)
         return created_group
 
     @staticmethod
@@ -788,3 +724,39 @@ class NexusBuilder:
 
     def delete_dataset_or_group(self, dataset_or_group_name):
         del self.root[dataset_or_group_name]
+
+    def add_feature_for_class(self, class_name):
+        """
+        If there is a feature (see https://github.com/nexusformat/features) corresponding to the added NX class
+        then append its feature id to the set of features
+        :param class_name:
+        """
+        if class_name == "NXlog":
+            feature_id = "B051F43BC680C13B"
+        elif class_name == "NXevent_data":
+            feature_id = "ECB064453EDB096D"
+        elif class_name == "NXoff_geometry" or class_name == "NXcylindrical_geometry":
+            feature_id = "8CB1EBAE3B2DA51D"
+        elif class_name == "NXcite":
+            feature_id = "D1A0000000000002"
+        else:
+            return
+        self.add_feature(feature_id)
+
+    def __add_features(self):
+        """
+        Add a dataset which details which "features" the file contains (see https://github.com/nexusformat/features),
+        either features explicitly noted using add_feature or based on what NeXus classes have been added through
+        the builder
+        """
+        if self.features:
+            feature_ids_int64 = [int(feature_id, 16) if isinstance(feature_id, str) else feature_id for feature_id in
+                                 self.features]
+            self.add_dataset(self.root, "features", feature_ids_int64)
+
+    def add_feature(self, feature_id):
+        """
+        Add a feature id to the list of features present in the file, id is a hex string or integer
+        """
+        self.features.add(feature_id)
+
