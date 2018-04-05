@@ -77,13 +77,26 @@ def get_transformations(depends_on, transformations, source_file):
             get_transformations(next_depends_on, transformations, source_file)
 
 
+def get_transformation_magnitude(transform):
+    if transform.attrs['NX_class'].decode() == 'NXlog':
+        transformation_magnitude = transform['value'][0]
+    else:
+        transformation_magnitude = transform[...]
+    return transformation_magnitude
+
+
 def get_transformation(transform, transformations):
+    """
+    Gets a transformation, if the transformation is an NXlog (indicating a scan)
+    then the transformation for the initial angle/position is returned
+    """
     attributes = transform.attrs
     offset = [0., 0., 0.]
     if 'offset' in attributes:
         offset = attributes['offset'].astype(float)
+    transform_magnitude = get_transformation_magnitude(transform)
     if attributes['transformation_type'].astype(str) == 'translation':
-        vector = attributes['vector'] * transform[...].astype(float)
+        vector = attributes['vector'] * transform_magnitude.astype(float)
         matrix = np.matrix([[1., 0., 0., vector[0] + offset[0]],
                             [0., 1., 0., vector[1] + offset[1]],
                             [0., 0., 1., vector[2] + offset[2]],
@@ -92,7 +105,7 @@ def get_transformation(transform, transformations):
 
     elif attributes['transformation_type'].astype(str) == 'rotation':
         axis = attributes['vector']
-        angle = np.deg2rad(transform[...])
+        angle = np.deg2rad(transform_magnitude)
         rotation_matrix = nexusutils.rotation_matrix_from_axis_and_angle(axis, angle)
         matrix = np.matrix([[rotation_matrix[0, 0], rotation_matrix[0, 1], rotation_matrix[0, 2], offset[0]],
                             [rotation_matrix[1, 0], rotation_matrix[1, 1], rotation_matrix[1, 2], offset[1]],

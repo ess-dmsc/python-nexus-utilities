@@ -46,7 +46,7 @@ To assist in creating the IDF to NeXus conversion scripts I made a couple of sim
 
 ### Detector Plotter
 
-Plots the pixel offsets in the XY and XZ planes.
+Plots the pixel offsets in the XY and XZ planes. If there are any scanning detectors they are plotted in their initial position and orientation.
 
 Usage example:
 ```python

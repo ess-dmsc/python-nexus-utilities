@@ -1,6 +1,8 @@
 from nexusbuilder import NexusBuilder
 import numpy as np
 from datetime import datetime
+from drawoff import render_off_from_file
+from nexustooff import nexus_geometry_to_off_file
 
 if __name__ == '__main__':
     output_filename = 'SANS2D_scan_example.hdf5'
@@ -37,3 +39,7 @@ if __name__ == '__main__':
     builder.delete_dataset_or_group('/raw_data_1/instrument/detector_1/depends_on')
     builder.add_dataset('/raw_data_1/instrument/detector_1', 'depends_on',
                         '/raw_data_1/instrument/detector_1/transformations/translation_scan')
+
+    output_off_file = "scan_example.off"
+    nexus_geometry_to_off_file(output_filename, output_off_file)
+    render_off_from_file(output_off_file)
