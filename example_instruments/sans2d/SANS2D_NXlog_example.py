@@ -1,6 +1,6 @@
 import numpy as np
 import h5py
-from nxlogexample import create_nexus_file
+from nxloghelper import create_nexus_file
 try:
     import matplotlib.pyplot as pl
 except:

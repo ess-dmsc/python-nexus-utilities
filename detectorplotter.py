@@ -9,8 +9,9 @@ class DetectorPlotter:
     Produce a simple scatter plot of detector pixel locations
     """
 
-    def __init__(self, nexus_filename):
+    def __init__(self, nexus_filename, nx_entry='raw_data_1'):
         self.source_file = h5py.File(nexus_filename, 'r')
+        self.nx_entry = nx_entry
 
     def __enter__(self):
         return self
@@ -20,7 +21,7 @@ class DetectorPlotter:
             self.source_file.close()
 
     def plot_pixel_positions(self):
-        instrument_group = self.source_file['/raw_data_1/instrument']
+        instrument_group = self.source_file['/' + self.nx_entry + '/instrument']
         detector_group_paths = []
         for name, dataset_or_group in instrument_group.items():
             if 'NX_class' in dataset_or_group.attrs:

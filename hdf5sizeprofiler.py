@@ -31,6 +31,13 @@ class HDF5SizeProfiler:
         for dataset in self.datasets:
             dataset['% of total size'] = dataset['Size (bytes)'] * size_factor
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.source_file is not None:
+            self.source_file.close()
+
     def print_stats_table(self):
         print('Total uncompressed size is {0} megabytes, compressed file size is {1} megabytes'
               .format(self.total_bytes / 1000000., self.file_size / 1e6))
@@ -46,16 +53,9 @@ class HDF5SizeProfiler:
         pl.pie(values, labels=names, autopct='%1.1f%%', shadow=True, startangle=90)
         pl.show()
 
-    def __del__(self):
-        # Wrap in try to ignore exception which h5py likes to throw with Python 3.5
-        try:
-            self.source_file.close()
-        except Exception:
-            pass
-
 
 if __name__ == '__main__':
     # Example usage
-    profiler = HDF5SizeProfiler('example_instruments/wish/WISH_example_gzip_compress.hdf5')
-    profiler.print_stats_table()
-    profiler.draw_pie_chart()
+    with HDF5SizeProfiler('example_instruments/sans2d/SANS2D_example.hdf5') as profiler:
+        profiler.print_stats_table()
+        profiler.draw_pie_chart()
