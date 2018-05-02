@@ -5,6 +5,9 @@ from nxloghelper import add_example_nxlog
 
 
 def __copy_and_truncate(builder, source_dataset_path, target_dataset_path, truncate_to_size):
+    """
+    Copy data from the existing NeXus file, but truncate datasets to specified length
+    """
     source_dataset = builder.source_file.get(source_dataset_path)[:truncate_to_size]
     source_attrs = builder.source_file.get(source_dataset_path).attrs
     if target_dataset_path[0] == "/":
