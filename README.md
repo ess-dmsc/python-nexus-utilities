@@ -54,7 +54,7 @@ plotter.plot_pixel_positions()
 ```
 example output:
 
-![WISH](example_instruments/wish/wish_plot.png)
+![WISH](examples/wish/wish_plot.png)
 
 ### HDF5 Size Profiler
 
