@@ -1,5 +1,5 @@
 from io import StringIO
-import readwriteoff
+from nexusutils.readwriteoff import parse_off_file
 
 test_OFF_file = StringIO('OFF\n'
                          '# A cube\n'
@@ -26,7 +26,7 @@ test_OFF_file = StringIO('OFF\n'
 
 def test_face_array_row_from_parsed_OFF_file_begins_with_number_of_vertices():
     test_OFF_file.seek(0)  # Ensure file is read from the start
-    vertices, faces = readwriteoff.parse_off_file(test_OFF_file)
+    vertices, faces = parse_off_file(test_OFF_file)
     for row in faces:
         number_of_vertex_indices = len(row[1:])
         assert (row[0] == number_of_vertex_indices)
@@ -34,13 +34,13 @@ def test_face_array_row_from_parsed_OFF_file_begins_with_number_of_vertices():
 
 def test_each_vertex_comprises_three_coordinate_components():
     test_OFF_file.seek(0)  # Ensure file is read from the start
-    vertices, faces = readwriteoff.parse_off_file(test_OFF_file)
+    vertices, faces = parse_off_file(test_OFF_file)
     for vertex in vertices:
         assert (len(vertex) == 3)
 
 
 def test_outputs_contain_number_of_vertices_and_faces_specified_in_file_header():
     test_OFF_file.seek(0)  # Ensure file is read from the start
-    vertices, faces = readwriteoff.parse_off_file(test_OFF_file)
+    vertices, faces = parse_off_file(test_OFF_file)
     assert (len(vertices) == 8)
     assert (len(faces) == 6)

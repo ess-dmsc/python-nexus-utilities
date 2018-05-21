@@ -37,6 +37,7 @@ node("docker") {
                 cd ${project}
                 build_env/bin/pip --proxy ${http_proxy} install --upgrade pip
                 build_env/bin/pip --proxy ${http_proxy} install -r requirements.txt
+                build_env/bin/pip --proxy ${http_proxy} install -e /home/jenkins/${project}
                 build_env/bin/pip --proxy ${http_proxy} install pytest
             \""""
         }
