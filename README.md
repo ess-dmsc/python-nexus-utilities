@@ -22,7 +22,7 @@ sudo yum install python34-tkinter
 
 ## To create a NeXus file
 
-Use `./build.py <input_IDF_file_path>`.
+Use `python nexusutils/build.py <input_IDF_file_path>`.
 
 To view a list of optional arguments use `./build.py --help` 
 
@@ -45,7 +45,7 @@ Examples scripts can be found in the `examples` directory. Example scripts shoul
 
 ## Tools
 
-To assist in creating the IDF to NeXus conversion scripts I made a couple of simple tools: "Detector Plotter" and "HDF5 Size Profiler". 
+To assist in creating the IDF to NeXus conversion scripts there are a couple of simple tools: "Detector Plotter" and "HDF5 Size Profiler". 
 
 ### Detector Plotter
 
