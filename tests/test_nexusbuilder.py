@@ -1,7 +1,5 @@
-import env
-import pytest
 import numpy as np
-from nexusbuilder import NexusBuilder
+from nexusutils.nexusbuilder import NexusBuilder
 
 
 def test_add_instrument_results_in_instrument_in_file_with_specified_name():

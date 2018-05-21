@@ -1,7 +1,5 @@
-import env
-import pytest
 import numpy as np
-from coordinatetransformer import CoordinateTransformer
+from nexusutils.coordinatetransformer import CoordinateTransformer
 
 
 def test_angles_already_in_degrees_are_unchanged():
