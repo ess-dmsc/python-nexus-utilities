@@ -56,6 +56,7 @@ class NexusBuilder:
             self.length_units = 'm'
         self.instrument = None
         self.features = set()
+        self.__add_citations()
 
     def __enter__(self):
         return self
@@ -113,7 +114,11 @@ class NexusBuilder:
             raise Exception(name + " dataset already exists, delete it before trying to create a new one")
 
         if isinstance(data, str):
-            dataset = group.create_dataset(name, data=np.array(data).astype('|S' + str(len(data))))
+            # If the string is large we have to write it as variable length (h5py constraint)
+            if len(data) > 32:
+                dataset = group.create_dataset(name, data=data, dtype=h5py.special_dtype(vlen=str))
+            else:
+                dataset = group.create_dataset(name, data=np.string_(data))
         elif is_scalar(data):
             # Don't try to use compression with scalar datasets
             dataset = group.create_dataset(name, data=data)
@@ -712,3 +717,39 @@ class NexusBuilder:
         Add a feature id to the list of features present in the file, id is a hex string or integer
         """
         self.features.add(feature_id)
+
+    def __add_citations(self):
+        """
+        Add NXcite entries to the output file
+        """
+        self.__add_nx_cite(name="ess_filewriter_citation",
+                           description="This file was written using the ESS File Writer "
+                                       "which is described in this paper",
+                           bibtex="\\bibitem{forwarderfilewriter:conf}\n"
+                                  "D.~Werder et al., \\textit{EPICS Data Streaming and HDF File Writing for ESS\n"
+                                  "Benchmarked Using the Virtual AMOR Instrument}, "
+                                  "in \\textit{16th Int.\\ Conf.\\ on,\n"
+                                  "Accelerator and Large Experimental Physics Control Systems (ICALEPCS’17)},\n"
+                                  "Barcelona, Spain, Oct.\\ 2017."
+                           )
+        self.__add_nx_cite(name="ess_datastreaming_citation",
+                           description="A report on the data aggregator software used to collect the data in this file",
+                           doi="10.17199/BRIGHTNESS.D5.3",
+                           bibtex="\\bibitem{brightness:d53}\n"
+                                  "A.~Mukai, T.~Richter, \\textit{Beta-version data aggregator software},\n"
+                                  "BrightnESS Deliverable Rep.\\ 5.3.\\ \\url{doi:10.17199/BRIGHTNESS.D5.3}"
+                           )
+
+    def __add_nx_cite(self, name, description=None, url=None, doi=None, bibtex=None):
+        """
+        Add an NXcite citation entry
+        """
+        nxcite_group = self.add_nx_group(self.root, name, 'NXcite')
+        if description:
+            self.add_dataset(nxcite_group, "description", description)
+        if url:
+            self.add_dataset(nxcite_group, "url", url)
+        if doi:
+            self.add_dataset(nxcite_group, "doi", doi)
+        if bibtex:
+            self.add_dataset(nxcite_group, "bibtex", bibtex)
