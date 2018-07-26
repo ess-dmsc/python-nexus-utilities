@@ -17,9 +17,9 @@ sudo yum install python34-tkinter
 
 ## To create a NeXus file
 
-Use `python nexusutils/build.py <input_IDF_file_path>`.
+Use `python build.py <input_IDF_file_path>`.
 
-To view a list of optional arguments use `./build.py --help` 
+To view a list of optional arguments use `python build.py --help` 
 
 ## Examples
 

@@ -47,7 +47,7 @@ if __name__ == '__main__':
         builder.add_instrument_geometry_from_idf()
 
     if arguments.plot:
-        from detectorplotter import DetectorPlotter
+        from nexusutils.detectorplotter import DetectorPlotter
 
         with DetectorPlotter(output_filename) as plotter:
             plotter.plot_pixel_positions()
@@ -56,6 +56,6 @@ if __name__ == '__main__':
         off_file_fullpath = os.path.join(output_dir, arguments.off_filename)
         nexus_geometry_to_off_file(nexus_file_fullpath, off_file_fullpath)
         if arguments.render:
-            from drawoff import render_off_from_file
+            from nexusutils.drawoff import render_off_from_file
 
             render_off_from_file(off_file_fullpath)
