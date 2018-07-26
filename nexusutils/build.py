@@ -2,8 +2,8 @@
 
 import argparse
 import os
-from .nexusbuilder import NexusBuilder
-from .nexustooff import nexus_geometry_to_off_file
+from nexusutils.nexusbuilder import NexusBuilder
+from nexusutils.nexustooff import nexus_geometry_to_off_file
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

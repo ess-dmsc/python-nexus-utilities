@@ -1,6 +1,6 @@
 import numpy as np
 import logging
-from .nexusutils import find_rotation_matrix_between_vectors
+from nexusutils.utils import find_rotation_matrix_between_vectors
 
 logger = logging.getLogger('NeXus_Utils')
 

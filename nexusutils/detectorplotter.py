@@ -1,7 +1,7 @@
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-import nexusutils
+import nexusutils.utils as utils
 
 
 class DetectorPlotter:
@@ -94,7 +94,7 @@ def get_transformation(transform, transformations):
     elif attributes['transformation_type'].astype(str) == 'rotation':
         axis = attributes['vector']
         angle = np.deg2rad(transform[...])
-        rotation_matrix = nexusutils.rotation_matrix_from_axis_and_angle(axis, angle)
+        rotation_matrix = utils.rotation_matrix_from_axis_and_angle(axis, angle)
         matrix = np.matrix([[rotation_matrix[0, 0], rotation_matrix[0, 1], rotation_matrix[0, 2], offset[0]],
                             [rotation_matrix[1, 0], rotation_matrix[1, 1], rotation_matrix[1, 2], offset[1]],
                             [rotation_matrix[2, 0], rotation_matrix[2, 1], rotation_matrix[2, 2], offset[2]],
