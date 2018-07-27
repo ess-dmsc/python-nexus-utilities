@@ -5,7 +5,7 @@ from panda3d.core import Geom, GeomTriangles, GeomVertexWriter
 from panda3d.core import GeomNode
 from panda3d.core import TextNode
 from pandac.PandaModules import WindowProperties
-from .readwriteoff import parse_off_file
+from nexusutils.readwriteoff import parse_off_file
 
 base = ShowBase()
 

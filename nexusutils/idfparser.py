@@ -1,8 +1,8 @@
 import xml.etree.ElementTree
 import numpy as np
-from .coordinatetransformer import CoordinateTransformer
+from nexusutils.coordinatetransformer import CoordinateTransformer
 import logging
-from .nexusutils import normalise, find_rotation_axis_and_angle_between_vectors
+from nexusutils.utils import normalise, find_rotation_axis_and_angle_between_vectors
 import itertools
 import uuid
 
@@ -54,10 +54,10 @@ class IDFParser:
 
     def get_source_position(self):
         """
-	Returns the source position as an x,y,z coord list
-	
-	:return: The source position as a list
-	"""
+        Returns the source position as an x,y,z coord list
+
+        :return: The source position as a list
+        """
         for xml_type in self.root.findall('d:type', self.ns):
             if xml_type.get('is') == 'Source':
                 for xml_source_component in self.root.findall('d:component', self.ns):

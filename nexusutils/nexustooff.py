@@ -1,9 +1,9 @@
 import numpy as np
 import h5py
 import logging
-from .readwriteoff import write_off_file, create_off_face_vertex_map, construct_cylinder_mesh
-from .detectorplotter import get_transformations, do_transformations
-from .nexusutils import normalise, calculate_magnitude
+from nexusutils.readwriteoff import write_off_file, create_off_face_vertex_map, construct_cylinder_mesh
+from nexusutils.detectorplotter import get_transformations, do_transformations
+from nexusutils.utils import normalise, calculate_magnitude
 
 logger = logging.getLogger('NeXus_Utils')
 

@@ -4,9 +4,9 @@ from collections import OrderedDict
 import tables
 import os
 import numpy as np
-from .idfparser import IDFParser
-from .nexusutils import is_scalar, normalise, get_an_orthogonal_unit_vector
-from .readwriteoff import create_off_face_vertex_map, parse_off_file
+from nexusutils.idfparser import IDFParser
+from nexusutils.utils import is_scalar, normalise, get_an_orthogonal_unit_vector
+from nexusutils.readwriteoff import create_off_face_vertex_map, parse_off_file
 
 logger = logging.getLogger('NeXus_Utils')
 logger.setLevel(logging.INFO)

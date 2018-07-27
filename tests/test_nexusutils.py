@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from nexusutils.nexusutils import *
+from nexusutils.utils import *
 
 
 def test_is_scalar_returns_true_for_single_value():
