@@ -132,3 +132,38 @@ def get_an_orthogonal_unit_vector(input_vector):
     vector = np.array([0., -input_vector[2], input_vector[1]])
     unit_vector, mag = normalise(vector)
     return unit_vector
+
+
+def create_dataset(nexus_entry, group, name, data, attributes=None, compress_type=None, compress_opts=None):
+    """
+    Add a dataset to a given group
+
+    :param group: Group object, or group path from NXentry as a string
+    :param name: Name of the dataset to create
+    :param data: Data to put in the dataset
+    :param attributes: Optional dictionary of attributes to add to dataset
+    :return: Dataset
+    """
+    if isinstance(group, str):
+        group = nexus_entry[group]
+
+    if name in group:
+        raise Exception(name + " dataset already exists, delete it before trying to create a new one")
+
+    if isinstance(data, str):
+        dataset = group.create_dataset(name, data=np.array(data).astype('|S' + str(len(data))))
+    elif is_scalar(data):
+        # Don't try to use compression with scalar datasets
+        dataset = group.create_dataset(name, data=data)
+    else:
+        dataset = group.create_dataset(name, data=data, compression=compress_type,
+                                       compression_opts=compress_opts)
+
+    if attributes:
+        for key in attributes:
+            if isinstance(attributes[key], str):
+                # Since python 3 we have to treat strings like this
+                dataset.attrs.create(key, np.array(attributes[key]).astype('|S' + str(len(attributes[key]))))
+            else:
+                dataset.attrs.create(key, np.array(attributes[key]))
+    return dataset
