@@ -204,15 +204,20 @@ class IDFParser:
             if child.tag == '{' + self.ns['d'] + '}location':
                 detector_offsets.append(self.__get_vector(child, top_level=top_level))
             elif child.tag == '{' + self.ns['d'] + '}locations':
+                n_locations = int(child.get('n-elements'))
+                locations = [np.array([0.0] * n_locations).astype(float), np.array([0.0] * n_locations).astype(float),
+                             np.array([0.0] * n_locations).astype(float)]
                 for axis_number, axis in enumerate(['x', 'y', 'z']):
                     if child.get(axis):
-                        for location in np.linspace(start=float(child.get(axis)),
-                                                    stop=float(child.get(axis + '-end')),
-                                                    num=int(child.get('n-elements'))):
-                            location_vector = np.array([0.0, 0.0, 0.0]).astype(float)
-                            location_vector[axis_number] = location
-                            detector_offsets.append(location_vector)
-                        break
+                        if child.get(axis + '-end'):
+                            locations[axis_number] = np.linspace(start=float(child.get(axis)),
+                                                                 stop=float(child.get(axis + '-end')),
+                                                                 num=int(child.get('n-elements')))
+                        else:
+                            locations[axis_number] = np.array(
+                                [float(child.get(axis))] * int(child.get('n-elements'))).astype(float)
+                for n in range(n_locations):
+                    detector_offsets.append(np.array([locations[0][n], locations[1][n], locations[2][n]]).astype(float))
         return detector_offsets
 
     def get_detectors(self):
