@@ -5,8 +5,9 @@ import tables
 import os
 import numpy as np
 from nexusutils.idfparser import IDFParser
-from nexusutils.utils import is_scalar, normalise, get_an_orthogonal_unit_vector
+from nexusutils.utils import is_scalar, normalise, get_an_orthogonal_unit_vector, create_dataset
 from nexusutils.readwriteoff import create_off_face_vertex_map, parse_off_file
+from nexusutils.generatefakeevents import generate_fake_events
 
 logger = logging.getLogger('NeXus_Utils')
 logger.setLevel(logging.INFO)
@@ -106,29 +107,7 @@ class NexusBuilder:
         :param attributes: Optional dictionary of attributes to add to dataset
         :return: Dataset
         """
-        if isinstance(group, str):
-            group = self.root[group]
-
-        if name in group:
-            raise Exception(name + " dataset already exists, delete it before trying to create a new one")
-
-        if isinstance(data, str):
-            dataset = group.create_dataset(name, data=np.array(data).astype('|S' + str(len(data))))
-        elif is_scalar(data):
-            # Don't try to use compression with scalar datasets
-            dataset = group.create_dataset(name, data=data)
-        else:
-            dataset = group.create_dataset(name, data=data, compression=self.compress_type,
-                                           compression_opts=self.compress_opts)
-
-        if attributes:
-            for key in attributes:
-                if isinstance(attributes[key], str):
-                    # Since python 3 we have to treat strings like this
-                    dataset.attrs.create(key, np.array(attributes[key]).astype('|S' + str(len(attributes[key]))))
-                else:
-                    dataset.attrs.create(key, np.array(attributes[key]))
-        return dataset
+        return create_dataset(self.root, group, name, data, attributes, self.compress_type, self.compress_opts)
 
     def add_detectors_from_idf(self):
         """
@@ -712,3 +691,13 @@ class NexusBuilder:
         Add a feature id to the list of features present in the file, id is a hex string or integer
         """
         self.features.add(feature_id)
+
+    def add_fake_event_data(self, events_per_pulse, number_of_pulses, pulse_freq_hz=10.0, tof_min_ns=0,
+                            tof_max_ns=50000000):
+        """
+        Adds fake event data to every NXdetector group
+        TOF and detector ID for each event is random
+
+        Returns an array of all detector IDs in the instrument - this can be used to create a detector-spectrum map
+        """
+        return generate_fake_events(self.root, events_per_pulse, number_of_pulses, pulse_freq_hz, tof_min_ns, tof_max_ns)
