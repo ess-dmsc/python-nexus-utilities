@@ -28,10 +28,10 @@ def generate_fake_events(nexus_entry: h5py._hl.group.Group, events_per_pulse, nu
                     event_time_offset = np.append(event_time_offset, random.randint(tof_min_ns, tof_max_ns))
             event_group = detector.create_group('event_data')
             event_group.attrs.create('NX_class', np.array('NXevent_data').astype('|S12'))
-            create_dataset(nexus_entry, event_group, 'event_time_zero', event_time_zero)
+            create_dataset(nexus_entry, event_group, 'event_time_zero', event_time_zero, {'units': 'ns'})
             create_dataset(nexus_entry, event_group, 'event_index', event_index)
             create_dataset(nexus_entry, event_group, 'event_id', event_id)
-            create_dataset(nexus_entry, event_group, 'event_time_offset', event_time_offset)
+            create_dataset(nexus_entry, event_group, 'event_time_offset', event_time_offset, {'units': 'ns'})
 
             # Also create a link to the event data in the entry group
             nexus_entry['event_data_{}'.format(detector.name.split('/')[-1])] = event_group
