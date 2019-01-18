@@ -24,7 +24,7 @@ def generate_fake_events(nexus_entry: h5py._hl.group.Group, events_per_pulse, nu
             event_time_offset = np.array([], dtype=np.uint64)
             for _ in range(number_of_pulses):
                 for _ in range(events_per_pulse):
-                    event_id = np.append(event_id, det_ids[random.randint(0, len(det_ids)-1)])
+                    event_id = np.append(event_id, det_ids[random.randint(0, len(det_ids) - 1)])
                     event_time_offset = np.append(event_time_offset, random.randint(tof_min_ns, tof_max_ns))
             event_group = detector.create_group('event_data')
             event_group.attrs.create('NX_class', np.array('NXevent_data').astype('|S12'))
@@ -32,6 +32,9 @@ def generate_fake_events(nexus_entry: h5py._hl.group.Group, events_per_pulse, nu
             create_dataset(nexus_entry, event_group, 'event_index', event_index)
             create_dataset(nexus_entry, event_group, 'event_id', event_id)
             create_dataset(nexus_entry, event_group, 'event_time_offset', event_time_offset)
+
+            # Also create a link to the event data in the entry group
+            nexus_entry['event_data_{}'.format(detector.name.split('/')[-1])] = event_group
     return all_ids
 
 
@@ -48,7 +51,7 @@ def __get_detector_id_list(detector):
 
 
 def __generate_pulse_times(number_of_pulses, pulse_freq_hz):
-    pulse_period_ns = int((1.0/pulse_freq_hz) * 1e9)
+    pulse_period_ns = int((1.0 / pulse_freq_hz) * 1e9)
     return np.arange(0, number_of_pulses * pulse_period_ns, pulse_period_ns, np.uint64)
 
 
