@@ -182,13 +182,14 @@ class NexusBuilder:
         orientation = detector['orientation']
         if location is None:
             return
+        transformations = self.add_nx_group(detector_group, 'transformations', 'NXtransformations')
         translate_unit_vector, translate_magnitude = normalise(location)
-        location_transformation = self.add_transformation(detector_group, 'translation',
+        location_transformation = self.add_transformation(transformations, 'translation',
                                                           translate_magnitude,
                                                           self.length_units, translate_unit_vector,
                                                           name='location')
         if orientation is not None:
-            orientation_transformation = self.add_transformation(detector_group, 'rotation',
+            orientation_transformation = self.add_transformation(transformations, 'rotation',
                                                                  orientation['angle'],
                                                                  'degrees', orientation['axis'],
                                                                  name='orientation', depends_on=location_transformation)
@@ -462,15 +463,16 @@ class NexusBuilder:
         return quadrilaterals, detector_faces, pixel_offsets
 
     def __add_transformations_for_structured_detector(self, detector, detector_group):
+        transformations = self.add_nx_group(detector_group, 'transformations', 'NXtransformations')
         # Add position of detector
         translate_unit_vector, translate_magnitude = normalise(detector['location'])
-        position = self.add_transformation(detector_group, 'translation', translate_magnitude,
+        position = self.add_transformation(transformations, 'translation', translate_magnitude,
                                            self.length_units,
                                            translate_unit_vector, name='panel_position')
         # Add orientation of detector
         if detector['orientation'] is not None:
             rotate_unit_vector, rotate_magnitude = normalise(detector['orientation']['axis'])
-            orientation = self.add_transformation(detector_group, 'rotation',
+            orientation = self.add_transformation(transformations, 'rotation',
                                                   detector['orientation']['angle'],
                                                   'degrees',
                                                   rotate_unit_vector, name='orientation',
@@ -512,7 +514,7 @@ class NexusBuilder:
         monitor_group = self.add_nx_group(self.instrument, name, 'NXmonitor')
         # detector_id is not a monitor dataset in the standard...
         self.add_dataset(monitor_group, 'detector_id', int(detector_id))
-        transform_group = self.add_nx_group(monitor_group, 'transformations', 'NXtransformation')
+        transform_group = self.add_nx_group(monitor_group, 'transformations', 'NXtransformations')
         location_unit_vector, location_magnitude = normalise(location.astype(float))
         location = self.add_transformation(transform_group, 'translation', location_magnitude, units,
                                            location_unit_vector, name='location')
@@ -547,20 +549,20 @@ class NexusBuilder:
             self.add_dataset(self.instrument, 'name', name, {'short_name': name})
         return self.instrument
 
-    def add_transformation(self, group, transformation_type, values, units, vector, offset=None, name='transformation',
-                           depends_on='.'):
+    def add_transformation(self, transform_group, transformation_type, values, units, vector, offset=None,
+                           name='transformation', depends_on='.'):
         """
-        Add an NXtransformation
+        Add a transformation to an NXtransformations group
 
-        :param group: The group to add the translation to, for example an instrument component
+        :param transform_group: The NXtransformations group to add the translation to, for example an instrument component
         :param transformation_type: "translation" or "rotation"
         :param values: Values to add to the dataset: distance to translate or angle to rotate
         :param units: Units for the dataset's values
         :param vector: Unit vector to translate along or rotate around
         :param offset: Offset translation to apply to the axis before applying transformation
         :param name: Name of this transformation axis, for example "rotation_angle", "phi", "panel_translate", etc
-        :param depends_on: Name (full path) of another NXtransformation which must be carried out before this one
-        :return: The NXtransformation
+        :param depends_on: Name (full path) of another transformation which must be carried out before this one
+        :return: The transformation
         """
         transform_types = ['translation', 'rotation']
         if transformation_type not in transform_types:
@@ -570,11 +572,10 @@ class NexusBuilder:
         attributes = {'units': units,
                       'vector': vector,
                       'transformation_type': transformation_type,
-                      'depends_on': depends_on,  # terminate chain with "." if no depends_on given
-                      'NX_class': 'NXtransformation'}
+                      'depends_on': depends_on}  # terminate chain with "." if no depends_on given
         if offset is not None:
             attributes['offset'] = offset
-        return self.add_dataset(group, name, values, attributes)
+        return self.add_dataset(transform_group, name, values, attributes)
 
     def add_instrument_geometry_from_idf(self):
         """
@@ -700,4 +701,5 @@ class NexusBuilder:
 
         Returns an array of all detector IDs in the instrument - this can be used to create a detector-spectrum map
         """
-        return generate_fake_events(self.root, events_per_pulse, number_of_pulses, pulse_freq_hz, tof_min_ns, tof_max_ns)
+        return generate_fake_events(self.root, events_per_pulse, number_of_pulses, pulse_freq_hz, tof_min_ns,
+                                    tof_max_ns)
