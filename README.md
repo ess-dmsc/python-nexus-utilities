@@ -15,6 +15,12 @@ on CentOS (with EPEL installed):
 sudo yum install python34-tkinter
 ```
 
+If you want to draw a 3D render then you will need to install panda3D:
+```
+pip install --extra-index-url https://archive.panda3d.org/ panda3d
+```
+Note, 3D rendering is not a core feature and panda3d is large, thus it is included in the requirements file.
+
 ## To create a NeXus file
 
 Use `python build.py <input_IDF_file_path>`.

@@ -71,7 +71,7 @@ def test_get_angle_unit_on_other_than_rad_or_deg_fails():
     test_defaults = {'length_units': 'Ald',
                      'angle_units': 'Furman'}
     fake_idf_file = create_fake_idf_file(defaults=test_defaults)
-    with pytest.raises(ValueError, message="Expecting ValueError for unexpected angle unit"):
+    with pytest.raises(ValueError):
         IDFParser(fake_idf_file)
     fake_idf_file.close()
 

@@ -16,6 +16,5 @@ setup(name='nexusutils',
                         'pyparsing',
                         'tables',
                         'matplotlib',
-                        'tabulate',
-                        'panda3d']
+                        'tabulate']
       )
