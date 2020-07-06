@@ -121,7 +121,7 @@ def construct_cylinder_mesh(height, radius, axis, centre=None, number_of_vertice
     if centre is None:
         centre = [0, 0, 0]
     face_centre = [centre[0] - (height / 2.0), centre[1], centre[2]]
-    angles = np.linspace(0, 2 * np.pi, np.floor((number_of_vertices / 2) + 1))
+    angles = np.linspace(0, 2 * np.pi, int((number_of_vertices / 2) + 1))
     # The last point is the same as the first so get rid of it
     angles = angles[:-1]
     y = face_centre[1] + radius * np.cos(angles)
