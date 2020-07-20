@@ -1,8 +1,6 @@
-import env
 import pytest
 import numpy as np
-import mathutils
-from nexusutils import *
+from nexusutils.utils import *
 
 
 def test_is_scalar_returns_true_for_single_value():
@@ -48,7 +46,7 @@ input_vectors = [np.array([0.0, 3.7, 0.0]),
 @pytest.mark.parametrize("input_vector", input_vectors)
 def test_normalise_returns_a_unit_vector_for_non_unit_input_vectors(input_vector):
     result_vector, result_mag = normalise(input_vector)
-    assert mathutils.isclose(1.0, np.linalg.norm(result_vector))
+    assert isclose(1.0, np.linalg.norm(result_vector))
 
 
 def test_rotation_matrix_for_coinciding_input_vectors_is_identity_matrix():
@@ -69,21 +67,21 @@ def test_get_an_orthogonal_unit_vector_returns_an_orthogonal_vector():
     input = np.array([0.5, 0.7, 0.1])
     result = get_an_orthogonal_unit_vector(input)
     dot_product = np.dot(input, result)
-    assert mathutils.isclose(0.0, dot_product, abs_tol=1e-10)
+    assert isclose(0.0, dot_product, abs_tol=1e-10)
 
 
 def test_get_an_orthogonal_unit_vector_returns_a_unit_vector():
     input = np.array([0.1, 0.7, 0.5])
     result = get_an_orthogonal_unit_vector(input)
     result_unit, result_mag = normalise(result)
-    assert mathutils.isclose(result_mag, 1.0)
+    assert isclose(result_mag, 1.0)
 
 
 def test_find_rotation_axis_and_angle_between_orthogonal_vectors_gives_90_degree_angle():
     vector_a = np.array([1.0, 0.0, 0.0])
     vector_b = np.array([0.0, 1.0, 0.0])
     axis, angle = find_rotation_axis_and_angle_between_vectors(vector_a, vector_b)
-    assert mathutils.isclose(angle, np.deg2rad(-90.0))
+    assert isclose(angle, np.deg2rad(-90.0))
 
 
 def test_find_rotation_axis_and_angle_between_orthogonal_vectors_gives_mutually_orthogonal_axis():

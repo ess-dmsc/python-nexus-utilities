@@ -21,22 +21,23 @@ node("docker") {
                 --env https_proxy=${env.https_proxy} \
             ")
         sh "docker cp ${project} ${container_name}:/home/jenkins/${project}"
-        sh """docker exec --user root ${container_name} bash -c \"
+        sh """docker exec --user root ${container_name} bash -e -c \"
             chown -R jenkins.jenkins /home/jenkins/${project}
         \""""
 
         stage("Create virtualenv") {
-            sh """docker exec ${container_name} bash -c \"
+            sh """docker exec ${container_name} bash -e -c \"
                 cd ${project}
                 python3.6 -m venv build_env
             \""""
         }
 
         stage("Install requirements") {
-            sh """docker exec ${container_name} bash -c \"
+            sh """docker exec ${container_name} bash -e -c \"
                 cd ${project}
                 build_env/bin/pip --proxy ${http_proxy} install --upgrade pip
                 build_env/bin/pip --proxy ${http_proxy} install -r requirements.txt
+                build_env/bin/pip --proxy ${http_proxy} install -e /home/jenkins/${project}
                 build_env/bin/pip --proxy ${http_proxy} install pytest
             \""""
         }
@@ -44,7 +45,7 @@ node("docker") {
         stage("Run tests") {
             def testsError = null
             try {
-                sh """docker exec ${container_name} bash -c \"
+                sh """docker exec ${container_name} bash -e -c \"
                     cd ${project}
                     build_env/bin/pytest . --ignore=build_env
                 \""""

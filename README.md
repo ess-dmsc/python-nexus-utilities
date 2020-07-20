@@ -1,7 +1,7 @@
 # python-nexus-utilities
 Functions to assist with building example NeXus files in the proposed format for ESS from existing NeXus files and Mantid IDFs.
 
-Tested with Python 3.4. You can install dependencies with
+Tested with Python 3.6, >=3.4 should be fine. You can install dependencies with
 ```
 pip install -r requirements.txt
 ```
@@ -15,32 +15,25 @@ on CentOS (with EPEL installed):
 sudo yum install python34-tkinter
 ```
 
+If you want to draw a 3D render then you will need to install panda3D:
+```
+pip install --extra-index-url https://archive.panda3d.org/ panda3d
+```
+Note, 3D rendering is not a core feature and panda3d is large, thus it is included in the requirements file.
+
 ## To create a NeXus file
 
-Use `./build.py <input_IDF_file_path>`.
+Use `python build.py <input_IDF_file_path>`.
 
-To view a list of optional arguments use `./build.py --help` 
+To view a list of optional arguments use `python build.py --help` 
 
 ## Examples
 
-`NexusBuilder` has functionality beyond that which is exposed by `build.py`.
-Examples scripts can be found in the `example_instruments` directory. Example scripts should be run from their own directory with the root directory of the repository in `PYTHONPATH` (IDEs such as PyCharm do this by default).
-
-- `SANS2D_example.py` example using a NeXus file and Mantid instrument definition from the SANS2D instrument. This outputs a new NeXus file in the proposed new format and contains examples of using the proposed `NXsolid_geometry` group to describe pixel shape.
-
-- `WISH_example` geometry example using a Mantid IDF for the WISH instrument. This demonstrates conversion from a polar coordinates system and more complex geometry with many (10 panels x 152 tubes x 512 pixels) detector pixels.
-
-- `LOKI_example.py` geometry example using a Mantid IDF for the LOKI instrument. It contains an example of using an `NXsolid_geometry` group to describe the shape of entire detector panels. 
-
-- `SANS2D_NXlog_example.py` demonstrates how one can use the `cue` datasets in the new `NXevent_data` group or in the updated `NXlog` to extract data for a specific time period from the file.
-
-- `all/` contains all current IDFs from Mantid. Running `parse_all.py` will attempt to convert all of these to the NeXus format. This is intended to help discover where the parser currently fails.
-
-- `SMALLFAKE_example` creates a small (~35 kB) NeXus file for a fake instrument with a few tube detectors.
+Scripts to generate example NeXus files for the ESS can be found at https://github.com/ess-dmsc/generate-nexus-files
 
 ## Tools
 
-To assist in creating the IDF to NeXus conversion scripts I made a couple of simple tools: "Detector Plotter" and "HDF5 Size Profiler". 
+To assist in creating the IDF to NeXus conversion scripts there are a couple of simple tools: "Detector Plotter" and "HDF5 Size Profiler". 
 
 ### Detector Plotter
 
@@ -48,13 +41,13 @@ Plots the pixel offsets in the XY and XZ planes.
 
 Usage example:
 ```python
-from detectorplotter import DetectorPlotter
+from nexusutils.detectorplotter import DetectorPlotter
 plotter = DetectorPlotter('example_instruments/wish/WISH_example_gzip_compress.hdf5')
 plotter.plot_pixel_positions()
 ```
 example output:
 
-![WISH](example_instruments/wish/wish_plot.png)
+![WISH](wish_plot.png)
 
 ### HDF5 Size Profiler
 
@@ -62,7 +55,7 @@ Prints a table of datasets (ignoring links) from largest to smallest with detail
 
 Usage example:
 ```python
-from hdf5sizeprofiler import HDF5SizeProfiler
+from nexusutils.hdf5sizeprofiler import HDF5SizeProfiler
 profiler = HDF5SizeProfiler('example_instruments/wish/WISH_example_gzip_compress.hdf5')
 profiler.print_stats_table()
 profiler.draw_pie_chart()
