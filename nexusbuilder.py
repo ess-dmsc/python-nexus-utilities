@@ -209,7 +209,17 @@ class NexusBuilder:
                                                           self.length_units, translate_unit_vector,
                                                           name='location')
         if orientation is not None:
-            orientation_transformation = self.add_transformation(detector_group, 'rotation',
+            if isinstance(orientation, list):
+                prev = location_transformation
+                for i, ort in enumerate(orientation):
+                    orientation_transformation = self.add_transformation(detector_group, 'rotation',
+                                                                     ort['angle'],
+                                                                     'degrees', ort['axis'],
+                                                                     name=f'orientation_{i}', depends_on=prev)
+                    prev = orientation_transformation
+
+            else:
+                orientation_transformation = self.add_transformation(detector_group, 'rotation',
                                                                  orientation['angle'],
                                                                  'degrees', orientation['axis'],
                                                                  name='orientation', depends_on=location_transformation)

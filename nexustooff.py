@@ -2,7 +2,6 @@ import numpy as np
 import h5py
 import logging
 from readwriteoff import write_off_file, create_off_face_vertex_map, construct_cylinder_mesh
-from detectorplotter import get_transformations, do_transformations
 import nexusutils
 
 logger = logging.getLogger('NeXus_Utils')
@@ -44,6 +43,7 @@ def get_off_geometry_from_group(group):
 
 
 def get_and_apply_transformations(group, nexus_file, vertices):
+    from detectorplotter import get_transformations
     transformations = list()
     try:
         depends_on = group['parent_group'].get('depends_on')
