@@ -24,6 +24,8 @@ builders = pipeline_builder.createBuilders { container ->
     container.sh """
       cd ${project}
       python3.6 -m venv build_env
+      build_env/bin/pip install --upgrade pip
+      build_env/bin/pip install --upgrade setuptools
       build_env/bin/pip --proxy ${http_proxy} install -r requirements.txt
       build_env/bin/pip --proxy ${http_proxy} install -e /home/jenkins/${project}
     """
