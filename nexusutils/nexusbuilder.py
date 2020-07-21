@@ -189,11 +189,21 @@ class NexusBuilder:
                                                           self.length_units, translate_unit_vector,
                                                           name='location')
         if orientation is not None:
-            orientation_transformation = self.add_transformation(transformations, 'rotation',
+            if(isinstance(orientation, list)):
+                previous_transf = location_transformation
+                for rot in orientation:
+                    orientation_transformation = self.add_transformation(detector_group, 'rotation',
+                                                                 rot['angle'],
+                                                                 'degrees', rot['axis'],
+                                                                 name='orientation', depends_on=previous_transf)
+                    self.add_depends_on(detector_group, orientation_transformation)
+                    previous_transf = orientation_transformation
+            else:
+                orientation_transformation = self.add_transformation(detector_group, 'rotation',
                                                                  orientation['angle'],
                                                                  'degrees', orientation['axis'],
-                                                                 name='orientation', depends_on=location_transformation)
-            self.add_depends_on(detector_group, orientation_transformation)
+                                                                 name='orientation', depends_on=prev_transf)
+                self.add_depends_on(detector_group, orientation_transformation)
         else:
             self.add_depends_on(detector_group, location_transformation)
 

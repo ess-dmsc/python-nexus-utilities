@@ -23,7 +23,7 @@ def dict_compare(d1, d2):
 
 
 def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, defaults=None, monitor_name=None,
-                         structured_detector=None, detector=None, rectangular_detector=None):
+                         structured_detector=None, detector=None, rectangular_detector=None, custom_location=None):
     """
     Create a fake IDF, in-memory, file object for use in unit tests of the IDF parser
 
@@ -34,6 +34,8 @@ def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, 
     :param monitor_name: A name for a monitor
     :param structured_detector: Dictionary with "name" and "type" for a structured detector
     :param detector: Dictionary with pixel and detector component information
+    :param rectuangular_detector: Dictionary with parameters for a rectangular detector
+    :param custom_location: Custom location element for a component
     :return: Python file object
     """
     fake_idf_file = StringIO()
@@ -56,17 +58,17 @@ def create_fake_idf_file(instrument_name='TEST', source_name=None, sample=None, 
     if detector is not None:
         __write_detector(fake_idf_file, detector)
     if rectangular_detector is not None:
-        __write_rectangular_detector(fake_idf_file, rectangular_detector)
+        __write_rectangular_detector(fake_idf_file, rectangular_detector, custom_location)
 
     fake_idf_file.write('</instrument>\n')
     fake_idf_file.seek(0)  # So that the xml parser reads from the start of the file
     return fake_idf_file
 
 
-def __write_rectangular_detector(fake_idf_file, detector):
+def __write_rectangular_detector(fake_idf_file, detector, custom_location):
     __write_detector_pixel(fake_idf_file, detector['pixel'])
     __write_rectangular_detector_type(fake_idf_file, detector)
-    __write_rectangular_detector_component(fake_idf_file, detector)
+    __write_rectangular_detector_component(fake_idf_file, detector, custom_location)
 
 
 def __write_rectangular_detector_type(fake_idf_file, detector):
@@ -79,18 +81,23 @@ def __write_rectangular_detector_type(fake_idf_file, detector):
                                                                '  </type>\n')
 
 
-def __write_rectangular_detector_component(fake_idf_file, detector):
+def __write_rectangular_detector_component(fake_idf_file, detector, custom_location=None):
+    if not custom_location:
+        location = r'<location x="2.1" z="23.281" name="front-detector"/>'
+    else:
+        location = custom_location
+
     if 'idstart' in detector.keys() and 'idstep' in detector.keys():
         fake_idf_file.write(
             '  <component type="detector-bank" idstart="' + str(
                 detector['idstart']) + '" idfillbyfirst="y" idstep="' + str(detector['idstep']) +
             '" idstepbyrow="1">\n'
-            '    <location x="1.1" z="23.281" name="front-detector"/>\n'
+            f'  {location}\n'  
             '  </component>\n')
     else:
         fake_idf_file.write(
             '  <component type="detector-bank">\n'
-            '    <location x="1.1" z="23.281" name="front-detector"/>\n'
+            f'    {location}\n'
             '  </component>\n')
 
 

@@ -105,8 +105,7 @@ class IDFParser:
                 x_pixel_offset, y_pixel_offset = np.meshgrid(x_pixel_offset_1d, y_pixel_offset_1d)
                 z_pixel_offset = np.zeros_like(x_pixel_offset)
                 offsets = np.stack((x_pixel_offset, y_pixel_offset, z_pixel_offset), axis=-1)
-                yield from self.find_rectangular_detector_components(bank_type_name, offsets, pixel_name, pixel_shape,
-                                                                     x_pixel_offset, y_pixel_offset, self.root)
+                yield from self.find_rectangular_detector_components(bank_type_name, offsets, pixel_name, pixel_shape, x_pixel_offset, y_pixel_offset, self.root)
                 for xml_top_level_type in self.root.findall('d:type', self.ns):
                     yield from self.find_rectangular_detector_components(bank_type_name, offsets, pixel_name,
                                                                          pixel_shape, x_pixel_offset, y_pixel_offset,
@@ -407,18 +406,34 @@ class IDFParser:
                      'pixels': []})
         self.__collect_detector_components(components, name, searched_already)
 
+    def __rotation_list(self, rot, rotations):
+        if rot is not None:
+            axis = np.array([rot.get('axis-x'), rot.get('axis-y'),
+                       rot.get('axis-z')]).astype(float)
+            if all([np.isnan(x) for x in axis]):
+                axis = np.array([0.0, 0.0, 1.0]) # This is how mantid defines angle only definition (around z)
+            rotation = {'angle': float(rot.get('val')),
+                'axis': axis}
+            rotations.append(rotation)
+            rotations = self.__rotation_list(rot.find('d:rot', self.ns), rotations)
+        return rotations
+
+
     def __parse_facing_element(self, xml_component):
         location_type = xml_component.find('d:location', self.ns)
         orientation = None
         if location_type is not None:
             location = self.__get_vector(location_type)
             facing_type = location_type.find('d:facing', self.ns)
+            rot = location_type.find('d:rot', self.ns)
             if facing_type is not None:
                 facing_point = self.__get_vector(facing_type)
                 vector_to_face_point = facing_point - location
                 axis, angle = find_rotation_axis_and_angle_between_vectors(vector_to_face_point,
                                                                            np.array([0, 0, -1.0]))
                 orientation = {'axis': axis, 'angle': np.rad2deg(angle)}
+            elif rot is not None:
+                orientation = self.__rotation_list(rot, [])
         return orientation
 
     def __get_pixel_shape(self, xml_root, type_name):
@@ -504,9 +519,7 @@ class IDFParser:
                     location = self.__get_vector(location_type, top_level=True)
                     angle = location_type.get('rot')
                     if angle is not None:
-                        rotation = {'angle': float(location_type.get('rot')),
-                                    'axis': np.array([location_type.get('axis-x'), location_type.get('axis-y'),
-                                                      location_type.get('axis-z')]).astype(float)}
+                        rotation = self.__rotation_list(anglangle, [])
                     else:
                         rotation = None
                 yield {'id_start': int(xml_type.get('idstart')), 'X_id_step': int(xml_type.get('idstepbyrow')),
@@ -680,7 +693,7 @@ class IDFParser:
             elif idf_angle_units.lower() in ['rad', 'radian', 'radians']:
                 self.angle_units = 'rad'
             else:
-                raise ValueError('Unexpected default unit for angles in IDF file')
+                raise ValueError(f'Unexpected default unit for angles in IDF file: {idf_angle_units}')
         return self.angle_units
 
     def get_length_units(self):

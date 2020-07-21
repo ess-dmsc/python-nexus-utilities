@@ -44,6 +44,7 @@ def get_off_geometry_from_group(group):
 
 
 def get_and_apply_transformations(group, nexus_file, vertices):
+    from detectorplotter import get_transformations
     transformations = list()
     try:
         depends_on = group['parent_group'].get('depends_on')
