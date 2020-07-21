@@ -1,61 +1,71 @@
-project = "python_nexus_utils"
+@Library('ecdc-pipeline')
+import ecdcpipeline.ContainerBuildNode
+import ecdcpipeline.PipelineBuilder
 
-centos = 'essdmscdm/centos.python-build-node:0.1.2'
+project = "python-nexus-utilities"
 
-container_name = "${project}-${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
+container_build_nodes = [
+  'centos7': ContainerBuildNode.getDefaultContainerBuildNode('centos7-gcc8')
+]
 
-node("docker") {
-    cleanWs()
-    dir("${project}") {
-        stage("Checkout") {
-            scm_vars = checkout scm
-        }
+pipeline_builder = new PipelineBuilder(this, container_build_nodes)
+pipeline_builder.activateEmailFailureNotifications()
+
+builders = pipeline_builder.createBuilders { container ->
+  pipeline_builder.stage("${container.key}: Checkout") {
+    dir(pipeline_builder.project) {
+      scm_vars = checkout scm
     }
-    try {
-        image = docker.image(centos)
-            container = image.run("\
-                --name ${container_name} \
-                --tty \
-                --network=host \
-                --env http_proxy=${env.http_proxy} \
-                --env https_proxy=${env.https_proxy} \
-            ")
-        sh "docker cp ${project} ${container_name}:/home/jenkins/${project}"
-        sh """docker exec --user root ${container_name} bash -e -c \"
-            chown -R jenkins.jenkins /home/jenkins/${project}
-        \""""
+    container.copyTo(pipeline_builder.project, pipeline_builder.project)
+  }  // stage
 
-        stage("Create virtualenv") {
-            sh """docker exec ${container_name} bash -e -c \"
-                cd ${project}
-                python3.6 -m venv build_env
-            \""""
-        }
+  pipeline_builder.stage("${container.key}: Dependencies") {
+    def conan_remote = "ess-dmsc-local"
+    container.sh """
+      cd ${project}
+      python3.6 -m venv venv
+      venv/bin/pip --proxy ${http_proxy} install -r requirements.txt
+    """
+  } // stage
 
-        stage("Install requirements") {
-            sh """docker exec ${container_name} bash -e -c \"
-                cd ${project}
-                build_env/bin/pip --proxy ${http_proxy} install --upgrade pip
-                build_env/bin/pip --proxy ${http_proxy} install -r requirements.txt
-                build_env/bin/pip --proxy ${http_proxy} install -e /home/jenkins/${project}
-                build_env/bin/pip --proxy ${http_proxy} install pytest
-            \""""
-        }
+  pipeline_builder.stage("${container.key}: Formatting (black) ") {
+    def conan_remote = "ess-dmsc-local"
+    container.sh """
+      cd ${project}
+      venv/bin/python -m black --check .
+    """
+  } // stage
 
-        stage("Run tests") {
-            def testsError = null
-            try {
-                sh """docker exec ${container_name} bash -e -c \"
-                    cd ${project}
-                    build_env/bin/pytest . --ignore=build_env
-                \""""
-                }
-                catch(err) {
-                    testsError = err
-                    currentBuild.result = 'FAILURE'
-                }
-        }
-    } finally {
-        container.stop()
-    }
+  pipeline_builder.stage("${container.key}: Static Analysis (flake8) ") {
+    def conan_remote = "ess-dmsc-local"
+    container.sh """
+      cd ${project}
+      venv/bin/python -m flake8
+    """
+  } // stage
+
+  pipeline_builder.stage("${container.key}: Test") {
+    def test_output = "TestResults.xml"
+    container.sh """
+      cd ${project}
+      venv/bin/python -m pytest --junitxml=${test_output} --ignore=venv
+    """
+    container.copyFrom("${project}/${test_output}", ".")
+    xunit thresholds: [failed(unstableThreshold: '0')], tools: [JUnit(deleteOutputFiles: true, pattern: '*.xml', skipNoTestFiles: false, stopProcessingIfError: true)]
+  } // stage
+}  // createBuilders
+
+node {
+  dir("${project}") {
+    scm_vars = checkout scm
+  }
+
+  try {
+    parallel builders
+  } catch (e) {
+    throw e
+  }
+
+  // Delete workspace when build is done
+  cleanWs()
 }

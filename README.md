@@ -1,7 +1,7 @@
 # python-nexus-utilities
 Functions to assist with building example NeXus files in the proposed format for ESS from existing NeXus files and Mantid IDFs.
 
-Tested with Python 3.6, >=3.4 should be fine. You can install dependencies with
+Tested with Python 3.6. You can install dependencies with
 ```
 pip install -r requirements.txt
 ```
@@ -15,11 +15,17 @@ on CentOS (with EPEL installed):
 sudo yum install python34-tkinter
 ```
 
-If you want to draw a 3D render then you will need to install panda3D:
+`black` and `flake8` can be used as a pre-commit hook (installed by [pre-commit](https://pre-commit.com/)).
+You need to run
 ```
-pip install --extra-index-url https://archive.panda3d.org/ panda3d
+pre-commit install
 ```
-Note, 3D rendering is not a core feature and panda3d is large, thus it is included in the requirements file.
+once to activate the pre-commit check.
+To test the hooks run
+```
+pre-commit run --all-files
+```
+This command can also be used to run the hooks manually.
 
 ## To create a NeXus file
 

@@ -5,15 +5,15 @@ import logging
 Free-function utilities for use by the NexusBuilder
 """
 
-logger = logging.getLogger('NeXus_Builder')
+logger = logging.getLogger("NeXus_Builder")
 
 
-def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
-    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+def is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
+    return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 
 def is_scalar(object_to_check):
-    if hasattr(object_to_check, '__len__'):
+    if hasattr(object_to_check, "__len__"):
         return len(object_to_check) == 1
     return True
 
@@ -53,12 +53,19 @@ def find_rotation_matrix_between_vectors(vector_a, vector_b):
 
     axis, angle = find_rotation_axis_and_angle_between_vectors(vector_a, vector_b)
 
-    skew_symmetric = np.array([np.array([0.0, -axis[2], axis[1]]),
-                               np.array([axis[2], 0.0, -axis[0]]),
-                               np.array([-axis[1], axis[0], 0.0])])
+    skew_symmetric = np.array(
+        [
+            np.array([0.0, -axis[2], axis[1]]),
+            np.array([axis[2], 0.0, -axis[0]]),
+            np.array([-axis[1], axis[0], 0.0]),
+        ]
+    )
 
-    rotation_matrix = identity_matrix + np.sin(angle) * skew_symmetric + \
-                      ((1.0 - np.cos(angle)) * (skew_symmetric ** 2.0))
+    rotation_matrix = (
+        identity_matrix
+        + np.sin(angle) * skew_symmetric
+        + ((1.0 - np.cos(angle)) * (skew_symmetric ** 2.0))
+    )
     return rotation_matrix
 
 
@@ -75,15 +82,18 @@ def find_rotation_axis_and_angle_between_vectors(vector_a, vector_b):
 
     if np.allclose(unit_a, unit_b):
         logger.debug(
-            'Vectors coincide; no rotation required in nexusutils.find_rotation_axis_and_angle_between_vectors')
+            "Vectors coincide; no rotation required in nexusutils.find_rotation_axis_and_angle_between_vectors"
+        )
         return None, None
 
     cross_prod = np.cross(vector_a, vector_b)
     unit_cross, mag_cross = normalise(cross_prod)
 
-    if isclose(mag_cross, 0.0):
-        raise NotImplementedError('No unique solution for rotation axis in '
-                                  'nexusutils.find_rotation_axis_and_angle_between_vectors')
+    if is_close(mag_cross, 0.0):
+        raise NotImplementedError(
+            "No unique solution for rotation axis in "
+            "nexusutils.find_rotation_axis_and_angle_between_vectors"
+        )
 
     axis = cross_prod / mag_cross
     angle = -1.0 * np.arccos(np.dot(vector_a, vector_b) / (mag_a * mag_b))
@@ -104,16 +114,30 @@ def rotation_matrix_from_axis_and_angle(axis, theta):
     axis_z = axis[2]
     cos_t = np.cos(theta)
     sin_t = np.sin(theta)
-    rotation_matrix_row_1 = np.array([cos_t + axis_x ** 2.0 * (1 - cos_t),
-                                      axis_x * axis_y * (1 - cos_t) - axis_z * sin_t,
-                                      axis_x * axis_z * (1 - cos_t) + axis_y * sin_t])
-    rotation_matrix_row_2 = np.array([axis_y * axis_x * (1 - cos_t) + axis_z * sin_t,
-                                      cos_t + axis_y ** 2.0 * (1 - cos_t),
-                                      axis_y * axis_z * (1 - cos_t) - axis_x * sin_t])
-    rotation_matrix_row_3 = np.array([axis_z * axis_x * (1 - cos_t) - axis_y * sin_t,
-                                      axis_z * axis_y * (1 - cos_t) + axis_x * sin_t,
-                                      cos_t + axis_z ** 2.0 * (1 - cos_t)])
-    rotation_matrix = np.array([rotation_matrix_row_1, rotation_matrix_row_2, rotation_matrix_row_3])
+    rotation_matrix_row_1 = np.array(
+        [
+            cos_t + axis_x ** 2.0 * (1 - cos_t),
+            axis_x * axis_y * (1 - cos_t) - axis_z * sin_t,
+            axis_x * axis_z * (1 - cos_t) + axis_y * sin_t,
+        ]
+    )
+    rotation_matrix_row_2 = np.array(
+        [
+            axis_y * axis_x * (1 - cos_t) + axis_z * sin_t,
+            cos_t + axis_y ** 2.0 * (1 - cos_t),
+            axis_y * axis_z * (1 - cos_t) - axis_x * sin_t,
+        ]
+    )
+    rotation_matrix_row_3 = np.array(
+        [
+            axis_z * axis_x * (1 - cos_t) - axis_y * sin_t,
+            axis_z * axis_y * (1 - cos_t) + axis_x * sin_t,
+            cos_t + axis_z ** 2.0 * (1 - cos_t),
+        ]
+    )
+    rotation_matrix = np.array(
+        [rotation_matrix_row_1, rotation_matrix_row_2, rotation_matrix_row_3]
+    )
     return rotation_matrix
 
 
@@ -126,15 +150,23 @@ def get_an_orthogonal_unit_vector(input_vector):
     :return: 3D vector as a numpy array, orthogonal to input_vector
     """
     if np.abs(input_vector[2]) < np.abs(input_vector[0]):
-        vector = np.array([input_vector[1], -input_vector[0], 0.])
+        vector = np.array([input_vector[1], -input_vector[0], 0.0])
         unit_vector, mag = normalise(vector)
         return unit_vector
-    vector = np.array([0., -input_vector[2], input_vector[1]])
+    vector = np.array([0.0, -input_vector[2], input_vector[1]])
     unit_vector, mag = normalise(vector)
     return unit_vector
 
 
-def create_dataset(nexus_entry, group, name, data, attributes=None, compress_type=None, compress_opts=None):
+def create_dataset(
+    nexus_entry,
+    group,
+    name,
+    data,
+    attributes=None,
+    compress_type=None,
+    compress_opts=None,
+):
     """
     Add a dataset to a given group
 
@@ -148,22 +180,31 @@ def create_dataset(nexus_entry, group, name, data, attributes=None, compress_typ
         group = nexus_entry[group]
 
     if name in group:
-        raise Exception(name + " dataset already exists, delete it before trying to create a new one")
+        raise Exception(
+            name
+            + " dataset already exists, delete it before trying to create a new one"
+        )
 
     if isinstance(data, str):
-        dataset = group.create_dataset(name, data=np.array(data).astype('|S' + str(len(data))))
+        dataset = group.create_dataset(
+            name, data=np.array(data).astype("|S" + str(len(data)))
+        )
     elif is_scalar(data):
         # Don't try to use compression with scalar datasets
         dataset = group.create_dataset(name, data=data)
     else:
-        dataset = group.create_dataset(name, data=data, compression=compress_type,
-                                       compression_opts=compress_opts)
+        dataset = group.create_dataset(
+            name, data=data, compression=compress_type, compression_opts=compress_opts
+        )
 
     if attributes:
         for key in attributes:
             if isinstance(attributes[key], str):
                 # Since python 3 we have to treat strings like this
-                dataset.attrs.create(key, np.array(attributes[key]).astype('|S' + str(len(attributes[key]))))
+                dataset.attrs.create(
+                    key,
+                    np.array(attributes[key]).astype("|S" + str(len(attributes[key]))),
+                )
             else:
                 dataset.attrs.create(key, np.array(attributes[key]))
     return dataset
