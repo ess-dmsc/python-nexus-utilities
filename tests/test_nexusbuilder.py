@@ -1,4 +1,3 @@
-import numpy as np
 from nexusutils.nexusbuilder import NexusBuilder
 
 

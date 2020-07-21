@@ -92,7 +92,7 @@ class IDFParser:
         """
         Get detector banks information from a Mantid IDF file for RectangularDetector panels
 
-        :returns A generator which yields details of each detector bank found in the instrument file 
+        :returns A generator which yields details of each detector bank found in the instrument file
         """
         # Look for detector bank definition
         for xml_type in self.root.findall("d:type", self.ns):

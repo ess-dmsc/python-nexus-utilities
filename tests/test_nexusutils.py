@@ -1,6 +1,14 @@
 import pytest
 import numpy as np
-from nexusutils.utils import *
+from nexusutils.utils import (
+    is_scalar,
+    is_close,
+    normalise,
+    find_rotation_matrix_between_vectors,
+    get_an_orthogonal_unit_vector,
+    find_rotation_axis_and_angle_between_vectors,
+    rotation_matrix_from_axis_and_angle,
+)
 
 
 def test_is_scalar_returns_true_for_single_value():

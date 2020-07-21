@@ -41,13 +41,6 @@ if __name__ == "__main__":
         help="Creates OFF file of full geometry with this filename",
     )
     optional_args.add_argument(
-        "-r",
-        "--render",
-        action="store_true",
-        default=False,
-        help="Render 3D view of output OFF file, must be used with -o",
-    )
-    optional_args.add_argument(
         "-c",
         "--compress-type",
         default="gzip",
@@ -72,9 +65,9 @@ if __name__ == "__main__":
     nexus_file_fullpath = os.path.join(output_dir, output_filename)
 
     compress_options = None
-    if arguments.compress_type is "gzip":
+    if arguments.compress_type == "gzip":
         compress_options = 1
-    elif arguments.compress_type is "none":
+    elif arguments.compress_type == "none":
         arguments.compress_type = None
     with NexusBuilder(
         nexus_file_fullpath,
@@ -93,7 +86,3 @@ if __name__ == "__main__":
     if arguments.off_filename:
         off_file_fullpath = os.path.join(output_dir, arguments.off_filename)
         nexus_geometry_to_off_file(nexus_file_fullpath, off_file_fullpath)
-        if arguments.render:
-            from nexusutils.drawoff import render_off_from_file
-
-            render_off_from_file(off_file_fullpath)

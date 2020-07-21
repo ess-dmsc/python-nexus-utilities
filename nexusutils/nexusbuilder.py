@@ -82,7 +82,7 @@ class NexusBuilder:
         Copy datasets and groups from one NeXus file to another
         NB, the order is important as the method of copying groups used deletes any sub-groups and datasets.
 
-        :param dataset_map: Input groups and datasets to output ones, order must be top-down in hierarchy of output file 
+        :param dataset_map: Input groups and datasets to output ones, order must be top-down in hierarchy of output file
                             Must be ordered.
         """
         if not isinstance(dataset_map, OrderedDict):
@@ -101,7 +101,7 @@ class NexusBuilder:
         """
         Add an NXuser
         
-        :param name: Name of the user 
+        :param name: Name of the user
         :param affiliation: Affiliation of the user
         :param number: User entry number, usually starting from 1
         :return: NXuser
