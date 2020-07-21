@@ -23,8 +23,8 @@ builders = pipeline_builder.createBuilders { container ->
     def conan_remote = "ess-dmsc-local"
     container.sh """
       cd ${project}
-      python3.6 -m venv build_env
-      build_env/bin/pip --proxy ${http_proxy} install -r requirements.txt
+      python3.6 -m venv venv
+      venv/bin/pip --proxy ${http_proxy} install -r requirements.txt
     """
   } // stage
 
@@ -32,7 +32,7 @@ builders = pipeline_builder.createBuilders { container ->
     def conan_remote = "ess-dmsc-local"
     container.sh """
       cd ${project}
-      build_env/bin/python -m black --check .
+      venv/bin/python -m black --check .
     """
   } // stage
 
@@ -40,7 +40,7 @@ builders = pipeline_builder.createBuilders { container ->
 //     def conan_remote = "ess-dmsc-local"
 //     container.sh """
 //       cd ${project}
-//       build_env/bin/python -m flake8
+//       venv/bin/python -m flake8
 //     """
 //   } // stage
 
@@ -48,7 +48,7 @@ builders = pipeline_builder.createBuilders { container ->
     def test_output = "TestResults.xml"
     container.sh """
       cd ${project}
-      build_env/bin/python -m pytest --junitxml=${test_output} --ignore=build_env
+      venv/bin/python -m pytest --junitxml=${test_output} --ignore=venv
     """
     container.copyFrom("${project}/${test_output}", ".")
     xunit thresholds: [failed(unstableThreshold: '0')], tools: [JUnit(deleteOutputFiles: true, pattern: '*.xml', skipNoTestFiles: false, stopProcessingIfError: true)]
