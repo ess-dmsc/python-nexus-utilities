@@ -663,7 +663,7 @@ class IDFParser:
                     location = self.__get_vector(location_type, top_level=True)
                     angle = location_type.get("rot")
                     if angle is not None:
-                        rotation = self.__rotation_list(anglangle, [])
+                        rotation = self.__rotation_list(angle, [])
                     else:
                         rotation = None
                 yield {

@@ -1,8 +1,6 @@
 import h5py
 import logging
 from collections import OrderedDict
-import tables
-import os
 import numpy as np
 from nexusutils.idfparser import IDFParser
 from nexusutils.utils import (
@@ -251,9 +249,9 @@ class NexusBuilder:
             translate_unit_vector,
             name="location",
         )
+        previous_transf = location_transformation
         if orientation is not None:
             if isinstance(orientation, list):
-                previous_transf = location_transformation
                 for rot in orientation:
                     orientation_transformation = self.add_transformation(
                         detector_group,
@@ -274,7 +272,7 @@ class NexusBuilder:
                     "degrees",
                     orientation["axis"],
                     name="orientation",
-                    depends_on=prev_transf,
+                    depends_on=previous_transf,
                 )
                 self.add_depends_on(detector_group, orientation_transformation)
         else:
@@ -350,7 +348,7 @@ class NexusBuilder:
         for dataset_name in offsets:
             offset_dataset = offsets[dataset_name]
             if offset_dataset is not None:
-                if isinstance(offset_dataset, h5py._hl.dataset.Dataset):
+                if isinstance(offset_dataset, h5py.Dataset):
                     detector_group[dataset_name] = offset_dataset
                 else:
                     self.add_dataset(
@@ -523,7 +521,7 @@ class NexusBuilder:
                 + ", errorstr: "
                 + e.strerror
             )
-        except:
+        except Exception:
             logger.error("Unexpected error in NexusBuilder.__copy_dataset")
             raise
         # Now copy attributes
@@ -762,7 +760,7 @@ class NexusBuilder:
         :param dependee: The dependee as a dataset object or name (full path) string
         :return: The "depends_on" dataset
         """
-        if isinstance(dependee, h5py._hl.dataset.Dataset):
+        if isinstance(dependee, h5py.Dataset):
             dependee = str(dependee.name)
         return self.add_dataset(group, "depends_on", dependee)
 
@@ -797,7 +795,7 @@ class NexusBuilder:
         """
         Add a transformation to an NXtransformations group
 
-        :param transform_group: The NXtransformations group to add the translation to, for example an instrument component
+        :param transform_group: The NXtransformations group to add the translation to
         :param transformation_type: "translation" or "rotation"
         :param values: Values to add to the dataset: distance to translate or angle to rotate
         :param units: Units for the dataset's values
@@ -814,7 +812,7 @@ class NexusBuilder:
                 + " ".join(transform_types)
                 + ")"
             )
-        if isinstance(depends_on, h5py._hl.dataset.Dataset):
+        if isinstance(depends_on, h5py.Dataset):
             depends_on = str(depends_on.name)
         attributes = {
             "units": units,

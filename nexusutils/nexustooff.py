@@ -302,8 +302,6 @@ def accumulate_geometry_in_prealloc_arrays(
 
 
 if __name__ == "__main__":
-    from .drawoff import render_off_from_file
-
     # Example use
     # SANS2D for example as it uses NXoff_geometry and NXcylindrical_geometry
     # NB, run example_instruments/sans2d/SANS2D_example.py from its own directory first to generate NeXus file
@@ -311,4 +309,3 @@ if __name__ == "__main__":
     nexus_geometry_to_off_file(
         "example_instruments/sans2d/SANS_example_gzip_compress.hdf5", output_off_file
     )
-    render_off_from_file(output_off_file)

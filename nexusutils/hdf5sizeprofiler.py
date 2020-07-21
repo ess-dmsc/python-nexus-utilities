@@ -2,7 +2,6 @@ import h5py
 from tabulate import tabulate
 from operator import itemgetter
 import numpy as np
-import seaborn
 import matplotlib.pylab as pl
 import os
 
