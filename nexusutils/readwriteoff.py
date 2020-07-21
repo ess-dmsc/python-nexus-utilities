@@ -148,7 +148,7 @@ def construct_cylinder_mesh(height, radius, axis, centre=None, number_of_vertice
         rotation_matrix = find_rotation_matrix_between_vectors(
             np.array(axis), np.array([1.0, 0.0, 0.0])
         )
-    except:
+    except Exception:
         rotation_matrix = None
     if rotation_matrix is not None:
         vertices = rotation_matrix.dot(vertices.T).T

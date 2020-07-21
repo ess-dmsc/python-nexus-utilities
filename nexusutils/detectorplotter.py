@@ -71,7 +71,7 @@ def get_transformations(depends_on, transformations, source_file):
     if depends_on is not None:
         try:
             transform_path = str(depends_on[...].astype(str))
-        except:
+        except Exception:
             transform_path = depends_on.decode()
         if transform_path != ".":
             transform = source_file.get(transform_path)

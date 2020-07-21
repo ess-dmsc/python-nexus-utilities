@@ -60,7 +60,7 @@ def get_and_apply_transformations(group, nexus_file, vertices):
     transformations = list()
     try:
         depends_on = group["parent_group"].get("depends_on")
-    except:
+    except Exception:
         depends_on = "."
     get_transformations(depends_on, transformations, nexus_file)
 
