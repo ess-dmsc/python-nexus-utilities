@@ -2,7 +2,7 @@ import numpy as np
 import logging
 from nexusutils.utils import find_rotation_matrix_between_vectors
 
-logger = logging.getLogger('NeXus_Utils')
+logger = logging.getLogger("NeXus_Utils")
 
 
 def parse_off_file(off_file):
@@ -13,12 +13,14 @@ def parse_off_file(off_file):
     :return: List of vertices and list of vertex indices in each face
     """
     file_start = off_file.readline()
-    if file_start != 'OFF\n':
-        logger.error('OFF file is expected to start "OFF", actually started: ' + file_start)
+    if file_start != "OFF\n":
+        logger.error(
+            'OFF file is expected to start "OFF", actually started: ' + file_start
+        )
         return None
     line = off_file.readline()
     # Skip any comment lines
-    while line[0] == '#' or line == '\n':
+    while line[0] == "#" or line == "\n":
         line = off_file.readline()
     counts = line.split()
     number_of_vertices = int(counts[0])
@@ -30,15 +32,18 @@ def parse_off_file(off_file):
     vertex_number = 0
     while vertex_number < number_of_vertices:
         line = off_file.readline()
-        if line[0] != '#' and line != '\n':
+        if line[0] != "#" and line != "\n":
             off_vertices[vertex_number, :] = np.array(line.split()).astype(float)
             vertex_number += 1
 
     faces_lines = off_file.readlines()
     # Only keep the first value (number of vertex indices in face) plus the number of vertices.
     # There may be other numbers following it to define a colour for the face, which we don't want to keep
-    all_faces = [np.array(face_line.split()[:(int(face_line.split()[0]) + 1)]).astype(int) for face_line in faces_lines
-                 if face_line[0] != '#']
+    all_faces = [
+        np.array(face_line.split()[: (int(face_line.split()[0]) + 1)]).astype(int)
+        for face_line in faces_lines
+        if face_line[0] != "#"
+    ]
     return off_vertices, all_faces
 
 
@@ -55,15 +60,19 @@ def write_off_file(filename, vertices, faces, winding_order):
     number_of_faces = len(faces) - 1
     # According to OFF standard the number of edges must be present but does not need to be correct
     number_of_edges = 0
-    with open(filename, 'wb') as off_file:
-        off_file.write('OFF\n'.encode('utf8'))
-        off_file.write('# NVertices NFaces NEdges\n'.encode('utf8'))
-        off_file.write('{} {} {}\n'.format(number_of_vertices, number_of_faces, number_of_edges).encode('utf8'))
+    with open(filename, "wb") as off_file:
+        off_file.write("OFF\n".encode("utf8"))
+        off_file.write("# NVertices NFaces NEdges\n".encode("utf8"))
+        off_file.write(
+            "{} {} {}\n".format(
+                number_of_vertices, number_of_faces, number_of_edges
+            ).encode("utf8")
+        )
 
-        off_file.write('# Vertices\n'.encode('utf8'))
-        np.savetxt(off_file, vertices, fmt='%f', delimiter=" ")
+        off_file.write("# Vertices\n".encode("utf8"))
+        np.savetxt(off_file, vertices, fmt="%f", delimiter=" ")
 
-        off_file.write('# Faces\n'.encode('utf8'))
+        off_file.write("# Faces\n".encode("utf8"))
         previous_index = 0
         for face in faces[1:]:
             verts_in_face = winding_order[previous_index:face]
@@ -81,9 +90,9 @@ def write_off_face(verts_in_face, off_file):
     :param verts_in_face: Indices in the vertex list of the vertices in this face
     :param off_file:  Handle of the file to write to
     """
-    fmt_str = '{} ' * (len(verts_in_face) + 1)
-    fmt_str = fmt_str[:-1] + '\n'
-    off_file.write(fmt_str.format(len(verts_in_face), *verts_in_face).encode('utf8'))
+    fmt_str = "{} " * (len(verts_in_face) + 1)
+    fmt_str = fmt_str[:-1] + "\n"
+    off_file.write(fmt_str.format(len(verts_in_face), *verts_in_face).encode("utf8"))
 
 
 def create_off_face_vertex_map(off_faces):
@@ -127,13 +136,18 @@ def construct_cylinder_mesh(height, radius, axis, centre=None, number_of_vertice
     y = face_centre[1] + radius * np.cos(angles)
     z = face_centre[2] + radius * np.sin(angles)
     num_points_at_each_tube_end = len(y)
-    vertices = np.concatenate((
-        np.array(list(zip(np.zeros(len(y)) + face_centre[0], y, z))),
-        np.array(list(zip(np.ones(len(y)) * height + face_centre[0], y, z)))))
+    vertices = np.concatenate(
+        (
+            np.array(list(zip(np.zeros(len(y)) + face_centre[0], y, z))),
+            np.array(list(zip(np.ones(len(y)) * height + face_centre[0], y, z))),
+        )
+    )
 
     # Rotate vertices to correct the tube axis
     try:
-        rotation_matrix = find_rotation_matrix_between_vectors(np.array(axis), np.array([1., 0., 0.]))
+        rotation_matrix = find_rotation_matrix_between_vectors(
+            np.array(axis), np.array([1.0, 0.0, 0.0])
+        )
     except:
         rotation_matrix = None
     if rotation_matrix is not None:
@@ -152,11 +166,25 @@ def construct_cylinder_mesh(height, radius, axis, centre=None, number_of_vertice
     #
     # face starts with the number of vertices in the face (4)
     faces = [
-        [4, nth_vertex, nth_vertex + num_points_at_each_tube_end, nth_vertex + num_points_at_each_tube_end + 1,
-         nth_vertex + 1] for nth_vertex in range(num_points_at_each_tube_end - 1)]
+        [
+            4,
+            nth_vertex,
+            nth_vertex + num_points_at_each_tube_end,
+            nth_vertex + num_points_at_each_tube_end + 1,
+            nth_vertex + 1,
+        ]
+        for nth_vertex in range(num_points_at_each_tube_end - 1)
+    ]
     # Append the last rectangular face
-    faces.append([4, num_points_at_each_tube_end - 1, (2 * num_points_at_each_tube_end) - 1,
-                  num_points_at_each_tube_end, 0])
+    faces.append(
+        [
+            4,
+            num_points_at_each_tube_end - 1,
+            (2 * num_points_at_each_tube_end) - 1,
+            num_points_at_each_tube_end,
+            0,
+        ]
+    )
     # NB this is a tube, not a cylinder; I'm not adding the circular faces on the ends of the tube
     faces = np.array(faces)
     return vertices, faces

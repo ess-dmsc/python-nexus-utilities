@@ -8,3 +8,6 @@ tables
 matplotlib
 tabulate
 pytest
+pre-commit
+black
+flake8

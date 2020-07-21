@@ -38,9 +38,11 @@ def test_normalise_returns_magnitude_for_non_zero_vector():
     assert np.isclose(np.array([result_mag]), np.array([np.sqrt(6.0)]))
 
 
-input_vectors = [np.array([0.0, 3.7, 0.0]),
-                 np.array([1.3, 2.4, 0.0]),
-                 np.array([1.2, 5.1, 0.6])]
+input_vectors = [
+    np.array([0.0, 3.7, 0.0]),
+    np.array([1.3, 2.4, 0.0]),
+    np.array([1.2, 5.1, 0.6]),
+]
 
 
 @pytest.mark.parametrize("input_vector", input_vectors)
@@ -60,7 +62,9 @@ def test_find_rotation_matrix_between_vectors():
     vector_a = np.array([1.0, 0.0, 0.0])
     vector_b = np.array([0.0, 1.0, 0.0])
     rotation_matrix = find_rotation_matrix_between_vectors(vector_a, vector_b)
-    assert np.allclose(rotation_matrix, np.array([[1., 2., 0.], [0., 1., 0.], [0., 0., 1.]]))
+    assert np.allclose(
+        rotation_matrix, np.array([[1.0, 2.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+    )
 
 
 def test_get_an_orthogonal_unit_vector_returns_an_orthogonal_vector():
@@ -110,4 +114,6 @@ def test_rotation_matrix_from_axis_and_angle():
     axis = np.array([0.0, 0.0, 1.0])
     angle = np.deg2rad(-90.0)
     rotation_matrix = rotation_matrix_from_axis_and_angle(axis, angle)
-    assert np.allclose(rotation_matrix, np.array([[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]))
+    assert np.allclose(
+        rotation_matrix, np.array([[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])
+    )

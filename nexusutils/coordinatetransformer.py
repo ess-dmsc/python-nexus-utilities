@@ -5,16 +5,30 @@ class CoordinateTransformer:
     """
     Transform between IDF and NeXus, units and coordinates
     """
-    def __init__(self, angles_in_degrees=True, nexus_coords=None, origin=np.array([.0, .0, .0])):
+
+    def __init__(
+        self,
+        angles_in_degrees=True,
+        nexus_coords=None,
+        origin=np.array([0.0, 0.0, 0.0]),
+    ):
         self.angles_in_degrees = angles_in_degrees
         if nexus_coords is None:
-            nexus_coords = ['x', 'y', 'z']
-        self.default_coords = (nexus_coords == ['x', 'y', 'z'])
-        self.nexus_coords_signs = \
-            np.array([-1.0 if self.__is_negative(axis) else 1.0 for axis in nexus_coords]).astype(float)
-        unsigned_nexus_coords = [coord[1:] if self.__is_negative(coord) else coord for coord in nexus_coords]
-        self.nexus_coords_order = np.array([unsigned_nexus_coords.index('x'), unsigned_nexus_coords.index('y'),
-                                            unsigned_nexus_coords.index('z')])
+            nexus_coords = ["x", "y", "z"]
+        self.default_coords = nexus_coords == ["x", "y", "z"]
+        self.nexus_coords_signs = np.array(
+            [-1.0 if self.__is_negative(axis) else 1.0 for axis in nexus_coords]
+        ).astype(float)
+        unsigned_nexus_coords = [
+            coord[1:] if self.__is_negative(coord) else coord for coord in nexus_coords
+        ]
+        self.nexus_coords_order = np.array(
+            [
+                unsigned_nexus_coords.index("x"),
+                unsigned_nexus_coords.index("y"),
+                unsigned_nexus_coords.index("z"),
+            ]
+        )
         self.origin = np.array(origin)
 
     def get_angle_in_degrees(self, angle):
@@ -56,7 +70,7 @@ class CoordinateTransformer:
         :param direction: Direction is an axis string, for example "-x"
         :return: Bool true if first charactor of direction is "-"
         """
-        return direction[0] == '-'
+        return direction[0] == "-"
 
     def spherical_to_cartesian(self, rthetaphi):
         """

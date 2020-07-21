@@ -29,21 +29,21 @@ builders = pipeline_builder.createBuilders { container ->
     """
   } // stage
 
-//   pipeline_builder.stage("${container.key}: Formatting (black) ") {
-//     def conan_remote = "ess-dmsc-local"
-//     container.sh """
-//       cd ${project}
-//       build_env/bin/python -m black --check .
-//     """
-//   } // stage
-
-  pipeline_builder.stage("${container.key}: Static Analysis (flake8) ") {
+  pipeline_builder.stage("${container.key}: Formatting (black) ") {
     def conan_remote = "ess-dmsc-local"
     container.sh """
       cd ${project}
-      build_env/bin/python -m flake8
+      build_env/bin/python -m black --check .
     """
   } // stage
+
+//   pipeline_builder.stage("${container.key}: Static Analysis (flake8) ") {
+//     def conan_remote = "ess-dmsc-local"
+//     container.sh """
+//       cd ${project}
+//       build_env/bin/python -m flake8
+//     """
+//   } // stage
 
   pipeline_builder.stage("${container.key}: Test") {
     def test_output = "TestResults.xml"
