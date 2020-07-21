@@ -71,7 +71,7 @@ def test_get_angle_unit_on_other_than_rad_or_deg_fails():
     test_defaults = {'length_units': 'Ald',
                      'angle_units': 'Furman'}
     fake_idf_file = create_fake_idf_file(defaults=test_defaults)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="^(Unexpected default unit).*(Furman)$"):
         IDFParser(fake_idf_file)
     fake_idf_file.close()
 
@@ -211,3 +211,22 @@ def test_rectangular_detectors_have_default_id_parameters():
                              [default_idstart + 2, default_idstart + default_idstep + 2,
                               default_idstart + (default_idstep * 2) + 2]]).astype(int)
     assert np.array_equal(expected_ids, output_detectors[0]['idlist'])
+
+def test_nested_rotations_on_rectangular_detector():
+    pixel = {'name': 'pixel',
+             'shape': {'shape': 'cuboid', 'x_pixel_size': 0.01, 'y_pixel_size': 0.01, 'thickness': 0.005}}
+    detector = {'pixel': pixel, 'xstart': -0.4, 'xstep': 0.4, 'xpixels': 3, 'ystart': -0.4, 'ystep': 0.4, 'ypixels': 3}
+    location = r'''<location x="1.0" y="0.0" z="0.0" name="front-detector">
+                    <rot axis-x="0.0" axis-y="1.0" axis-z="0.0" val="45">
+                        <rot axis-x="0.0" axis-y="1.0" axis-z="0.0" val="45">
+                        </rot>
+                    </rot>
+                    </location>'''
+    fake_idf_file = create_fake_idf_file(rectangular_detector=detector, custom_location=location)
+    parser = IDFParser(fake_idf_file)
+    rectdet = parser.get_rectangular_detectors()
+    rotations = list(rectdet)[0]['orientation']
+    assert len(rotations) == 2
+
+
+
