@@ -812,7 +812,7 @@ class NexusBuilder:
                 + " ".join(transform_types)
                 + ")"
             )
-        if isinstance(depends_on, h5py.Dataset):
+        if isinstance(depends_on, (h5py.Dataset, h5py.Group)):
             depends_on = str(depends_on.name)
         attributes = {
             "units": units,
