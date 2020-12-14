@@ -4,7 +4,6 @@ numexpr
 numpy
 packaging
 pyparsing
-tables
 matplotlib
 tabulate
 pytest
