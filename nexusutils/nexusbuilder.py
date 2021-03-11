@@ -757,10 +757,10 @@ class NexusBuilder:
         Add a "depends_on" dataset to a group
 
         :param group: Group to add dataset to
-        :param dependee: The dependee as a dataset object or name (full path) string
+        :param dependee: The dependee as a dataset, group (NXlog) or name (full path) string
         :return: The "depends_on" dataset
         """
-        if isinstance(dependee, h5py.Dataset):
+        if isinstance(dependee, (h5py.Dataset, h5py.Group)):
             dependee = str(dependee.name)
         return self.add_dataset(group, "depends_on", dependee)
 
