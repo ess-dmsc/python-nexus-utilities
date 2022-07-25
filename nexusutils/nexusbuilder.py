@@ -100,7 +100,7 @@ class NexusBuilder:
     def add_user(self, name, affiliation, number=1):
         """
         Add an NXuser
-        
+
         :param name: Name of the user
         :param affiliation: Affiliation of the user
         :param number: User entry number, usually starting from 1
@@ -319,7 +319,7 @@ class NexusBuilder:
     ):
         """
         Add an NXdetector, only suitable for rectangular detectors of consistent pixels
-        
+
         :param name: Name of the detector panel
         :param number : Banks are numbered from 1
         :param offsets : Dictionary of pixel offsets
@@ -383,7 +383,7 @@ class NexusBuilder:
     def add_detector_minimal(self, name, number, depends_on=None):
         """
         Add an NXdetector with minimal details
-        
+
         :param name: Name of the detector panel
         :param number: Detectors are typically numbered from 1
         :param depends_on: Dataset object or name (full path) of axis the detector depends on
@@ -478,7 +478,7 @@ class NexusBuilder:
     def __copy_group(self, source_group_name, target_group_name):
         """
         Copy a group with its attributes but without members
-    
+
         :param source_group_name: Name of group in source file
         :param target_group_name: Name of group in target file
         """
@@ -492,7 +492,7 @@ class NexusBuilder:
     def __copy_dataset(self, dataset, target_dataset):
         """
         Copy a dataset with specified compression options and the source dataset's attributes
-    
+
         :param dataset: The dataset being copied
         :param target_dataset: Name of the dataset in the target file
         """
