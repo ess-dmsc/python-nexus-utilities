@@ -22,33 +22,40 @@ builders = pipeline_builder.createBuilders { container ->
   pipeline_builder.stage("${container.key}: Dependencies") {
     def conan_remote = "ess-dmsc-local"
     container.sh """
-      cd ${project}
-      python3.6 -m venv venv
-      venv/bin/pip --proxy ${http_proxy} install -r requirements.txt
+      /opt/miniconda/bin/conda init bash
+      export PATH=/opt/miniconda/bin:$PATH
+      python --version
+      python -m pip install --user -r ${pipeline_builder.project}/requirements.txt
     """
   } // stage
 
   pipeline_builder.stage("${container.key}: Formatting (black) ") {
     def conan_remote = "ess-dmsc-local"
     container.sh """
-      cd ${project}
-      venv/bin/python -m black --check .
+      export PATH=/opt/miniconda/bin:$PATH
+      python --version
+      cd ${pipeline_builder.project}
+      python -m black --check .
     """
   } // stage
 
   pipeline_builder.stage("${container.key}: Static Analysis (flake8) ") {
     def conan_remote = "ess-dmsc-local"
     container.sh """
-      cd ${project}
-      venv/bin/python -m flake8
+      export PATH=/opt/miniconda/bin:$PATH
+      python --version
+      cd ${pipeline_builder.project}
+      python -m flake8
     """
   } // stage
 
   pipeline_builder.stage("${container.key}: Test") {
     def test_output = "TestResults.xml"
     container.sh """
-      cd ${project}
-      venv/bin/python -m pytest --junitxml=${test_output} --ignore=venv
+      export PATH=/opt/miniconda/bin:$PATH
+      python --version
+      cd ${pipeline_builder.project}
+      python -m pytest --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
     xunit thresholds: [failed(unstableThreshold: '0')], tools: [JUnit(deleteOutputFiles: true, pattern: '*.xml', skipNoTestFiles: false, stopProcessingIfError: true)]
