@@ -20,7 +20,6 @@ builders = pipeline_builder.createBuilders { container ->
   }  // stage
 
   pipeline_builder.stage("${container.key}: Dependencies") {
-    def conan_remote = "ess-dmsc-local"
     container.sh """
       /opt/miniconda/bin/conda init bash
       export PATH=/opt/miniconda/bin:$PATH
@@ -30,7 +29,6 @@ builders = pipeline_builder.createBuilders { container ->
   } // stage
 
   pipeline_builder.stage("${container.key}: Formatting (black) ") {
-    def conan_remote = "ess-dmsc-local"
     container.sh """
       export PATH=/opt/miniconda/bin:$PATH
       python --version
@@ -40,7 +38,6 @@ builders = pipeline_builder.createBuilders { container ->
   } // stage
 
   pipeline_builder.stage("${container.key}: Static Analysis (flake8) ") {
-    def conan_remote = "ess-dmsc-local"
     container.sh """
       export PATH=/opt/miniconda/bin:$PATH
       python --version
