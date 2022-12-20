@@ -5,7 +5,7 @@ import ecdcpipeline.PipelineBuilder
 project = "python-nexus-utilities"
 
 container_build_nodes = [
-  'centos7': ContainerBuildNode.getDefaultContainerBuildNode('centos7-gcc8')
+  'centos7': new ContainerBuildNode('dockerregistry.esss.dk/ecdc_group/build-node-images/centos7-build-node:10.0.4-dev', '/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -e -x')
 ]
 
 pipeline_builder = new PipelineBuilder(this, container_build_nodes)
@@ -21,16 +21,14 @@ builders = pipeline_builder.createBuilders { container ->
 
   pipeline_builder.stage("${container.key}: Dependencies") {
     container.sh """
-      /opt/miniconda/bin/conda init bash
-      export PATH=/opt/miniconda/bin:$PATH
+      which python
       python --version
-      python -m pip install --user -r ${pipeline_builder.project}/requirements.txt
+      python -m pip install --user -r ${pipeline_builder.project}/requirements-dev.txt
     """
   } // stage
 
   pipeline_builder.stage("${container.key}: Formatting (black) ") {
     container.sh """
-      export PATH=/opt/miniconda/bin:$PATH
       python --version
       cd ${pipeline_builder.project}
       python -m black --check .
@@ -39,7 +37,6 @@ builders = pipeline_builder.createBuilders { container ->
 
   pipeline_builder.stage("${container.key}: Static Analysis (flake8) ") {
     container.sh """
-      export PATH=/opt/miniconda/bin:$PATH
       python --version
       cd ${pipeline_builder.project}
       python -m flake8
@@ -49,7 +46,6 @@ builders = pipeline_builder.createBuilders { container ->
   pipeline_builder.stage("${container.key}: Test") {
     def test_output = "TestResults.xml"
     container.sh """
-      export PATH=/opt/miniconda/bin:$PATH
       python --version
       cd ${pipeline_builder.project}
       python -m pytest --junitxml=${test_output}
