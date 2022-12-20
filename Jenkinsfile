@@ -23,7 +23,7 @@ builders = pipeline_builder.createBuilders { container ->
     container.sh """
       which python
       python --version
-      python -m pip install --user -r ${pipeline_builder.project}/requirements-dev.txt
+      python -m pip install --user -r ${pipeline_builder.project}/requirements.txt
     """
   } // stage
 
