@@ -1,0 +1,20 @@
+Metadata-Version: 2.4
+Name: nexusutils
+Version: 1.0
+Summary: Python NeXus Utilities
+Home-page: https://github.com/ess-dmsc/python-nexus-utilities
+License: BSD 2-clause
+Platform: any
+License-File: License.md
+Requires-Dist: appdirs
+Requires-Dist: h5py
+Requires-Dist: numexpr
+Requires-Dist: numpy
+Requires-Dist: packaging
+Requires-Dist: pyparsing
+Requires-Dist: matplotlib
+Requires-Dist: tabulate
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: summary

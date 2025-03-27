@@ -1,0 +1,8 @@
+appdirs
+h5py
+numexpr
+numpy
+packaging
+pyparsing
+matplotlib
+tabulate
